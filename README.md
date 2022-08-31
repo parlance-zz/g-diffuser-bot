@@ -41,6 +41,7 @@ If you do happen to generate anything questionable please delete the message you
 !help:
 
 User Commands:
+
   !t2i : Generates an image with a prompt [-seed num] [-scale num] [-steps num] [-plms] [-m model] [-x num]
   
   !t2ihd : As above but no -plms support, uses txt2imghd to generate 1 sample at 4x size
@@ -60,6 +61,7 @@ User Commands:
   !show_input : Shows your current input image (skips the queue)
  
 Admin Commands:
+
   !shutdown : Cancel all pending / running commands and shutdown the bot (can only be used by bot owner)
   
   !clean : Delete temporary files in SD folders, -force will delete temporary files that may still be referenced (can only be used by bot owner) [-force]
@@ -69,6 +71,7 @@ Admin Commands:
   !clear [user]: Cancel all or only a specific user's pending / running commands
 
 Parameter Notes:
+
   -seed : Any whole number (default random)
   
   -scale : Can be any positive real number (default 6). Controls the unconditional guidance scale. Good values are between 3-20.
@@ -84,6 +87,7 @@ Parameter Notes:
   -m: Choose the model to use
 
 Input images:
+
   Commands that require an input image will use the image you attach to your message. If you do not attach an image it will attempt to use the last image you attached.
   
   The select command can be used to turn your last command's output image into your next input image, please see !select above.
