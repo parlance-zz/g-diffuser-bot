@@ -39,6 +39,8 @@ Commands can be used in any channel the bot is in, provided you have the appropr
 Please use discretion in your prompts as the safety filter has been disabled. Repeated violations will result in banning.
 If you do happen to generate anything questionable please delete the message yourself or contact a mod ASAP. The watermarking feature has been left enabled to minimize potential harm.
 
+For more information on the G-Diffuser-Bot please see https://github.com/parlance-zz/g-diffuser-bot
+
 !help:
 
 User Commands:
