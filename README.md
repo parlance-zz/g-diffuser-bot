@@ -90,6 +90,8 @@ Input images:
 
   Commands that require an input image will use the image you attach to your message. If you do not attach an image it will attempt to use the last image you attached.
   
+  Input images will be cropped to 1:1 aspect and resized to 512x512.
+  
   The select command can be used to turn your last command's output image into your next input image, please see !select above.
 
 !examples:
