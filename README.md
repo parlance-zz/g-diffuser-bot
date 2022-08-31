@@ -101,6 +101,6 @@ Input images:
 
 !t2i painting of an island by lisa frank -plms -seed 10
 
-!t2ihd baroque painting of a mystical island treehouse on the ocean, chrono trigger, snes style, trending on artstation, soft lighting, vivid colors, extremely detailed, very intricate -plms
+!t2ihd baroque painting of a mystical island treehouse on the ocean, chrono trigger, trending on artstation, soft lighting, vivid colors, extremely detailed, very intricate -plms
 
 !t2i my little pony in space marine armor from warhammer 40k, trending on artstation, intricate detail, 3d render, gritty, dark colors, cinematic lighting, cosmic background with colorful constellations -scale 10 -seed 174468 -steps 50
