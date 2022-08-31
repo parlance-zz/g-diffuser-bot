@@ -2,7 +2,7 @@
 
   G-Diffuser-Bot is a simple, compact Discord bot for local installations of the public release of Stable-Diffusion (https://github.com/CompVis/stable-diffusion).
   If you are able to successfully install stable-diffusion locally using the public release, you've already done everything you need to run this bot.
-  This bot is designed for users with a powerful home PC and wish to share the magic of stable-diffusion with small groups of friends on Discord.
+  This bot is designed for users with a powerful home PC who wish to share the magic of stable-diffusion with small groups of friends on Discord.
   
   The bot supports txt2img as well as img2img, optionally it also implements txt2imghd (https://github.com/jquesnelle/txt2imghd) and esrgan (https://github.com/xinntao/Real-ESRGAN).
   Commands are queued for execution one at a time as my intention is to provide a solution for users to share stable-diffusion from their own PC and most commands require significant video memory.
