@@ -28,92 +28,56 @@
 
   This software is licensed under the Unlicense. Please see LICENSE for more information.
   
-######  !about, !help, !examples ######
-
-!about:
-
-This is a simple discord bot for stable-diffusion and provides access to the most common commands as well as a few others.
-
-Commands can be used in any channel the bot is in, provided you have the appropriate server role. For a list of commands, use !help
-
-Please use discretion in your prompts as the safety filter has been disabled. Repeated violations will result in banning.
-If you do happen to generate anything questionable please delete the message yourself or contact a mod ASAP. The watermarking feature has been left enabled to minimize potential harm.
-
-For more information on the G-Diffuser-Bot please see https://github.com/parlance-zz/g-diffuser-bot
-
-!help:
+######  Commands ######
 
 User Commands:
 
-  !t2i : Generates an image with a prompt [-seed num] [-scale num] [-steps num][-x num]
-  
-  !t2ihd : As above, uses txt2imghd to generate 1 sample at 4x size
-  
-  !i2i : Generates an image with a prompt and input image [-seed num] [-str num] [-scale num] [-steps num] [-x num] 
-  
-  !enhance : Uses esrgan to upscale the input image image by 4x
-  
-  !queue : Shows running / waiting commands in the queue [-mine]
-  
-  !cancel : Cancels your last command (can be used while running) [-all]
-  
-  !top : Shows the top users' total running time
-  
-  !select : Selects an image by number from your last result and make it your input image (left to right, top to bottom) (skips the queue)
-  
-  !show_input : Shows your current input image (skips the queue)
-  
+  - !t2i : Generates an image with a prompt [-seed num] [-scale num] [-steps num][-x num]
+  - !t2ihd : As above, uses txt2imghd to generate 1 sample at 4x size
+  - !i2i : Generates an image with a prompt and input image [-seed num] [-str num] [-scale num] [-steps num] [-x num] 
+  - !enhance : Uses esrgan to upscale the input image image by 4x
+  - !queue : Shows running / waiting commands in the queue [-mine]
+  - !cancel : Cancels your last command (can be used while running) [-all]
+  - !top : Shows the top users' total running time
+  - !select : Selects an image by number from your last result and make it your input image (left to right, top to bottom) (skips the queue) 
+  - !show_input : Shows your current input image (skips the queue)
+ 
  
 Admin Commands:
 
-  !shutdown : Cancel all pending / running commands and shutdown the bot (can only be used by bot owner)
+  - !shutdown : Cancel all pending / running commands and shutdown the bot (can only be used by bot owner)
+  - !clean : Delete temporary files in SD folders, -force will delete temporary files that may still be referenced (can only be used by bot owner) [-force]
+  - !restart : Restart the bot after the command queue is idle
+  - !clear [user]: Cancel all or only a specific user's pending / running commands
   
-  !clean : Delete temporary files in SD folders, -force will delete temporary files that may still be referenced (can only be used by bot owner) [-force]
   
-  !restart : Restart the bot after the command queue is idle
-  
-  !clear [user]: Cancel all or only a specific user's pending / running commands
-  
-
-
 Parameter Notes:
 
-  -seed : Any whole number (default random)
-  
-  -scale : Can be any positive real number (default 6). Controls the unconditional guidance scale. Good values are between 3-20.
-  
-  -str : Number between 0 and 1, (default 0.4). Controls how much to change the input image. 
-  
-  -plms : Use the plms instead of ddim sampler to generate your output.
-  
-  -steps: Any whole number from 10 to 200 (default 50). Controls how many times to recursively change the input image.
-  
-  -x: Repeat the given command some number of times. The number of possible repeats may be limited.
-  
+  - -seed : Any whole number (default random)
+  - -scale : Can be any positive real number (default 6). Controls the unconditional guidance scale. Good values are between 3-20.
+  - -str : Number between 0 and 1, (default 0.4). Controls how much to change the input image. 
+  - -plms : Use the plms instead of ddim sampler to generate your output.
+  - -steps: Any whole number from 10 to 200 (default 50). Controls how many times to recursively change the input image.
+  - -x: Repeat the given command some number of times. The number of possible repeats may be limited.
+
 
 Models and Samplers:
 
  - !t2i supports alternate samplers, and all generation commands support alternate models with [-m model] (sd1.4_small)
-
  - To use an alternate sampler use the following options [-plms] [-dpm_2_a] [-dpm_2] [-euler_a] [-euler] [-heun] [-lms]
+
 
 Input images:
 
-  Commands that require an input image will use the image you attach to your message. If you do not attach an image it will attempt to use the last image you attached.
-  
-  Input images will be cropped to 1:1 aspect and resized to 512x512.
-  
-  The select command can be used to turn your last command's output image into your next input image, please see !select above.
+  - Commands that require an input image will use the image you attach to your message. If you do not attach an image it will attempt to use the last image you attached.
+  - Input images will be cropped to 1:1 aspect and resized to 512x512.
+  - The select command can be used to turn your last command's output image into your next input image, please see !select above.
   
   
-Example commands:
+Examples:
 
-!t2i an astronaut riding a horse on the moon
-
-!t2i painting of an island by lisa frank -plms -seed 10
-
-!t2ihd baroque painting of a mystical island treehouse on the ocean, chrono trigger, trending on artstation, soft lighting, vivid colors, extremely detailed, very intricate -plms
-
-!t2i my little pony in space marine armor from warhammer 40k, trending on artstation, intricate detail, 3d render, gritty, dark colors, cinematic lighting, cosmic background with colorful constellations -scale 10 -seed 174468 -steps 50
-
-!t2ihd baroque painting of a mystical island treehouse on the ocean, chrono trigger, trending on artstation, soft lighting, vivid colors, extremely detailed, very intricate -scale 14 -str 0.375 -seed 252229
+  - !t2i an astronaut riding a horse on the moon
+  - !t2i painting of an island by lisa frank -plms -seed 10
+  - !t2ihd baroque painting of a mystical island treehouse on the ocean, chrono trigger, trending on artstation, soft lighting, vivid colors, extremely detailed, very intricate -plms
+  - !t2i my little pony in space marine armor from warhammer 40k, trending on artstation, intricate detail, 3d render, gritty, dark colors, cinematic lighting, cosmic background with colorful constellations -scale 10 -seed 174468 -steps 50
+  - !t2ihd baroque painting of a mystical island treehouse on the ocean, chrono trigger, trending on artstation, soft lighting, vivid colors, extremely detailed, very intricate -scale 14 -str 0.375 -seed 252229
