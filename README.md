@@ -105,12 +105,7 @@ Input images:
   
   The select command can be used to turn your last command's output image into your next input image, please see !select above.
   
-Examples:
-
-  To see examples of valid commands use !examples
   
-!examples:
-
 Example commands:
 
 !t2i an astronaut riding a horse on the moon
