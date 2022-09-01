@@ -94,7 +94,7 @@ Parameter Notes:
 Models and Samplers:
 
  - !t2i supports alternate samplers, and all generation commands support alternate models with [-m model] (sd1.4_small)
- - 
+
  - To use an alternate sampler use the following options [-plms] [-dpm_2_a] [-dpm_2] [-euler_a] [-euler] [-heun] [-lms]
 
 Input images:
