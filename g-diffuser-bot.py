@@ -1,45 +1,75 @@
 """
 
- G-DiffuserBot for Discord (https://https://github.com/parlance-zz/g-diffuser-bot/)
+ G-Diffuser-Bot for Discord (https://https://github.com/parlance-zz/g-diffuser-bot/)
+ 
+ done:
+ - add support for other samplers
+ - fixed user params being overriden by *_ADD_PARAMS
+ - made important install settings easier to find
  
  todo:
+ 0. add other samplers to img2img and txt2imghd
  1. add command list trimming by adding a replacement dummy completed command with total elapsed time and in out image props (_compactify)
  2. change _auto_clean to not delete files referenced by any input or output image in the command queue, unless -force
- 3. cleanup param reformatting since long commands are no longer supported
+ 3. cleanup param reformatting since the longer original commands are no longer supported
  4. cleanup _process_commands to merge i2i and t2i because there is a lot of redundant code now
  5. fixup path concat to use os.path, low priority because no user data is used
+ 5.5 replace command queue pickling with a proper log file
+ 
+ 6. possibly add GUI interface buttons to bot messages
+ 7. swap out prefix mode for slash command mode (https://support.discord.com/hc/en-us/articles/1500000368501-Slash-Commands-FAQ#:~:text=WHAT%20ARE%20SLASH%20COMMANDS%3F,to%20use%20your%20favorite%20bot.)
+ 8. multi-gpu or sharding support
+ 9. test / implement linux support
+ 
 """
 
 
 # --- bot params ----------------------------------------------------------------------------
 
-BOT_TOKEN = "YOUR_BOT_TOKEN_GOES_HERE"
-BOT_ADMIN_ROLE_NAME = "AI Overlords"   # use your group names here accordingly, check the help text for command permissions
-BOT_USERS_ROLE_NAME = "AI Underlings"
+BOT_TOKEN = "YOUR_BOT_TOKEN_GOES_HERE"                     # IMPORTANT - Put your Discord bot token here
+BOT_ADMIN_ROLE_NAME = "YOUR ADMIN ROLE NAME GOES HERE"     # IMPORTANT - use your group names here accordingly, check the help text for command permissions
+BOT_USERS_ROLE_NAME = "YOUR USER ROLE NAME GOES HERE"
 
 BOT_COMMAND_PREFIX = "!"
 BOT_ACTIVITY = "The way of the future..."
 
 # default paths - please adjust accordingly
-SD_ROOT_PATH = "C:/stable-diffusion/stable-diffusion-main"                            # make this your stable-diffusion-main root path
-TMP_ROOT_PATH = SD_ROOT_PATH + "/scripts/tmp"                                         # make sure this is a valid path (it will be created if it does not exist)
-ESRGAN_PATH = SD_ROOT_PATH + "/scripts/esrgan/realesrgan-ncnn-vulkan.exe"             # optional, but required for !enhance and !txt2imghd
+SD_ROOT_PATH = "C:/stable-diffusion/stable-diffusion-main" # IMPORTANT - make this your stable-diffusion-main root path
+TMP_ROOT_PATH = SD_ROOT_PATH + "/scripts/tmp"                               # make sure this is a valid path (it will be created if it does not exist)
+ESRGAN_PATH = SD_ROOT_PATH + "/scripts/esrgan/realesrgan-ncnn-vulkan.exe"   # optional, but required for !enhance and !txt2imghd
 BOT_PATH = "scripts/g-diffuser-bot"
-BOT_STATE_DATA_FILE = BOT_PATH + "/g-diffuser-bot.pickle"  # can be disabled, used for persisting command queue, top user list and input image paths
+BOT_STATE_DATA_FILE = BOT_PATH + "/g-diffuser-bot.pickle"     # can be disabled, used for persisting command queue, top user list and input image paths
 
-# default params for commands, these override any user supplied params (except seed)
-TXT2IMG_ADD_PARAMS = { "--n_samples": "2" }
-IMG2IMG_ADD_PARAMS = {}
+# default params for commands, these are overriden by any user supplied params
+TXT2IMG_ADD_PARAMS = { "--n_samples": "2", "--ddim_steps": "50" }
+TXT2IMGHD_ADD_PARAMS = { "--scale": "8", "--strength": "0.37" }
+IMG2IMG_ADD_PARAMS = { }
 ESRGAN_ADD_PARAMS = { "-n": "realesrgan-x4plus" }
 AUTO_SEED_RANGE = (1,999999)
-MAX_STEPS_LIMIT = 120
+MAX_STEPS_LIMIT = 300
 MAX_REPEAT_LIMIT = 100             # max number of repititions that can be used with the -x param
 
 MAX_QUEUE_LENGTH = 1000            # beyond this limit additional commands will be rejected
 QUEUE_MODE = 0                     # 0 for round-robin, 1 for first come first serve
 MAX_QUEUE_PRINT_ITEMS = 4          # max number of items to show for !queue command (up to discord message length limit)
 
-SHORTHAND_LIST = { "-str": "--strength", "-scale": "--scale", "-seed": "--seed", "-plms": "--plms", "-steps": "--ddim_steps", "-n": "--n_samples", "-x": "-x", "-m": "--ckpt" } # shortcut map for command params
+SHORTHAND_LIST = {
+"-str": "--strength",
+"-scale": "--scale",
+"-seed": "--seed",
+"-plms": "--plms",
+"-dpm_2_a": "--dpm_2_a",
+"-dpm_2": "--dpm_2",
+"-euler_a": "--euler_a",
+"-euler": "--euler",
+"-heun": "--heun",
+"-lms": "--lms",
+"-steps":
+"--ddim_steps",
+"-n": "--n_samples",
+"-x": "-x",
+"-m": "--ckpt"
+} # shortcut map for command params
 
 TMP_CLEAN_PATHS = [
     SD_ROOT_PATH + "/outputs/img2img-samples/*.png",
@@ -65,14 +95,14 @@ Commands can be used in any channel the bot is in, provided you have the appropr
 Please use discretion in your prompts as the safety filter has been disabled. Repeated violations will result in banning.
 If you do happen to generate anything questionable please delete the message yourself or contact a mod ASAP. The watermarking feature has been left enabled to minimize potential harm.
 
-For more information on the G-DiffuserBot please see https://github.com/parlance-zz/g-diffuser-bot
+For more information on the G-Diffuser-Bot please see https://github.com/parlance-zz/g-diffuser-bot
 """
 
 HELP_TXT1 = """
 User Commands:
-  !t2i : Generates an image with a prompt [-seed num] [-scale num] [-steps num] [-plms] [-m model] [-x num]
-  !t2ihd : As above but no -plms support, uses txt2imghd to generate 1 sample at 4x size
-  !i2i : Generates an image with a prompt and input image [-seed num] [-str num] [-scale num] [-steps num] [-m model] [-x num] 
+  !t2i : Generates an image with a prompt [-seed num] [-scale num] [-steps num][-x num]
+  !t2ihd : As above, uses txt2imghd to generate 1 sample at 4x size
+  !i2i : Generates an image with a prompt and input image [-seed num] [-str num] [-scale num] [-steps num] [-x num] 
   !enhance : Uses esrgan to upscale the input image image by 4x
   !queue : Shows running / waiting commands in the queue [-mine]
   !cancel : Cancels your last command (can be used while running) [-all]
@@ -94,8 +124,11 @@ Parameter Notes:
   -plms : Use the plms instead of ddim sampler to generate your output.
   -steps: Any whole number from 10 to 200 (default 50). Controls how many times to recursively change the input image.
   -x: Repeat the given command some number of times. The number of possible repeats may be limited.
-  -m: Choose the model to use
 
+Models and Samplers:
+ - !t2i supports alternate samplers, and all generation commands support alternate models with [-m model] (sd1.4_small)
+ - To use an alternate sampler use the following options [-plms] [-dpm_2_a] [-dpm_2] [-euler_a] [-euler] [-heun] [-lms]
+ 
 Input images:
   Commands that require an input image will use the image you attach to your message. If you do not attach an image it will attempt to use the last image you attached.
   Input images will be cropped to 1:1 aspect and resized to 512x512.
@@ -109,19 +142,21 @@ EXAMPLES_TXT = """
 Example commands:
 !t2i an astronaut riding a horse on the moon
 !t2i painting of an island by lisa frank -plms -seed 10
-!t2ihd baroque painting of a mystical island treehouse on the ocean, chrono trigger, snes style, trending on artstation, soft lighting, vivid colors, extremely detailed, very intricate -plms
+!t2ihd baroque painting of a mystical island treehouse on the ocean, chrono trigger, trending on artstation, soft lighting, vivid colors, extremely detailed, very intricate -plms
 !t2i my little pony in space marine armor from warhammer 40k, trending on artstation, intricate detail, 3d render, gritty, dark colors, cinematic lighting, cosmic background with colorful constellations -scale 10 -seed 174468 -steps 50
+!t2ihd baroque painting of a mystical island treehouse on the ocean, chrono trigger, trending on artstation, soft lighting, vivid colors, extremely detailed, very intricate -scale 14 -str 0.375 -seed 252229
 """
 
 # -------------------------------------------------------------------------------------------
 
 
 
-# discord and psutil are the only modules you need outside of the pre-built ldm conda environment
+# discord, psutil, and urlparse are the only modules you need outside of the pre-built ldm conda environment
 
 try: # install discord module if we haven't already
     import discord
 except ImportError:
+    print("Could not import discord, installing with pip...")
     from pip._internal import main as pip
     pip(['install', 'discord'])
     import discord
@@ -133,10 +168,11 @@ from discord.ext import tasks
 try: # install psutil module if we haven't already
     import psutil
 except ImportError:
+    print("Could not import psutil, installing with pip...")
     from pip._internal import main as pip
     pip(['install', 'psutil'])
     import psutil
-
+    
 # these dependencies are part of the conda ldm environment for the public release of stable-diffusion 1.4
 import subprocess
 import glob
@@ -155,6 +191,7 @@ import datetime
 import string
 from pathlib import Path
 import copy
+import urllib
 
 # pickle is only used to save the command queue / remember input images, output images and user total run-time between restarts
 # if you set BOT_STATE_DATA_FILE = "" in the global options below then you can safely remove this import
@@ -181,22 +218,22 @@ class Command:
 
     def __init__(self, ctx=None):
     
-        self.ctx = ctx  # discord context is attached to command to reply appropriately
-        self.init_time = datetime.datetime.now()
-        self.init_user = ctx.message.author.name
-        self.message = ctx.message.content 
-        self.command = ctx.message.content.split()[0].strip().lower()
-        self.cmd_args = _parse_args(ctx.message.content)
+        self.ctx = ctx  # originating discord context is attached to command to reply appropriately
+        self.init_time = datetime.datetime.now()                        # time the command was created / queued
+        self.init_user = ctx.message.author.name                        # username that initiated the command
+        self.message = ctx.message.content                              # the complete message string
+        self.command = ctx.message.content.split()[0].strip().lower()   # first part of the message following the bot command prefix
+        self.cmd_args = _parse_args(ctx.message.content)                # dictionary of parameters
         self.run_path = ""             # final command line executed
         self.in_image = ""             # local path to input image
         self.out_image = ""            # local path to output image
         self.out_image_dims = (0, 0)   # size of the individual images in the output 
         self.out_image_layout = (1, 1) # grid layout of image, or (1,1) for a single image
         
-        self.start_time = datetime.datetime.max
-        self.elapsed_time = datetime.timedelta(seconds=0)
-        self.status = 0 # 0 for waiting in queue, 1 for running, 2 for run successfully, 3 for cancelling, -1 for error
-        self.error_txt = ""
+        self.start_time = datetime.datetime.max             # time when the command begins running
+        self.elapsed_time = datetime.timedelta(seconds=0)   # if the command completed successfully this is the run-time
+        self.status = 0         # 0 for waiting in queue, 1 for running, 2 for run successfully, 3 for cancelling, -1 for error
+        self.error_txt = ""     # if the command had an error, this text is any additional info
     
     def __getstate__(self):      # remove discord context for pickling
         attributes = self.__dict__.copy()
@@ -243,7 +280,7 @@ class CommandQueue:
             try:
                 os.chdir(SD_ROOT_PATH)
                 
-                file_size = os.stat(data_file).st_size
+                file_size = os.stat(data_file).st_size # if the file is empty, look for the last backup pickle instead
                 if file_size == 0:
                     list_of_files = glob.glob(TMP_ROOT_PATH + "/*.pickle")
                     latest_file = max(list_of_files, key=os.path.getctime)
@@ -252,9 +289,10 @@ class CommandQueue:
                     data_file = latest_file
                     
                 file = open(data_file, "rb")
-                self.cmd_list = pickle.load(file)
+                self.cmd_list = pickle.load(file) # i hate pickles too, i'm sorry. todo: don't use pickles
                 file.close()
                 
+                # create the per user total run-time cache
                 for cmd in self.cmd_list:
                     if cmd.init_user in USERS_ELAPSED_TIME.keys():
                         USERS_ELAPSED_TIME[cmd.init_user] += cmd.elapsed_time
@@ -290,7 +328,7 @@ class CommandQueue:
                 for cmd in self.cmd_list:
                     if cmd.status == 2: # only save completed commands (because we can't save contexts for waiting commands)
                         cmd_list_copy.append(cmd)
-                    
+                
                 pickle.dump(cmd_list_copy, file)
                 file.close()
                 
@@ -360,7 +398,7 @@ class CommandQueue:
                         pending_list.append(cmd)
                         break
         
-        if num_to_return == 1: # rather than return an empty list this command returns None or the actual command when num_to_return == 1
+        if num_to_return == 1: # rather than return an empty list this method returns None or the actual command when num_to_return == 1
             if len(pending_list) == 0:
                 return None
             else:
@@ -395,7 +433,7 @@ class CommandQueue:
         
     def get_last_attached(self, user=None):
         
-        _reversed = reversed(self.cmd_list) 
+        _reversed = reversed(self.cmd_list)
         for cmd in _reversed:
             if (cmd.init_user == user) or (user == None):
                 if cmd.in_image != "":
@@ -497,7 +535,7 @@ class CommandQueue:
                 
                 for x in range(repeat_x):
                     cmd_copy = Command(ctx)
-                    del cmd_copy.cmd_args["-x"]
+                    del cmd_copy.cmd_args["-x"] # make sure repeats don't multiply ;)
                     self.cmd_list.append(cmd_copy)
                     
             except Exception as e:
@@ -615,13 +653,19 @@ def _short_cmd_reformat(args):
     
     return new_args
     
+def _get_file_extension_from_url(url):
+    tokens = os.path.splitext(os.path.basename(urllib.parse.urlsplit(url).path))
+    if len(tokens) > 1:
+        return tokens[1]
+    return ""
+    
 async def _download_to_tmp(url):
 
     url = url.lower()
     print("Downloading '" + url + "'...")
     request = requests.get(url, stream = True)
     
-    url_ext = url[url.rfind("."):]
+    url_ext = _get_file_extension_from_url(url)
     tmp_file_path = _get_tmp_path(url_ext)
     
     with open(tmp_file_path, "wb") as out_file:
@@ -654,7 +698,7 @@ def _regularize_image(in_path, out_path, dims): # format an image for 1:1 aspect
     
     return
 
-def _merge_dicts(_d1, d2):
+def _merge_dicts(_d1, d2): # overwrites the attributes in _d1 in merge
     d1 = _d1.copy()
     for x in d2:
         d1[x] = d2[x]
@@ -693,7 +737,7 @@ def _auto_clean():  # delete images and pickles from temporary and output paths
             
     return
     
-def _check_server_roles(ctx, role_name_list):
+def _check_server_roles(ctx, role_name_list): # resolve and check the roles of a user against a list of role name strings
     role_list = []
     for role_name in role_name_list:
         try:
@@ -708,7 +752,7 @@ def _check_server_roles(ctx, role_name_list):
             
     return False
     
-def _p_kill(proc_pid):
+def _p_kill(proc_pid):  # kill all child processes recursively as well, its the only way to be sure
     process = psutil.Process(proc_pid)
     for proc in process.children(recursive=True):
         proc.kill()
@@ -769,7 +813,7 @@ async def _select(ctx, select_mode=0): # crop an image from the user's last outp
             raise Exception("No output images to select")
         
         found_cmd = False
-        _reversed = reversed(CMD_QUEUE.cmd_list) 
+        _reversed = reversed(CMD_QUEUE.cmd_list) # look for the most recently completed command by the requesting user with an attached image and replace it with the selected one
         for cmd in _reversed:
             if cmd.init_user == user:
                 if cmd.status == 2: # completed successfully
@@ -802,7 +846,7 @@ async def shutdown(ctx): # shutdown the bot (only used by the bot owner)
     
 @client.command()
 async def restart(ctx): # restart the bot when the queue is empty (available to admins)
-
+                        # to restart immediately an admin can follow-up with !clear
     global RESTART_NOW
     
     global BOT_ADMIN_ROLE_NAME
@@ -829,18 +873,18 @@ async def clear(ctx): # clear the command queue completely (available to admins)
     if len(tokens) > 1:
         user = tokens[1].strip().lower()
     
-    if user == "":
+    if user == "": # clear the whole queue
         try:
             await ctx.send("Okay @" + ctx.message.author.name + ", clearing the queue... ")
         except:
             print("Error sending acknowledgement")
-    else:
+    else: # clear the requested user's queue
         try:
             await ctx.send("Okay @" + ctx.message.author.name + ", clearing @" + tokens[1].strip() + " from the queue... ")
         except:
             print("Error sending acknowledgement")
             
-    for cmd in CMD_QUEUE.cmd_list:
+    for cmd in CMD_QUEUE.cmd_list: # do the cancelling
         if cmd.status in [0, 1]:
             if user == "":
                 cmd.status = 3 # cancelled
@@ -971,6 +1015,7 @@ async def gselect(ctx):
 async def _process_commands_loop():
 
     global TXT2IMG_ADD_PARAMS
+    global TXT2IMGHD_ADD_PARAMS
     global IMG2IMG_ADD_PARAMS
     global AUTO_SEED_RANGE
     global SD_ROOT_PATH
@@ -1013,13 +1058,15 @@ async def _process_commands_loop():
             hd = ("hd" in cmd.command)       
             
             if not hd:
-                cmd.run_string = "python scripts/txt2img.py"
+                cmd.run_string = 'python "' + BOT_PATH + '/txt2img2.py"'
             else:
                 cmd.run_string = "python scripts/txt2imghd.py"
             
             if not "--prompt" in cmd.cmd_args:
                 cmd.cmd_args = _short_cmd_reformat(cmd.cmd_args)
-            if not hd: cmd.cmd_args = _merge_dicts(cmd.cmd_args, TXT2IMG_ADD_PARAMS)
+            if not hd: cmd.cmd_args = _merge_dicts(TXT2IMG_ADD_PARAMS, cmd.cmd_args)
+            else: cmd.cmd_args = _merge_dicts(TXT2IMGHD_ADD_PARAMS, cmd.cmd_args)
+            
             if not "--seed" in cmd.cmd_args:
                 cmd.cmd_args["--seed"] = auto_seed
             if "--ckpt" in cmd.cmd_args:
@@ -1083,7 +1130,7 @@ async def _process_commands_loop():
                 
                 if not "--prompt" in cmd.cmd_args:
                     cmd.cmd_args = _short_cmd_reformat(cmd.cmd_args)
-                cmd.cmd_args = _merge_dicts(cmd.cmd_args, IMG2IMG_ADD_PARAMS)
+                cmd.cmd_args = _merge_dicts(IMG2IMG_ADD_PARAMS, cmd.cmd_args)
                 if not "--seed" in cmd.cmd_args:
                     cmd.cmd_args["--seed"] = auto_seed                    
                 cmd.cmd_args["--init-img"] = '"' + reg_path + '"'
@@ -1142,7 +1189,7 @@ async def _process_commands_loop():
                     input_path = tmp_file_path
 
                 enhanced_file_path = _get_tmp_path(".png")
-                cmd.cmd_args = _merge_dicts(cmd.cmd_args, ESRGAN_ADD_PARAMS)
+                cmd.cmd_args = _merge_dicts(ESRGAN_ADD_PARAMS, cmd.cmd_args)
                 cmd.cmd_args["-i"] = '"' + input_path + '"'
                 cmd.cmd_args["-o"] = '"' + enhanced_file_path + '"'
                 
