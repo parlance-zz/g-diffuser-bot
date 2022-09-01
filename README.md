@@ -17,10 +17,9 @@
   1. Install the official stable-diffusion public release (https://github.com/CompVis/stable-diffusion) and download the appropriate model checkpoint / weights.
      You should be able to activate the ldm environment and run the example command: python '/scripts/txt2img.py' --prompt 'an astronaut riding a horse on the moon'
   2. Setup your Discord bot in the Discord developer portal. You should have your bot token. By default the bot asks for all "intents" on your server.
-  3. Download g-diffuser-bot.py to folder "stable-diffusion-main/scripts/g-diffuser-bot"
-  4. Open g-diffuser-bot.py in a text editor of your choice and find and replace BOT_TOKEN and SD_ROOT_PATH as appropriate.
-     You may also want to adjust other options here, especially the default server role names for bot admins and bot users.
-     Save your changes.
+  3. Download the contents of this repo into the folder "stable-diffusion-main/scripts/g-diffuser-bot/*"
+  4. Open g-diffuser-bot.py in a text editor of your choice and find and replace BOT_TOKEN, SD_ROOT_PATH, BOT_ADMIN_ROLE_NAME, and BOT_USERS_ROLE_NAME as appropriate.
+     You may also want to adjust other options here. Don't forget to save your changes!
   5. If you are in the stable-diffusion-main folder in a conda prompt with the ldm environment activated,
      run the bot with: python scripts/g-diffuser-bot/g-diffuser-bot.py
   6. All done!
