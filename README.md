@@ -15,3 +15,5 @@ Good luck!
 - WARNING: Be careful when erasing images for in-painting. The windows clipboard will destroy color values in transparent pixels, and some editing programs
            need specific export options to avoid destroying those color values. If your in-painting looks funky or has a huge blotch where you erased, then
            this is probably what happened.
+- Parameter names are now: ["-str", "-scale", "-seed", "-steps", "-x", "-mine", "-all", "-num", "-force", "-user", "-w", "-h", "-n", "-none"]
+-          e.g. !gen this is my prompt -str 0.5 -scale 12 -n 6
