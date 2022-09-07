@@ -14,6 +14,6 @@ Good luck!
 - If you do attach an image and it has an alpha channel, it will be used for in-painting.
 - WARNING: Be careful when erasing images for in-painting. The windows clipboard will destroy color values in transparent pixels, and some editing programs
            need specific export options to avoid destroying those color values. If your in-painting looks funky or has a huge blotch where you erased, then
-           this is probably what happened.
+           this is probably what happened. As a last resort you can use -str 0.99 when in-painting (it won't wreck your image, usually)
 - Parameter names are now: ["-str", "-scale", "-seed", "-steps", "-x", "-mine", "-all", "-num", "-force", "-user", "-w", "-h", "-n", "-none"]
 -          !gen this is an example prompt -str 0.5 -scale 12 -n 6
