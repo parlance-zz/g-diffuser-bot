@@ -1,11 +1,8 @@
 # todo:
 # - setting seeds doesnt work
-# - add !enhance support back in
 # - outpainting
-# - add style transfer function that takes input image and 50% erases it
 # - check for command cancelling between individual pipe calls / samples
-
-#  ??. integrate gfp-gan to fix faces
+# - ?? fix the diffusers inpainter pipeline - noise not being added, strength should decay to 0 over steps
 
 from g_diffuser_bot_params import *
 
@@ -18,6 +15,9 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from PIL import Image
 from PIL import ImageFilter
 from PIL import ImageEnhance
+import skimage
+from skimage.exposure import match_histograms
+
 import PIL
 import numpy as np
 import asyncio
@@ -32,6 +32,52 @@ from diffusers import StableDiffusionImg2ImgPipeline
 from diffusers import StableDiffusionInpaintPipeline
 from diffusers import LMSDiscreteScheduler
 
+DEFAULT_RESOLUTION = (512, 512)
+RESOLUTION_GRANULARITY = 64
+
+def _get_image_colors(np_image, np_mask, cutoff=0.99): # returns an array consisting of all unmasked colors in src img
+                                                      # (does not dedupe and count, not a real histogram)
+    width = np_image.shape[0]
+    height = np_image.shape[1]
+    
+    inverted_mask = 1. - np_mask
+    histogram = []
+    for y in range(height):
+        for x in range(width):
+            if np_mask[x,y] < cutoff:
+                histogram.append((np_image[x,y,0],np_image[x,y,1],np_image[x,y,2]))
+                
+    return np.asarray(histogram)
+    
+def _valid_resolution(width, height, init_image=None): # cap max dimension at max res and ensure size is 
+                                                       # a correct multiple of granularity while
+                                                       # preserving aspect ratio (best we can anyway)
+    global RESOLUTION_GRANULARITY
+    global DEFAULT_RESOLUTION
+    global MAX_RESOLUTION
+    
+    if not init_image:
+        if not width: width = DEFAULT_RESOLUTION[0]
+        if not height: height = DEFAULT_RESOLUTION[1]
+    else:
+        if not width: width = init_image.size[0]
+        if not height: height = init_image.size[1]
+        
+    aspect_ratio = width / height 
+    if width > MAX_RESOLUTION[0]:
+        width = MAX_RESOLUTION[0]
+        height = int(width / aspect_ratio + .5)
+    if height > MAX_RESOLUTION[1]:
+        height = MAX_RESOLUTION[1]
+        width = int(height * aspect_ratio + .5)
+        
+    width = int(width / float(RESOLUTION_GRANULARITY) + 0.5) * RESOLUTION_GRANULARITY
+    height = int(height / float(RESOLUTION_GRANULARITY) + 0.5) * RESOLUTION_GRANULARITY
+    if width < RESOLUTION_GRANULARITY: width = RESOLUTION_GRANULARITY
+    if height < RESOLUTION_GRANULARITY: height = RESOLUTION_GRANULARITY
+
+    return width, height
+    
 def _get_tmp_path(file_extension):
     global TMP_ROOT_PATH
     try: # try to make sure temp folder exists
@@ -39,6 +85,24 @@ def _get_tmp_path(file_extension):
     except Exception as e:
         print("Error creating temp path: '" + TMP_ROOT_PATH + "' - " + str(e))
     return TMP_ROOT_PATH + "/" + str(uuid.uuid4()) + file_extension
+
+def _save_debug_img(np_image, name):
+    global DEBUG_MODE
+    if not DEBUG_MODE: return
+    global TMP_ROOT_PATH
+    
+    image_path = TMP_ROOT_PATH + "/_debug_" + name + ".png"
+    if type(np_image) == np.ndarray:
+        if np_image.ndim == 2:
+            mode = "L"
+        elif np_image.shape[2] == 4:
+            mode = "RGBA"
+        else:
+            mode = "RGB"
+        pil_image = PIL.Image.fromarray(np.clip(np_image*255., 0., 255.).astype(np.uint8), mode=mode)
+        pil_image.save(image_path)
+    else:
+        np_image.save(image_path)
     
 def _dummy_checker(images, **kwargs): # replacement func to disable safety_checker in diffusers
     return images, False
@@ -47,9 +111,7 @@ def _factorize(num):
     return [n for n in range(1, num + 1) if num % n == 0]
     
 def _get_grid_layout(num_samples):
-    
     factors = _factorize(num_samples)
-    
     median_factor = factors[len(factors)//2]
     columns = median_factor
     rows = num_samples // columns
@@ -66,17 +128,153 @@ def _image_grid(imgs, layout): # make an image grid out of a set of images
         grid.paste(img, box=(i%layout[1]*w, i//layout[1]*h))
     return grid
 
-def _premultiply_alpha(im):
-    pixels = im.load()
-    for y in range(im.size[1]):
-        for x in range(im.size[0]):
-            r, g, b, a = pixels[x, y]
-            if a != 255:
-                r = r * a // 255
-                g = g * a // 255
-                b = b * a // 255
-                pixels[x, y] = (r, g, b, a)
-                
+# helper fft routines that keep ortho normalization and auto-shift before and after fft
+def _fft2(data):
+    if data.ndim > 2: # has channels
+        out_fft = np.zeros((data.shape[0], data.shape[1], data.shape[2]), dtype=np.complex128)
+        for c in range(data.shape[2]):
+            c_data = data[:,:,c]
+            out_fft[:,:,c] = np.fft.fft2(np.fft.fftshift(c_data),norm="ortho")
+            out_fft[:,:,c] = np.fft.ifftshift(out_fft[:,:,c])
+    else: # one channel
+        out_fft = np.zeros((data.shape[0], data.shape[1]), dtype=np.complex128)
+        out_fft[:,:] = np.fft.fft2(np.fft.fftshift(data),norm="ortho")
+        out_fft[:,:] = np.fft.ifftshift(out_fft[:,:])
+    
+    return out_fft
+   
+def _ifft2(data):
+    if data.ndim > 2: # has channels
+        out_ifft = np.zeros((data.shape[0], data.shape[1], data.shape[2]), dtype=np.complex128)
+        for c in range(data.shape[2]):
+            c_data = data[:,:,c]
+            out_ifft[:,:,c] = np.fft.ifft2(np.fft.fftshift(c_data),norm="ortho")
+            out_ifft[:,:,c] = np.fft.ifftshift(out_ifft[:,:,c])
+    else: # one channel
+        out_ifft = np.zeros((data.shape[0], data.shape[1]), dtype=np.complex128)
+        out_ifft[:,:] = np.fft.ifft2(np.fft.fftshift(data),norm="ortho")
+        out_ifft[:,:] = np.fft.ifftshift(out_ifft[:,:])
+        
+    return out_ifft
+            
+def _get_gaussian_window(width, height, hardness=3.14):
+
+    window_scale_x = float(width / min(width, height))
+    window_scale_y = float(height / min(width, height))
+    
+    window = np.zeros((width, height))
+    x = (np.arange(width) / width * 2. - 1.) * window_scale_x
+    for y in range(height):
+        fy = (y / height * 2. - 1.) * window_scale_y
+        window[:, y] = np.exp(-(x**2+fy**2) * hardness)
+    return window
+
+def _get_masked_window(np_mask_grey, hardness=1.):
+    
+    width = np_mask_grey.shape[0]
+    height = np_mask_grey.shape[1]
+
+    #blur_kernel = _get_gaussian_window(width*3, height*3) # window the padded image mask to avoid bleeding from corners as much
+    padded = np.ones((width*3,height*3))
+    padded[width:width*2,height:height*2] = (np_mask_grey[:] > 0.99).astype(np.float64)
+    
+    _save_debug_img(padded, "padded")
+     
+    gaussian = _get_gaussian_window(width*3, height*3, hardness=1e6) # todo: derive magic constant
+    padded_fft = _fft2(padded[:]) * gaussian
+    padded_blurred = np.real(_ifft2(padded_fft[:]))
+    padded_blurred -= np.min(padded_blurred)
+    padded_blurred /= np.max(padded_blurred)
+    padded_blurred = np.exp(-padded_blurred**2 * 2e4)# todo: derive magic constant
+    
+    
+    _save_debug_img(padded_blurred, "padded_blurred")
+    _save_debug_img(gaussian, "gaussian")
+    
+    cropped = padded_blurred[width:width*2,height:height*2]
+    cropped = np.clip(cropped / np.max(padded_blurred) * hardness, 0., 1.)
+    
+    _save_debug_img(cropped, "cropped")
+    return 1.-cropped
+
+"""
+ By taking an fft of the greyscale src img we get a function that tells us the presence and orientation of each visible feature scale.
+ Shaping the seed noise to the same distribution of feature scales and orientations increases in/out-painted output quality.
+ 
+ np_src_image is a float64 np array of shape [width,height,3] normalized to 0..1
+ np_mask_rgb is a float64 np array of shape [width,height,3] normalized to 0..1
+ noise_q controls the exponent in the fall-off of the distribution can be any positive number (default 1.)
+ returns shaped noise for blending into the src image with the supplied mask ( [width,height,3] normalized to 0..1 )
+"""
+def _get_multiscale_noise(_np_src_image, np_mask_rgb, noise_q): 
+
+    global DEBUG_MODE
+    global TMP_ROOT_PATH
+    
+    width = _np_src_image.shape[0]
+    height = _np_src_image.shape[1]
+    num_channels = _np_src_image.shape[2]
+
+    np_src_image = _np_src_image[:] * (1. - np_mask_rgb)
+    np_mask_grey = (np.sum(np_mask_rgb, axis=2)/3.) 
+    np_src_grey = (np.sum(np_src_image, axis=2)/3.) 
+
+    noise_window = _get_gaussian_window(width, height)
+    noise = np.random.random_sample((width, height))*2. - 1.
+    noise_fft = _fft2(noise) * noise_window
+    noise = np.real(_ifft2(noise_fft)) # start with simple gaussian noise
+    
+    histogram = _get_image_colors(_np_src_image, np_mask_grey)
+    color_indices = np.random.randint(len(histogram), size=(width,height))
+    
+    shaped_noise = np.zeros((width, height, num_channels))    
+    for y in range(height):
+        for x in range(width):
+            shaped_noise[x,y,:] = noise[x,y] * histogram[color_indices[x,y],:]
+    original_shaped_noise_mag = np.sum(shaped_noise**2)**(1/2)
+    
+    windowed_image = np_src_grey * (1.-_get_masked_window(np_mask_grey)) # the output quality is extremely sensitive to windowing to avoid non-features
+    windowed_image /= np.max(windowed_image)
+    _save_debug_img(windowed_image, "windowed_src_img")
+    src_dist = np.absolute(_fft2(windowed_image))
+    _save_debug_img(src_dist, "windowed_src_dist")
+    
+    shaped_noise_fft = _fft2(shaped_noise)
+    for c in range(num_channels):
+        shaped_noise_fft[:,:,c] *= src_dist ** noise_q
+    shaped_noise = np.real(_ifft2(shaped_noise_fft))
+    tmp_shaped_noise_mag = np.sum(shaped_noise**2)**(1/2)
+    shaped_noise = shaped_noise / tmp_shaped_noise_mag * original_shaped_noise_mag + 0.5 # brighten it back up to approx the same brightness, the histogram matching will fine-tune
+    _save_debug_img(shaped_noise, "shaped_noise")
+    
+    img_mask = np.ones((width, height), dtype=bool)
+    ref_mask = np_mask_grey < 0.99
+    matched_noise = np.zeros((width, height, num_channels))
+    matched_noise[img_mask,:] = skimage.exposure.match_histograms(shaped_noise[img_mask,:], _np_src_image[ref_mask,:], channel_axis=1)
+    
+    """
+    color_variation = 0.1
+    if color_variation > 0:
+        variation = np.random.random_sample((width, height, num_channels)) * 2. - 1.
+        matched_noise *= np.exp(variation * color_variation)
+    """
+    
+    """
+    todo:
+     1. we could generate a new sample with txt2img and the same prompt, then blend the sample histogram
+        with the source image histogram before histogram-matching the shaped noise, which would greatly enhance outcomes for src images
+        that have been mostly erased, and enhance color variation overall
+    
+     2. we could also project the phases of the shaped noise in frequency space to align with the phases of the src image in freq space
+        this would help features line-up a bit better and increase coherence and quality
+    
+     3. finally, the output of the in-painting pipeline could be fed into the img2img pipeline with a very low and same prompt to
+        merge the in-paint just a teensy bit better at the cost of small changes to unmasked areas
+        
+    """
+    
+    return np.clip(matched_noise, 0., 1.)
+    
 class CommandServer(BaseHTTPRequestHandler): # http command server
 
     def do_GET(self): # get command server status on GET
@@ -121,6 +319,7 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
             self.wfile.write(bytes(response_json, "utf-8"))
                     
         except Exception as e:
+            raise
             print("Error sending command response - " + str(e) + "\n")
         
         return
@@ -153,6 +352,8 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
             width = int(cmd["cmd_args"]["-w"]) if "-w" in cmd["cmd_args"] else None
             height = int(cmd["cmd_args"]["-h"]) if "-h" in cmd["cmd_args"] else None
             num_inference_steps = int(cmd["cmd_args"]["-steps"]) if "-steps" in cmd["cmd_args"] else None
+            noise_factor = float(cmd["cmd_args"]["-noise"]) if "-noise" in cmd["cmd_args"] else 1.
+            noise_q = float(cmd["cmd_args"]["-noise_q"]) if "-noise_q" in cmd["cmd_args"] else 0.99
         except Exception as e:
             cmd["status"] = -1 # error status
             cmd["error_txt"] = "Error getting params '" + str(e) + "'"
@@ -163,10 +364,6 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
         
         # check params
         try:
-            if width:
-                width = min(width, MAX_RESOLUTION[0])
-            if height:
-                height = min(height, MAX_RESOLUTION[1])
             if num_inference_steps:
                 num_inference_steps = min(num_inference_steps, MAX_STEPS_LIMIT)
             if strength:
@@ -175,35 +372,26 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
                 guidance_scale = max(guidance_scale, 0.0)
             if num_samples:
                 num_samples = min(num_samples, MAX_OUTPUT_LIMIT)
-                
-            mask_image = None
+            
             if init_image:
                 try:
                     init_image = Image.open(init_image)
-                    
-                    if not width:
-                        width = init_image.size[0]
-                    if not height:
-                        height = init_image.size[1]
-                    
-                    # input images must be sized to a multiple of 32, additionally we set a minimum size
+                except Exception as e:
+                    raise 
+                    cmd["status"] = -1 # error status
+                    cmd["error_txt"] = "Error loading img or mask '" + str(e) + "'"
+                    print(cmd["error_txt"] + "\n")
+                    return cmd
 
-                    n_width = int(int(width / 32. + 0.5) * 32)
-                    n_height = int(int(height / 32. + 0.5) * 32)
-                    if n_width < 32: n_width = 32
-                    if n_height < 32: n_height = 32
-                    if (n_width != width) or (n_height != height) or (init_image.size != (width,height)):
-                        print("Resizing img to (" + str(width) + ", " + str(height) + ")")
-                        
-                        # due to a stupid bug in PIL we have to manually pre-multiply the colors by alpha before resize if we have an alpha channel
-                        #if init_image.mode == "RGBA":
-                        #    _premultiply_alpha(init_image)
-                            
-                        init_image = init_image.resize((n_width, n_height), resample=PIL.Image.LANCZOS)
-                        width = n_width
-                        height = n_height
-                    
-                    # make mask_image
+            width, height = _valid_resolution(width, height, init_image=init_image)
+            
+            if init_image:
+                try:
+                    if (width, height) != init_image.size: # default size is native img size
+                        print("Resizing input img to (" + str(width) + ", " + str(height) + ")")    
+                        init_image = init_image.resize((width, height), resample=PIL.Image.LANCZOS)
+
+                    # extract mask_image from alpha
                     if init_image.mode == "RGBA":
                         mask_image = init_image.split()[-1]
                         mask_image = PIL.ImageOps.invert(mask_image)
@@ -213,90 +401,39 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
                         if not mask_image.getbbox(): # if mask is all opaque anyway just use regular img2img pipe
                             mask_image = None
                         else:
-                            # add noise to erased area inversely proportional to str
-                            # todo: this is a total hack job
                             np_init = (np.asarray(init_image.convert("RGB"))/255.0).astype(np.float64)
-                            np_mask_a = (np.asarray(mask_image.convert("L"))/255.0).astype(np.float64)
                             np_mask_rgb = (np.asarray(mask_image.convert("RGB"))/255.0).astype(np.float64)
-                            mean_r = np.sum(np_init[:,:,0]) / width / height
-                            mean_g = np.sum(np_init[:,:,1]) / width / height
-                            mean_b = np.sum(np_init[:,:,2]) / width / height
-                            var_r = np.sum((np_init[:,:,0] - mean_r)**2) / width / height 
-                            var_g = np.sum((np_init[:,:,1] - mean_g)**2) / width / height
-                            var_b = np.sum((np_init[:,:,2] - mean_b)**2) / width / height
                             
-                            assert(strength != None)
+                            noised_image = init_image.copy()
+                            noised = np.asarray(noised_image)/255.
                             
-                            # todo: too many magic numbers
-                            color_tone_freedom = (strength ** 2) * 0.12
-                            num_blend_steps = 3
-                            blend_step_radius = 83.8 # 61.8
-                            blend_step_final_radius = 0.618
-                            
-                            noise_factor = 0.2
-
-                            if strength > 0.98:
-                                strength = 0.81
-                                noise_factor = 0.69               
-                            elif strength > 0.91:
-                                strength = 0.74
-                                noise_factor = 0.57
-                            elif strength > 0.79:
-                                strength = 0.66
-                                noise_factor = 0.44
-                            elif strength > 0.58:
-                                strength = 0.52
-                                noise_factor = 0.31
-
-                            var_r *= 1. + color_tone_freedom
-                            var_g *= 1. + color_tone_freedom
-                            var_b *= 1. + color_tone_freedom
-                            np_mask_a_scaled = np_mask_a[:] * noise_factor
-                            np_mask_rgb_scaled = np_mask_rgb[:] * noise_factor
-                            
-                            noised = np_init[:].copy()
-                            noised[:,:,0] = mean_r
-                            noised[:,:,1] = mean_g
-                            noised[:,:,2] = mean_b
-                            
-                            for i in range(num_blend_steps):
-                                noise_r = np.random.normal(0.,var_r**0.5,(width,height))
-                                noise_g = np.random.normal(0.,var_g**0.5,(width,height))
-                                noise_b = np.random.normal(0.,var_b**0.5,(width,height))
-                                noised[:,:,0] += noise_r
-                                noised[:,:,1] += noise_g
-                                noised[:,:,2] += noise_b
+                            if noise_factor > 0.0:
+                                noise_rgb = _get_multiscale_noise(np_init, np_mask_rgb, noise_q)
+                                noised = np_init[:] * (1. - np_mask_rgb)
+                                noised[:] += noise_rgb * np_mask_rgb * noise_factor
                                 noised_image = PIL.Image.fromarray(np.clip(noised * 255., 0., 255.).astype(np.uint8), mode="RGB")
-                                if (i < (num_blend_steps-1)):
-                                    noised_image = noised_image.filter(ImageFilter.GaussianBlur(radius=blend_step_radius))
-                                    noised = np.asarray(noised_image.convert("RGB"))/255.
-                                else:
-                                    if blend_step_final_radius > 0:
-                                        noised_image = noised_image.filter(ImageFilter.GaussianBlur(radius=blend_step_final_radius))
-                                        noised = np.asarray(noised_image.convert("RGB"))/255.
-                                        
-                                noised[:] = np_init[:] * (1. - np_mask_rgb_scaled) + noised[:] * np_mask_rgb_scaled
                             
-                            init_image = PIL.Image.fromarray((noised.clip(0., 1.)*255.).astype(np.uint8), mode="RGB")
-                            try: # these are helpful for debugging in-painting
-                                init_image.save(TMP_ROOT_PATH + "/_debug_init_img.png")
-                                mask_image.save(TMP_ROOT_PATH + "/_debug_mask_img.png")
-                            except Exception as e:
-                                print("Error saving debug images - " + str(e))
+                            init_image = noised_image.copy()                            
+                            _save_debug_img(init_image, "init_img")
+                            _save_debug_img(mask_image, "mask_img")
                     
                     if mask_image: # choose a pipe
                         pipe = IMG_INP_DIFFUSERS_PIPE
-                        
                     else:
                         pipe = IMG2IMG_DIFFUSERS_PIPE
 
                 except Exception as e:
+                    raise 
                     cmd["status"] = -1 # error status
                     cmd["error_txt"] = "Error loading img or mask '" + str(e) + "'"
                     print(cmd["error_txt"] + "\n")
                     return cmd
-                
+            
+            else: # txt2img
+                print("")
+                        
         except Exception as e:
+            raise
             cmd["status"] = -1 # error status
             cmd["error_txt"] = "Error checking params '" + str(e) + "'"
             print(cmd["error_txt"] + "\n")
@@ -304,13 +441,6 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
             
         with autocast("cuda"):
             try:
-                """
-                try:
-                    pipe.to("cuda") # use gpu pls
-                except:
-                    print("Error moving model to cuda in pipe.to() \n")
-                """
-
                 # finally generate the actual samples
                 samples = []
                 for i in range(num_samples):
@@ -327,16 +457,10 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
                     samples.append(sample["sample"][0])
                     
             except Exception as e:
+                raise
                 cmd["status"] = -1 # error status
                 cmd["error_txt"] = "Error in diffuser pipeline '" + str(e) + "'"
                 print(cmd["error_txt"] + "\n")
-            
-            """
-            try:
-                pipe.to("cpu") # reclaim gpu memory
-            except:
-                print("Error moving model to cpu in pipe.to() \n")
-            """
         
         if cmd["status"] != -1: # if no error so far, save outputs and set success status
             try:
@@ -470,45 +594,3 @@ if __name__ == "__main__":
     else:
     
         print("Please run python g_diffuser_bot.py to start the G-Diffuser-Bot")
-
-
-"""
-    elif cmd.command in ["!enhance"]:
-    
-        try:
-            cmd.status = 1 # in-progress
-            cmd.start_time = datetime.datetime.now()
-            
-            input_path = cmd.in_image
-            if input_path == "": input_path = CMD_QUEUE.get_last_attached(user=cmd.init_user)
-            if input_path == "":
-                cmd.error_txt = "No attached image"
-                cmd.status = -1 # error
-            else:
-            
-                if not input_path.endswith(".png"):
-                    img = Image.open(input_path)
-                    tmp_file_path = _get_tmp_path(".png")
-                    img.save(tmp_file_path)
-                    img.close()
-                    input_path = tmp_file_path
-
-                enhanced_file_path = _get_tmp_path(".png")
-                cmd.cmd_args = _merge_dicts(ESRGAN_ADD_PARAMS, cmd.cmd_args)
-                cmd.cmd_args["-i"] = '"' + input_path + '"'
-                cmd.cmd_args["-o"] = '"' + enhanced_file_path + '"'
-                
-                cmd.run_string = _join_args(ESRGAN_PATH, cmd.cmd_args)
-                return_code = await _run_cmd(cmd.run_string, cmd)
-                
-                if cmd.status != 3: # cancelled
-                    if return_code != 0:
-                        cmd.error_txt = "Error returned by command"
-                        cmd.status = -1  # error
-                    else:
-                        print(enhanced_file_path)
-                        cmd.out_image = enhanced_file_path
-                        cmd.out_resolution = (512 * 4, 512 * 4)
-                        cmd.out_preview_image_layout = (1, 1)
-                        cmd.status = 2 # success
-"""

@@ -8,7 +8,6 @@
  1.5 make commands use your current input image again by default
  2. wait until command server is running before _process_commands loop, otherwise keep commands waiting
  2.5 send command cancel notice for currently running commands to server so it can abort ASAP
- 2.75 add color variation and noise factor override params
  
  3. write and test setup.py (install additional modules and latest diffusers)
  4. rewrite !help
