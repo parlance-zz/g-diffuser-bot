@@ -1,3 +1,5 @@
+Sept 09/2022 Update - Improving and working on in/out painting. Color values under mask are no longer required for good results.
+
 Real instructions and documentation to come later, but if you're feeling brave:
 
 Install instructions:
