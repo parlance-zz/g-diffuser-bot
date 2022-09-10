@@ -2,42 +2,36 @@
 
 # IMPORTANT - Sign up for a Discord developer account if you don't have one, create a new app, bot, then put your Discord bot token here
 # Discord developers site: https://discordapp.com/developers/applications/ instructions: https://www.writebots.com/discord-bot-token/
-BOT_TOKEN = "BOT_TOKEN_HERE"
-
+BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"
 BOT_ADMIN_ROLE_NAME = "ADMIN_ROLE_NAME_HERE"  # IMPORTANT - use your server / guild group names here accordingly, check the help text for command permissions
-BOT_USERS_ROLE_NAME = "USER_ROLE_NAME_HERE" # if you want anyone to be able to use the bot, change this to "everyone"
-
+BOT_USERS_ROLE_NAME = "USER_ROLE_NAME_HERE"   # if you want anyone to be able to use the bot, change this to "everyone"
 BOT_COMMAND_PREFIX = "!"
 BOT_ACTIVITY = "The way of the future..."
-BOT_USE_OPTIMIZED = False             # IMPORTANT - Set to true if you encounter errors running commands due to low memory
+BOT_USE_OPTIMIZED = False                     # IMPORTANT - Set to true if you encounter errors running commands due to low memory
 
 # IMPORTANT - Sign up for an account on https://www.huggingface.co and accept the terms to use stable diffusion
 # Create an access token at https://huggingface.co/settings/tokens and enter your token below:
-#CMD_SERVER_MODEL_NAME = "CompVis/stable-diffusion-v1-4"
-CMD_SERVER_MODEL_SCHEDULER = "default" # samplers are called schedulers in the diffusers library
-#HUGGINGFACE_TOKEN = "HUGGINGFACE_TOKEN" 
-
-# alternatively if you follow the local download instructions, make this the local relative path to the downloaded folder"
-CMD_SERVER_MODEL_NAME = "./stable-diffusion-v1-4" # local folder download path instead of token
-#CMD_SERVER_MODEL_SCHEDULER = "LMS" # this is the only alternative "sampler" in the diffusers library right now
-HUGGINGFACE_TOKEN = None
+HUGGINGFACE_TOKEN = "YOUR_HUGGINGFACE_ACCESS_TOKEN"     # if you use a locally downloaded diffusers model you can comment this line out
+CMD_SERVER_MODEL_NAME = "CompVis/stable-diffusion-v1-4"
+#CMD_SERVER_MODEL_NAME = "./stable-diffusion-v1-4"      #  if you use a locally downloaded diffusers model then make this the relative path to the downloaded folder"
                        
 # default paths
 from pathlib import Path
 ROOT_PATH = str(Path(__file__).parent.absolute())
 TMP_ROOT_PATH = ROOT_PATH + "/tmp"                               # make sure this is a valid path (it will be created if it does not exist)
 BACKUP_PATH = ROOT_PATH + "/backup"                              # make sure this is a valid path (it will be created if it does not exist)
-BOT_STATE_DATA_FILE = ROOT_PATH + "/g-diffuser-bot.json"       # used for persisting command queue, top user list and input image paths
-BOT_LOG_FILE_PATH = ROOT_PATH + "/g-diffuser-bot.log"          # keep a text log of commands
+BOT_STATE_DATA_FILE = ROOT_PATH + "/g-diffuser-bot.json"         # used for persisting command queue, top user list and input image paths
+BOT_LOG_FILE_PATH = ROOT_PATH + "/g-diffuser-bot.log"            # keep a text log of commands
+SERVER_LOG_FILE_PATH = ROOT_PATH + "/diffuser-server.log"
 
 # default params for commands, these are overriden by any user supplied params
-DEFAULT_CMD_PARAMS = { "-n": 1, "-steps": "50", "-scale": "9.5", "-str": "0.55", "-noise_q": "0.9" }
+DEFAULT_CMD_PARAMS = { "-n": 1, "-steps": "50", "-scale": "10.", "-str": "0.5" }
 AUTO_SEED_RANGE = (1,999999)
 MAX_STEPS_LIMIT = 300
 MAX_REPEAT_LIMIT = 100             # max number of repetitions that can be used with the -x param
 MAX_OUTPUT_LIMIT = 6               # max number of samples to create with -n param
 MAX_RESOLUTION = (768, 768)        # max resolution to avoid erroring out of memory
-MAX_STRENGTH = 0.99
+MAX_STRENGTH = 0.999999999
 
 QUEUE_MODE = 0                     # 0 for round-robin, 1 for first come first serve
 QUEUE_POLL_INTERVAL = 0.5          # how often should the queue look for new commands to begin processing (in seconds)
@@ -52,7 +46,7 @@ TMP_CLEAN_PATHS = [
 ]
 
 # merged list of all valid options / parameters for all commands
-PARAM_LIST = ["-str", "-scale", "-seed", "-steps", "-x", "-mine", "-all", "-num", "-force", "-user", "-w", "-h", "-n", "-none", "-noise", "-noise_q"]
+PARAM_LIST = ["-str", "-scale", "-seed", "-steps", "-x", "-mine", "-all", "-num", "-force", "-user", "-w", "-h", "-n", "-none", "-color", "-noise_q"]
 
 # by default the command server runs and binds to localhost for local connections only
 CMD_SERVER_BIND_HTTP_HOST = "localhost"
