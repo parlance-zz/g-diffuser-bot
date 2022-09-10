@@ -2,14 +2,7 @@ Real instructions and documentation to come later, but if you're feeling brave:
 
 Install instructions:
  - Install Python 3.8.5ish, in a conda env if you wish
- - pip install numpy
- - pip install image
- - pip scikit-image
- - pip install discord
- - pip install psutil
- - pip install pytimeparse
- - pip install torch
- - pip install --upgrade diffusers
+ - pip install numpy image scikit-image discord psutil pytimeparse torch diffusers transformers
 
 You'll need a huggingface token if you don't already have one (or alternatively download the local model for the SD1.4 for diffusers), then edit g_diffuser_bot_params.py and review / change the values there. (https://huggingface.co/CompVis/stable-diffusion-v1-4)
 
