@@ -397,10 +397,10 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
                             np_mask_rgb = 1. - np_mask_rgb
                             _save_debug_img(np_mask_rgb, "np_mask_rgb1")
                             np_mask_rgb_hardened = 1. - (np_mask_rgb < 0.99).astype(np.float64)
-                            blurred = skimage.filters.gaussian(np_mask_rgb_hardened[:], sigma=32, channel_axis=2, truncate=32.)
+                            blurred = skimage.filters.gaussian(np_mask_rgb_hardened[:], sigma=32., channel_axis=2, truncate=32.)
                             #np_mask_rgb_dilated = np_mask_rgb + blurred  # fixup mask todo: derive magic constants
-                            np_mask_rgb = np_mask_rgb + blurred
-                            np_mask_rgb = np.clip(np_mask_rgb*0.7071, 0., 1.)
+                            #np_mask_rgb = np_mask_rgb + blurred
+                            np_mask_rgb = np.clip((np_mask_rgb + blurred) * 0.7, 0., 1.)
                             np_mask_rgb_dilated = np_mask_rgb[:]
                             _save_debug_img(np_mask_rgb, "np_mask_rgb2")
                             
@@ -451,7 +451,8 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
                         
                         noise_rgb = _get_matched_noise(np_init, np_mask_rgb_dilated, noise_q, color_variation)
                         blend_mask_rgb = (np_mask_rgb_dilated ** mask_blend_factor)
-                        #noised = np_init[:] * (1. - blend_mask_rgb) + noise_rgb * blend_mask_rgb
+                        #noised = (np_init[:] ** (1. - blend_mask_rgb)) * (noise_rgb ** blend_mask_rgb)
+                        blend_mask_rgb **= 16.# this constant controls how much to weight color tone control, either from noise or src in overlap region
                         noised = (np_init[:] ** (1. - blend_mask_rgb)) * (noise_rgb ** blend_mask_rgb)
                         _save_debug_img(noised, "noised_" + str(i+1))
                         
