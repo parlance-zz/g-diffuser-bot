@@ -1,5 +1,10 @@
 Sept 10/2022 Update - The first functioning implementation of the in/out-paint system is finally complete. Please try it ASAP! It's awesome!!
 
+Edit: I have a feeling the outpaint implementation may garner some traffic. Please forgive the implementation as I've been very busy and trying
+to write code as fast as psosible. This software is distributed under the Unlicense (https://unlicense.org/) and you are under no obligation, but
+if you could find it in your heart to credit me that would be appreciated. If you're looking for the implementation it can be found in _get_matched_noise
+in diffuser_server.py. Thank you.
+
 Real instructions and documentation to come later, but if you're feeling brave:
 
 Install instructions:
