@@ -137,7 +137,7 @@ def _ifft2(data):
         
     return out_ifft
             
-def _get_gaussian_window(width, height, std=3.14):
+def _get_gaussian_window(width, height, std=3.14, mode=0):
 
     window_scale_x = float(width / min(width, height))
     window_scale_y = float(height / min(width, height))
@@ -146,14 +146,22 @@ def _get_gaussian_window(width, height, std=3.14):
     x = (np.arange(width) / width * 2. - 1.) * window_scale_x
     for y in range(height):
         fy = (y / height * 2. - 1.) * window_scale_y
-        window[:, y] = np.exp(-(x**2+fy**2) * std)
+        if mode == 0:
+            window[:, y] = np.exp(-(x**2+fy**2) * std)
+        else:
+            window[:, y] = (1/((x**2+1.) * (fy**2+1.))) ** (std/3.14) # hey wait a minute that's not gaussian
+            
     return window
 
-def _get_masked_window(np_mask_grey, hardness=1.):
+def _get_masked_window_rgb(np_mask_grey, hardness=1.):
+    np_mask_rgb = np.zeros((np_mask_grey.shape[0], np_mask_grey.shape[1], 3))
     if hardness != 1.:
-        return np_mask_grey ** hardness
+        hardened = np_mask_grey[:] ** hardness
     else:
-        return np_mask_grey
+        hardened = np_mask_grey[:]
+    for c in range(3):
+        np_mask_rgb[:,:,c] = hardened[:]
+    return np_mask_rgb
 
 """
  Explanation:
@@ -193,13 +201,14 @@ def _get_matched_noise(_np_src_image, np_mask_rgb, noise_q, color_variation):
     np_src_image = _np_src_image[:] * (1. - np_mask_rgb)
     np_mask_grey = (np.sum(np_mask_rgb, axis=2)/3.) 
     np_src_grey = (np.sum(np_src_image, axis=2)/3.) 
-    img_mask = np.ones((width, height), dtype=bool)
+    all_mask = np.ones((width, height), dtype=bool)
+    img_mask = np_mask_grey > 0.5
     ref_mask = np_mask_grey < 0.5
     
-    windowed_image = np_src_grey * (1.-_get_masked_window(np_mask_grey))
+    windowed_image = _np_src_image * (1.-_get_masked_window_rgb(np_mask_grey))
     windowed_image /= np.max(windowed_image)
-    windowed_image += np.average(np_src_grey) * np_mask_grey / (1.-np.average(np_mask_grey))  # rather than leave the masked area black, we get better results from fft by filling the average unmasked color
-    windowed_image += np.average(np_src_grey) * (np_mask_grey * (1.- np_mask_grey)) / (1.-np.average(np_mask_grey)) # compensate for darkening across the mask transition area
+    windowed_image += np.average(_np_src_image) * np_mask_rgb# / (1.-np.average(np_mask_rgb))  # rather than leave the masked area black, we get better results from fft by filling the average unmasked color
+    #windowed_image += np.average(_np_src_image) * (np_mask_rgb * (1.- np_mask_rgb)) / (1.-np.average(np_mask_rgb)) # compensate for darkening across the mask transition area
     _save_debug_img(windowed_image, "windowed_src_img")
     
     src_fft = _fft2(windowed_image) # get feature statistics from masked src img
@@ -207,7 +216,7 @@ def _get_matched_noise(_np_src_image, np_mask_rgb, noise_q, color_variation):
     src_phase = src_fft / src_dist
     _save_debug_img(src_dist, "windowed_src_dist")
     
-    noise_window = _get_gaussian_window(width, height)  # start with simple gaussian noise
+    noise_window = _get_gaussian_window(width, height, mode=1)  # start with simple gaussian noise
     noise_rgb = np.random.random_sample((width, height, num_channels))
     noise_grey = (np.sum(noise_rgb, axis=2)/3.) 
     noise_rgb *=  color_variation # the colorfulness of the starting noise is blended to greyscale with a parameter
@@ -219,31 +228,34 @@ def _get_matched_noise(_np_src_image, np_mask_rgb, noise_q, color_variation):
         noise_fft[:,:,c] *= noise_window
     noise_rgb = np.real(_ifft2(noise_fft))
     shaped_noise_fft = _fft2(noise_rgb)
-    for c in range(num_channels):
-        shaped_noise_fft[:,:,c] = np.absolute(shaped_noise_fft[:,:,c])**2 * (src_dist ** noise_q) * src_phase # perform the actual shaping
+    shaped_noise_fft[:,:,:] = np.absolute(shaped_noise_fft[:,:,:])**2 * (src_dist ** noise_q) * src_phase # perform the actual shaping
     
-    brightness_variation = color_variation # todo: temporarily tieing brightness variation to color variation for now
-    contrast_adjusted_np_src = _np_src_image[:] * (brightness_variation*2. + 1.) - brightness_variation
+    brightness_variation = 0.#color_variation # todo: temporarily tieing brightness variation to color variation for now
+    contrast_adjusted_np_src = _np_src_image[:] * (brightness_variation + 1.) - brightness_variation * 2.
     
     # scikit-image is used for histogram matching, very convenient!
     shaped_noise = np.real(_ifft2(shaped_noise_fft))
-    shaped_noise = np.clip(shaped_noise / np.max(shaped_noise), 0., 1.)
-    shaped_noise[img_mask,:] = skimage.exposure.match_histograms(shaped_noise[img_mask,:], contrast_adjusted_np_src[ref_mask,:], channel_axis=1)
+    
+    #shaped_noise -= np.min(shaped_noise)
+    shaped_noise = np.clip(shaped_noise/ np.max(shaped_noise), 0., 1.)
+    #shaped_noise_blended = _np_src_image[:] * (1. - np_mask_rgb) + shaped_noise * np_mask_rgb
+    #shaped_noise[all_mask,:] = skimage.exposure.match_histograms(shaped_noise_blended[all_mask,:], contrast_adjusted_np_src[ref_mask,:], channel_axis=1)
+    shaped_noise[all_mask,:] = skimage.exposure.match_histograms(shaped_noise[all_mask,:], contrast_adjusted_np_src[ref_mask,:], channel_axis=1)
     shaped_noise = np.clip(shaped_noise / np.max(shaped_noise), 0., 1.)
     _save_debug_img(shaped_noise, "shaped_noise")
     
     matched_noise = np.zeros((width, height, num_channels))
-    matched_noise[img_mask,:] = skimage.exposure.match_histograms(shaped_noise[img_mask,:], contrast_adjusted_np_src[ref_mask,:], channel_axis=1)
+    matched_noise[all_mask,:] = skimage.exposure.match_histograms(shaped_noise[all_mask,:], _np_src_image[ref_mask,:], channel_axis=1)
+    matched_noise[all_mask,:] = skimage.exposure.match_histograms(matched_noise[all_mask,:], _np_src_image[ref_mask,:], channel_axis=1)
+    #matched_noise[ref_mask,:] = skimage.exposure.match_histograms(matched_noise[ref_mask,:], _np_src_image[ref_mask,:], channel_axis=1)
     _save_debug_img(matched_noise, "matched_noise")
     
     """
     todo:
-     1. we could also project the phases and feature intensities for each color individually
-     2. color_variation doesnt have to be a single number, the overall color tone of the out-painted area could be param controlled
-     
+    color_variation doesnt have to be a single number, the overall color tone of the out-painted area could be param controlled
     """
     
-    return np.clip(matched_noise, 0., 1.)
+    return np.clip(matched_noise, 0., 1.) 
     
 class CommandServer(BaseHTTPRequestHandler): # http command server
 
@@ -322,8 +334,9 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
             width = int(cmd["cmd_args"]["-w"]) if "-w" in cmd["cmd_args"] else None
             height = int(cmd["cmd_args"]["-h"]) if "-h" in cmd["cmd_args"] else None
             num_inference_steps = int(cmd["cmd_args"]["-steps"]) if "-steps" in cmd["cmd_args"] else None
-            color_variation = float(cmd["cmd_args"]["-color"]) if "-color" in cmd["cmd_args"] else 0.01
+            color_variation = float(cmd["cmd_args"]["-color"]) if "-color" in cmd["cmd_args"] else 0.
             noise_q = float(cmd["cmd_args"]["-noise_q"]) if "-noise_q" in cmd["cmd_args"] else 0.99
+            mask_blend_factor = float(cmd["cmd_args"]["-blend"]) if "-blend" in cmd["cmd_args"] else 1.
         except Exception as e:
             cmd["status"] = -1 # error status
             cmd["error_txt"] = "Error getting params '" + str(e) + "'"
@@ -342,7 +355,9 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
                 guidance_scale = max(guidance_scale, 0.0)
             if num_samples:
                 num_samples = min(num_samples, MAX_OUTPUT_LIMIT)
-            
+            if mask_blend_factor < 1.:
+                mask_blend_factor = 1.
+                
             if init_image:
                 try:
                     init_image = Image.open(init_image)
@@ -411,11 +426,29 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
                         print("Using img in-painting pipeline...")
                         
                         noise_rgb = _get_matched_noise(np_init, np_mask_rgb, noise_q, color_variation)
-                        noised = np_init[:] * (1. - np_mask_rgb) + noise_rgb * np_mask_rgb
+                        blend_mask_rgb = ((np_mask_rgb*2.) ** mask_blend_factor) / (2. ** mask_blend_factor)
+                        noised = np_init[:] * (1. - blend_mask_rgb) + noise_rgb * blend_mask_rgb
+                        
+                        # one last thing, gotta colorize the noise from src while preserving vector mag of blended noise img
+                        """
+                        noised_mag = np.sum(noise_rgb**2, axis=2) ** 0.5
+                        noised_mag_rgb = np.zeros((noised_mag.shape[0], noised_mag.shape[1], 3))
+                        for c in range(3):
+                            noised_mag_rgb[:,:,c] = noised_mag[:]
+                        colorize_mask = (blend_mask_rgb > 0.99).astype(np.float64)                                              # todo: magic constant
+                        noised_colorized = noised_mag_rgb * np_init[:,:,:] ** (((1. - blend_mask_rgb) ** 0.1) * colorize_mask) # todo: derive magic constant
+                        """
+                        #"""
+                        for t in range(8): # 4
+                            noised = np_init[:] * (1. - blend_mask_rgb) + noised * blend_mask_rgb # and blend back to the src again
+                            #noised = np.clip(noised, 0. , 1.)
+                        #"""
+                        
                         init_image = PIL.Image.fromarray(np.clip(noised * 255., 0., 255.).astype(np.uint8), mode="RGB")
 
                         _save_debug_img(init_image, "init_img_" + str(i+1))
                         _save_debug_img(mask_image, "mask_img_" + str(i+1))                        
+                        _save_debug_img(blend_mask_rgb, "blend_mask_rgb_" + str(i+1))
                         
                         sample = pipe(prompt=prompt, init_image=init_image, strength=strength, guidance_scale=guidance_scale, mask_image=mask_image, num_inference_steps=num_inference_steps)
                     else:
