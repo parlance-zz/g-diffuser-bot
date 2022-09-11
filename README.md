@@ -19,4 +19,4 @@ Good luck!
 - If you do attach an image but it has no alpha channel, it will be treated as image to image.
 - If you do attach an image and it has an alpha channel, it will be used for in-painting.
 - Parameter names are now: 
-["-str", "-scale", "-seed", "-steps", "-x", "-mine", "-all", "-num", "-force", "-user", "-w", "-h", "-n", "-none", "-noise", "-noise_q"]
+["-str", "-scale", "-seed", "-steps", "-x", "-mine", "-all", "-num", "-force", "-user", "-w", "-h", "-n", "-none", "-color", "-noise_q"]
