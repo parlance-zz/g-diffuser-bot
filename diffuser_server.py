@@ -397,10 +397,10 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
                             np_mask_rgb = 1. - np_mask_rgb
                             _save_debug_img(np_mask_rgb, "np_mask_rgb1")
                             np_mask_rgb_hardened = 1. - (np_mask_rgb < 0.99).astype(np.float64)
-                            blurred = skimage.filters.gaussian(np_mask_rgb_hardened[:], sigma=16., channel_axis=2, truncate=32.)
+                            blurred = skimage.filters.gaussian(np_mask_rgb_hardened[:], sigma=32, channel_axis=2, truncate=32.)
                             #np_mask_rgb_dilated = np_mask_rgb + blurred  # fixup mask todo: derive magic constants
-                            np_mask_rgb = (np_mask_rgb + blurred)/2.
-                            np_mask_rgb /= np.max(np_mask_rgb)
+                            np_mask_rgb = np_mask_rgb + blurred
+                            np_mask_rgb = np.clip(np_mask_rgb*0.7071, 0., 1.)
                             np_mask_rgb_dilated = np_mask_rgb[:]
                             _save_debug_img(np_mask_rgb, "np_mask_rgb2")
                             
