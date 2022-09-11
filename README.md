@@ -1,3 +1,7 @@
+Sept 11/2022 Update:
+- If you're looking for the new in/out-painting code, check out the beta branch. This version of the bot is now very old but will soon be replaced by a new version
+based on the diffusers library.
+
 ######  G-Diffuser-Bot ######
 
   G-Diffuser-Bot is a simple, compact Discord bot for local installations of the public release of Stable-Diffusion (https://github.com/CompVis/stable-diffusion).
