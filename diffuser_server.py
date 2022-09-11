@@ -436,14 +436,18 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
                         
                         # one last thing, gotta colorize the noise from src while preserving vector mag of blended noise img
                         #"""
+                        
+                        np_init2 = np.clip(np_init[:] + np.random.normal(0, 1/16., (width, height, 3)), 0., 1.)
+                        np_mask_rgb2 = np.clip(np_mask_rgb[:] + np.random.normal(0, 1/16., (width, height, 3)), 0., 1.)
                         np_init_mag_rgb = np.zeros((width, height, 3))
-                        np_init_mag_rgb[:,:,0] = np.sum(np_init**2, axis=2) ** 0.5
+                        np_init_mag_rgb[:,:,0] = np.sum(np_init2**2, axis=2) ** 0.5
                         np_init_mag_rgb[:,:,1] = np_init_mag_rgb[:,:,0]
                         np_init_mag_rgb[:,:,2] = np_init_mag_rgb[:,:,0]
-                        np_init_mag_rgb[np.where(np_init_mag_rgb <= 0.1)] = 1.
+                        np_init_mag_rgb[np.where(np_init_mag_rgb <= 1e-8)] = 1.
                         
-                        noised *= ((np_init[:] ** 0.5) / np_init_mag_rgb ) ** (1. - np.clip(np_mask_rgb*1.1, 0., 1.))
-                        noised = np_init[:] * (1. - np_mask_rgb) + noised * np_mask_rgb
+                        
+                        noised *= ((np_init2[:] ** 0.5) / np_init_mag_rgb ) ** (1. - np.clip(np_mask_rgb2*1.1, 0., 1.))
+                        noised = np_init[:] * (1. - np_mask_rgb2) + noised * np_mask_rgb2
                         
                         init_image = PIL.Image.fromarray(np.clip(noised * 255., 0., 255.).astype(np.uint8), mode="RGB")
 
