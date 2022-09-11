@@ -171,10 +171,10 @@ def _get_masked_window_rgb(np_mask_grey, hardness=1.):
  Provided here is my take on a potential solution to this problem.
  
  By taking a fourier transform of the masked src img we get a function that tells us the presence and orientation of each feature scale in the unmasked src.
- Shaping the init noise for in/outpainting to the same distribution of feature scales, orientations, and positions increases output coherence
- by helping keep everything aligned. This technique is applicable to any continuous generation task such as audio or video, each of which can
+ Shaping the init/seed noise for in/outpainting to the same distribution of feature scales, orientations, and positions increases output coherence
+ by helping keep features aligned. This technique is applicable to any continuous generation task such as audio or video, each of which can
  be conceptualized as a series of out-painting steps where the last half of the input "frame" is erased. For multi-channel data such as color
- or stereo sound the "color tone" of the seed noise can also be matched to improve coherence (using scikit-image currently)
+ or stereo sound the "color tone" or histogram of the seed noise can be matched to improve quality (using scikit-image currently)
  This method is quite robust and has the added benefit of being fast independently of the size of the out-painted area.
  The effects of this method include things like helping the generator integrate the pre-existing view distance and camera angle.
  
@@ -184,7 +184,11 @@ def _get_masked_window_rgb(np_mask_grey, hardness=1.):
  color_variation controls how much freedom is allowed for the colors/palette of the out-painted area (range 0..1, default 0.01)
  returns shaped noise for blending into the src image with the supplied mask ( [width,height,3] range 0..1 )
  
+ The returned mask should be blended strongly into the src image, and mask hardening can improve the results.
+ 
  This code is provided as is under the Unlicense (https://unlicense.org/)
+ Although you have no obligation to do so, if you found this code helpful please find it in your heart to credit me.
+ 
  Questions or comments can be sent to parlance@fifth-harmonic.com (https://github.com/parlance-zz/)
  This code is part of a new branch of a discord bot I am working on integrating with diffusers (https://github.com/parlance-zz/g-diffuser-bot)
  
