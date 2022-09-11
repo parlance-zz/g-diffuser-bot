@@ -1,4 +1,4 @@
-Sept 09/2022 Update - Improving and working on in/out painting. Color values under mask are no longer required for good results.
+Sept 10/2022 Update - The first functioning implementation of the in/out-paint system is finally complete. Please try it ASAP! It's awesome!!
 
 Real instructions and documentation to come later, but if you're feeling brave:
 
