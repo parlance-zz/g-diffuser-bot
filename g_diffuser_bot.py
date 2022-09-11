@@ -1,23 +1,6 @@
 """
 
  G-Diffuser-Bot for Discord (https://https://github.com/parlance-zz/g-diffuser-bot/)
-
- todo:
- 
- 1. select -none to remove current input image
- 1.5 make commands use your current input image again by default
- 2. wait until command server is running before _process_commands loop, otherwise keep commands waiting
- 2.5 send command cancel notice for currently running commands to server so it can abort ASAP
- 
- 3. write and test setup.py (install additional modules and latest diffusers)
- 4. rewrite !help
- 5. rewrite github readme
- 6. add command list trimming by adding a replacement dummy completed command with total elapsed time and in / out attach props (_compactify)
- 
- ??. maybe speed up command server start somehow?
- ??. auto-upload attachments too large for discord to an image hosting service when sending output
- ??. fine-tuning?
- ??. option to run a local prompt without discord?
  
 """
 
