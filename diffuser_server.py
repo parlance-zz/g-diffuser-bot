@@ -430,26 +430,20 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
                         print("Using img in-painting pipeline...")
                         
                         noise_rgb = _get_matched_noise(np_init, np_mask_rgb, noise_q, color_variation)
-                        final_mask = np.clip(np_mask_rgb * 2., 0., 1.)
+                        final_mask = np.clip(np_mask_rgb + 0.0, 0., 1.)
                         blend_mask_rgb = (final_mask ** mask_blend_factor)
                         noised = np_init[:] * (1. - blend_mask_rgb) + noise_rgb * blend_mask_rgb
                         
                         # one last thing, gotta colorize the noise from src while preserving vector mag of blended noise img
-                        """
-                        noised_mag = np.sum(noise_rgb**2, axis=2) ** 0.5
-                        noised_mag_rgb = np.zeros((noised_mag.shape[0], noised_mag.shape[1], 3))
-                        for c in range(3):
-                            noised_mag_rgb[:,:,c] = noised_mag[:]
-                        colorize_mask = (blend_mask_rgb > 0.99).astype(np.float64)                                              # todo: magic constant
-                        noised_colorized = noised_mag_rgb * np_init[:,:,:] ** (((1. - blend_mask_rgb) ** 0.1) * colorize_mask) # todo: derive magic constant
-                        noised = np_init[:] * (1. - blend_mask_rgb) + noised_colorized * blend_mask_rgb
+                        #"""
+                        np_init_mag_rgb = np.zeros((width, height, 3))
+                        np_init_mag_rgb[:,:,0] = np.sum(np_init**2, axis=2) ** 0.5
+                        np_init_mag_rgb[:,:,1] = np_init_mag_rgb[:,:,0]
+                        np_init_mag_rgb[:,:,2] = np_init_mag_rgb[:,:,0]
+                        np_init_mag_rgb[np.where(np_init_mag_rgb <= 0.1)] = 1.
                         
-                        """
-                        """
-                        for t in range(3): # 4
-                            noised = np_init[:] * (1. - blend_mask_rgb) + noised * blend_mask_rgb # and blend back to the src again
-                            #noised = np.clip(noised, 0. , 1.)
-                        """
+                        noised *= ((np_init[:] ** 0.5) / np_init_mag_rgb ) ** (1. - np.clip(np_mask_rgb*1.1, 0., 1.))
+                        noised = np_init[:] * (1. - np_mask_rgb) + noised * np_mask_rgb
                         
                         init_image = PIL.Image.fromarray(np.clip(noised * 255., 0., 255.).astype(np.uint8), mode="RGB")
 
