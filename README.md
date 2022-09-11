@@ -19,9 +19,8 @@ If running python g_diffuser_bot.py errors out with an import error you can try 
 
 Good luck!
 
-- The old t2i and i2i commands are gone, Instead use !gen to do everything now.
+- Use !help to get a command and parameter overview
 - If you don't attach an image when using !gen it will be treated as text to image.
 - If you do attach an image but it has no alpha channel, it will be treated as image to image.
 - If you do attach an image and it has an alpha channel, it will be used for in-painting.
-- Parameter names are now: 
-["-str", "-scale", "-seed", "-steps", "-x", "-mine", "-all", "-num", "-force", "-user", "-w", "-h", "-n", "-none", "-color", "-noise_q"]
+- You don't need to worry about "erasing color values" under transparency, but when erasing try to avoid cutting things out into squares.
