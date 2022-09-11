@@ -390,8 +390,28 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
                         if not mask_image.getbbox(): # if mask is all opaque anyway just use regular img2img pipe
                             mask_image = None
                         else:
-                            np_init = (np.asarray(init_image.convert("RGB"))/255.0).astype(np.float64)
-                            np_mask_rgb = (np.asarray(mask_image.convert("RGB"))/255.0).astype(np.float64)
+                            np_init = (np.asarray(init_image.convert("RGB"))/255.0).astype(np.float64) # annoyingly complex mask fixing
+                            np_mask_rgb = 1. - (np.asarray(mask_image.convert("RGB"))/255.0).astype(np.float64)
+                            np_mask_rgb -= np.min(np_mask_rgb)
+                            np_mask_rgb /= np.max(np_mask_rgb)
+                            np_mask_rgb = 1. - np_mask_rgb
+                            _save_debug_img(np_mask_rgb, "np_mask_rgb1")
+                            np_mask_rgb_hardened = 1. - (np_mask_rgb < 0.99).astype(np.float64)
+                            blurred = skimage.filters.gaussian(np_mask_rgb_hardened[:], sigma=16., channel_axis=2, truncate=32.)
+                            #np_mask_rgb_dilated = np_mask_rgb + blurred  # fixup mask todo: derive magic constants
+                            np_mask_rgb = (np_mask_rgb + blurred)/2.
+                            np_mask_rgb /= np.max(np_mask_rgb)
+                            np_mask_rgb_dilated = np_mask_rgb[:]
+                            _save_debug_img(np_mask_rgb, "np_mask_rgb2")
+                            
+                            """
+                            np_mask_rgb_dilated = np.clip(np_mask_rgb_dilated, 0., 1.)
+                            np_mask_rgb_dilated = 1. - np_mask_rgb_dilated
+                            np_mask_rgb_dilated -= np.min(np_mask_rgb_dilated)
+                            np_mask_rgb_dilated /= np.max(np_mask_rgb_dilated)
+                            np_mask_rgb_dilated = 1. - np_mask_rgb_dilated
+                            """
+                            _save_debug_img(np_mask_rgb_dilated, "np_mask_rgb_dilated")
                             
                     else:
                         mask_image = None
@@ -429,25 +449,32 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
                     elif pipe == IMG_INP_DIFFUSERS_PIPE:
                         print("Using img in-painting pipeline...")
                         
-                        noise_rgb = _get_matched_noise(np_init, np_mask_rgb, noise_q, color_variation)
-                        final_mask = np.clip(np_mask_rgb + 0.0, 0., 1.)
-                        blend_mask_rgb = (final_mask ** mask_blend_factor)
-                        noised = np_init[:] * (1. - blend_mask_rgb) + noise_rgb * blend_mask_rgb
+                        noise_rgb = _get_matched_noise(np_init, np_mask_rgb_dilated, noise_q, color_variation)
+                        blend_mask_rgb = (np_mask_rgb_dilated ** mask_blend_factor)
+                        #noised = np_init[:] * (1. - blend_mask_rgb) + noise_rgb * blend_mask_rgb
+                        noised = (np_init[:] ** (1. - blend_mask_rgb)) * (noise_rgb ** blend_mask_rgb)
+                        _save_debug_img(noised, "noised_" + str(i+1))
                         
                         # one last thing, gotta colorize the noise from src while preserving vector mag of blended noise img
                         #"""
                         
-                        np_init2 = np.clip(np_init[:] + np.random.normal(0, 1/16., (width, height, 3)), 0., 1.)
-                        np_mask_rgb2 = np.clip(np_mask_rgb[:] + np.random.normal(0, 1/16., (width, height, 3)), 0., 1.)
+                        #np_init2 = np.clip(np_init[:] + np.random.normal(0.05, 1/24., (width, height, 3)), 1e-50, 1.)
+                        #np_mask_rgb2 = np.clip(np_mask_rgb[:] + np.random.normal(0.05, 1/24., (width, height, 3)), 1e-50, 1.)
+                        """
                         np_init_mag_rgb = np.zeros((width, height, 3))
-                        np_init_mag_rgb[:,:,0] = np.sum(np_init2**2, axis=2) ** 0.5
+                        np_init_mag_rgb[:,:,0] = np.sum(np_init**2, axis=2) ** 0.5
                         np_init_mag_rgb[:,:,1] = np_init_mag_rgb[:,:,0]
                         np_init_mag_rgb[:,:,2] = np_init_mag_rgb[:,:,0]
-                        np_init_mag_rgb[np.where(np_init_mag_rgb <= 1e-8)] = 1.
+                        np_init_mag_rgb[np.where(np_init_mag_rgb <= 1e-2)] = 1.
+                        #np_init2[np.where(np_init2 <= 1e-50)] = 1. 
                         
                         
-                        noised *= ((np_init2[:] ** 0.5) / np_init_mag_rgb ) ** (1. - np.clip(np_mask_rgb2*1.1, 0., 1.))
-                        noised = np_init[:] * (1. - np_mask_rgb2) + noised * np_mask_rgb2
+                        #noised *= np.clip(((np_init[:] ** 1.) / np_init_mag_rgb ) ** (1. - np.clip(np_mask_rgb*1.1, 0., 1.)), 0., 1.)
+                        noised *= (np_init[:] / np_init_mag_rgb ) ** (1. - np_mask_rgb)
+                        _save_debug_img(noised, "noised_s3" + str(i+1))
+                        noised = np_init[:] * (1. - np_mask_rgb)  + noised * np_mask_rgb
+                        #noised = np_init[:] + noised * np_mask_rgb2
+                        """
                         
                         init_image = PIL.Image.fromarray(np.clip(noised * 255., 0., 255.).astype(np.uint8), mode="RGB")
 
