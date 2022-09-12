@@ -26,7 +26,7 @@ BOT_LOG_FILE_PATH = ROOT_PATH + "/g-diffuser-bot.log"            # keep a text l
 SERVER_LOG_FILE_PATH = ROOT_PATH + "/diffuser-server.log"
 
 # default params for commands, these are overriden by any user supplied params
-DEFAULT_CMD_PARAMS = { "-n": 1, "-steps": "50", "-scale": "10.", "-str": "0.7071", "-color": "0.005" }
+DEFAULT_CMD_PARAMS = { "-n": 1, "-steps": "50", "-scale": "10.", "-str": "0.618", "-color": "0.005" }
 AUTO_SEED_RANGE = (1,999999)
 MAX_STEPS_LIMIT = 300
 MAX_REPEAT_LIMIT = 100             # max number of repetitions that can be used with the -x param
