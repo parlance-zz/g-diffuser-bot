@@ -1,6 +1,6 @@
 Sept 11/2022 Update - The BUG-FREE-ish implementation of the in/out-paint system is finally complete. Please try it ASAP! It's awesome!!
 
-With the Sept-11 update please use the following default params: -str 0.75, -scale 10, -blend 5, -color 0.2, -noise_q 0.9
+With the Sept-11 update please use the following default params: -str 0.75, -scale 10, -blend 10, -color 0.2, -noise_q 0.9
 
 Edit: I have a feeling the outpaint implementation may garner some traffic. Please forgive the implementation as I've been very busy and trying
 to write code as fast as psosible. This software is distributed under the Unlicense (https://unlicense.org/) and you are under no obligation, but
