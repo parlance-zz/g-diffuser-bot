@@ -1,3 +1,9 @@
+# todo:
+# - setting seeds doesnt work
+# - outpainting
+# - check for command cancelling between individual pipe calls / samples
+# - ?? fix the diffusers inpainter pipeline - noise not being added, strength should decay to 0 over steps
+
 from g_diffuser_bot_params import *
 
 import os, sys
@@ -29,6 +35,28 @@ from diffusers import LMSDiscreteScheduler
 DEFAULT_RESOLUTION = (512, 512)
 RESOLUTION_GRANULARITY = 64
 
+global txt2imgIsEnabled
+global img2imgIsEnabled
+global imgInpIsEnabled
+
+txt2imgIsEnabled = True
+img2imgIsEnabled = True
+imgInpIsEnabled = False
+
+def _get_image_colors(np_image, np_mask, cutoff=0.99): # returns an array consisting of all unmasked colors in src img
+                                                      # (does not dedupe and count, not a real histogram)
+    width = np_image.shape[0]
+    height = np_image.shape[1]
+    
+    inverted_mask = 1. - np_mask
+    histogram = []
+    for y in range(height):
+        for x in range(width):
+            if np_mask[x,y] < cutoff:
+                histogram.append((np_image[x,y,0],np_image[x,y,1],np_image[x,y,2]))
+                
+    return np.asarray(histogram)
+    
 def _valid_resolution(width, height, init_image=None): # cap max dimension at max res and ensure size is 
                                                        # a correct multiple of granularity while
                                                        # preserving aspect ratio (best we can anyway)
@@ -137,7 +165,7 @@ def _ifft2(data):
         
     return out_ifft
             
-def _get_gaussian_window(width, height, std=3.14, mode=0):
+def _get_gaussian_window(width, height, hardness=3.14):
 
     window_scale_x = float(width / min(width, height))
     window_scale_y = float(height / min(width, height))
@@ -146,54 +174,47 @@ def _get_gaussian_window(width, height, std=3.14, mode=0):
     x = (np.arange(width) / width * 2. - 1.) * window_scale_x
     for y in range(height):
         fy = (y / height * 2. - 1.) * window_scale_y
-        if mode == 0:
-            window[:, y] = np.exp(-(x**2+fy**2) * std)
-        else:
-            window[:, y] = (1/((x**2+1.) * (fy**2+1.))) ** (std/3.14) # hey wait a minute that's not gaussian
-            
+        window[:, y] = np.exp(-(x**2+fy**2) * hardness)
     return window
 
-def _get_masked_window_rgb(np_mask_grey, hardness=1.):
-    np_mask_rgb = np.zeros((np_mask_grey.shape[0], np_mask_grey.shape[1], 3))
-    if hardness != 1.:
-        hardened = np_mask_grey[:] ** hardness
-    else:
-        hardened = np_mask_grey[:]
-    for c in range(3):
-        np_mask_rgb[:,:,c] = hardened[:]
-    return np_mask_rgb
+def _get_masked_window(np_mask_grey, hardness=1.):
+    
+    width = np_mask_grey.shape[0]
+    height = np_mask_grey.shape[1]
+
+    #blur_kernel = _get_gaussian_window(width*3, height*3) # window the padded image mask to avoid bleeding from corners as much
+    padded = np.ones((width*3,height*3))
+    padded[width:width*2,height:height*2] = (np_mask_grey[:] > 0.99).astype(np.float64)
+    
+    _save_debug_img(padded, "padded")
+     
+    gaussian = _get_gaussian_window(width*3, height*3, hardness=1e6) # todo: derive magic constant
+    padded_fft = _fft2(padded[:]) * gaussian
+    padded_blurred = np.real(_ifft2(padded_fft[:]))
+    padded_blurred -= np.min(padded_blurred)
+    padded_blurred /= np.max(padded_blurred)
+    padded_blurred = np.exp(-padded_blurred**2 * 2e4)# todo: derive magic constant
+    
+    
+    _save_debug_img(padded_blurred, "padded_blurred")
+    _save_debug_img(gaussian, "gaussian")
+    
+    cropped = padded_blurred[width:width*2,height:height*2]
+    cropped = np.clip(cropped / np.max(padded_blurred) * hardness, 0., 1.)
+    
+    _save_debug_img(cropped, "cropped")
+    return 1.-cropped
 
 """
- Explanation:
- Getting good results in/out-painting with stable diffusion can be challenging.
- Although there are simpler effective solutions for in-painting, out-painting can be especially challenging because there is no color data
- in the masked area to help prompt the generator. Ideally, even for in-painting we'd like work effectively without that data as well.
- Provided here is my take on a potential solution to this problem.
+ By taking an fft of the greyscale src img we get a function that tells us the presence and orientation of each visible feature scale.
+ Shaping the seed noise to the same distribution of feature scales and orientations increases in/out-painted output quality.
  
- By taking a fourier transform of the masked src img we get a function that tells us the presence and orientation of each feature scale in the unmasked src.
- Shaping the init/seed noise for in/outpainting to the same distribution of feature scales, orientations, and positions increases output coherence
- by helping keep features aligned. This technique is applicable to any continuous generation task such as audio or video, each of which can
- be conceptualized as a series of out-painting steps where the last half of the input "frame" is erased. For multi-channel data such as color
- or stereo sound the "color tone" or histogram of the seed noise can be matched to improve quality (using scikit-image currently)
- This method is quite robust and has the added benefit of being fast independently of the size of the out-painted area.
- The effects of this method include things like helping the generator integrate the pre-existing view distance and camera angle.
- 
- np_src_image is a float64 np array of shape [width,height,3] ( range 0..1)
- np_mask_rgb is a float64 np array of shape [width,height,3] ( range 0..1)
- noise_q controls the exponent in the fall-off of the distribution can be any positive number, lower values means higher detail (range > 0, default 1.)
- color_variation controls how much freedom is allowed for the colors/palette of the out-painted area (range 0..1, default 0.01)
- returns shaped noise for blending into the src image with the supplied mask ( [width,height,3] range 0..1 )
- 
- The returned mask should be blended strongly into the src image, and mask hardening can improve the results.
- 
- This code is provided as is under the Unlicense (https://unlicense.org/)
- Although you have no obligation to do so, if you found this code helpful please find it in your heart to credit me.
- 
- Questions or comments can be sent to parlance@fifth-harmonic.com (https://github.com/parlance-zz/)
- This code is part of a new branch of a discord bot I am working on integrating with diffusers (https://github.com/parlance-zz/g-diffuser-bot)
- 
+ np_src_image is a float64 np array of shape [width,height,3] normalized to 0..1
+ np_mask_rgb is a float64 np array of shape [width,height,3] normalized to 0..1
+ noise_q controls the exponent in the fall-off of the distribution can be any positive number (default 1.)
+ returns shaped noise for blending into the src image with the supplied mask ( [width,height,3] normalized to 0..1 )
 """
-def _get_matched_noise(_np_src_image, np_mask_rgb, noise_q, color_variation): 
+def _get_multiscale_noise(_np_src_image, np_mask_rgb, noise_q): 
 
     global DEBUG_MODE
     global TMP_ROOT_PATH
@@ -205,61 +226,62 @@ def _get_matched_noise(_np_src_image, np_mask_rgb, noise_q, color_variation):
     np_src_image = _np_src_image[:] * (1. - np_mask_rgb)
     np_mask_grey = (np.sum(np_mask_rgb, axis=2)/3.) 
     np_src_grey = (np.sum(np_src_image, axis=2)/3.) 
-    all_mask = np.ones((width, height), dtype=bool)
-    img_mask = np_mask_grey > 0.5
-    ref_mask = np_mask_grey < 0.5
+
+    noise_window = _get_gaussian_window(width, height)
+    noise = np.random.random_sample((width, height))*2. - 1.
+    noise_fft = _fft2(noise) * noise_window
+    noise = np.real(_ifft2(noise_fft)) # start with simple gaussian noise
     
-    windowed_image = _np_src_image * (1.-_get_masked_window_rgb(np_mask_grey))
+    histogram = _get_image_colors(_np_src_image, np_mask_grey)
+    color_indices = np.random.randint(len(histogram), size=(width,height))
+    
+    shaped_noise = np.zeros((width, height, num_channels))    
+    for y in range(height):
+        for x in range(width):
+            shaped_noise[x,y,:] = noise[x,y] * histogram[color_indices[x,y],:]
+    original_shaped_noise_mag = np.sum(shaped_noise**2)**(1/2)
+    
+    windowed_image = np_src_grey * (1.-_get_masked_window(np_mask_grey)) # the output quality is extremely sensitive to windowing to avoid non-features
     windowed_image /= np.max(windowed_image)
-    windowed_image += np.average(_np_src_image) * np_mask_rgb# / (1.-np.average(np_mask_rgb))  # rather than leave the masked area black, we get better results from fft by filling the average unmasked color
-    #windowed_image += np.average(_np_src_image) * (np_mask_rgb * (1.- np_mask_rgb)) / (1.-np.average(np_mask_rgb)) # compensate for darkening across the mask transition area
     _save_debug_img(windowed_image, "windowed_src_img")
-    
-    src_fft = _fft2(windowed_image) # get feature statistics from masked src img
-    src_dist = np.absolute(src_fft)
-    src_phase = src_fft / src_dist
+    src_dist = np.absolute(_fft2(windowed_image))
     _save_debug_img(src_dist, "windowed_src_dist")
     
-    noise_window = _get_gaussian_window(width, height, mode=1)  # start with simple gaussian noise
-    noise_rgb = np.random.random_sample((width, height, num_channels))
-    noise_grey = (np.sum(noise_rgb, axis=2)/3.) 
-    noise_rgb *=  color_variation # the colorfulness of the starting noise is blended to greyscale with a parameter
+    shaped_noise_fft = _fft2(shaped_noise)
     for c in range(num_channels):
-        noise_rgb[:,:,c] += (1. - color_variation) * noise_grey
-        
-    noise_fft = _fft2(noise_rgb)
-    for c in range(num_channels):
-        noise_fft[:,:,c] *= noise_window
-    noise_rgb = np.real(_ifft2(noise_fft))
-    shaped_noise_fft = _fft2(noise_rgb)
-    shaped_noise_fft[:,:,:] = np.absolute(shaped_noise_fft[:,:,:])**2 * (src_dist ** noise_q) * src_phase # perform the actual shaping
-    
-    brightness_variation = 0.#color_variation # todo: temporarily tieing brightness variation to color variation for now
-    contrast_adjusted_np_src = _np_src_image[:] * (brightness_variation + 1.) - brightness_variation * 2.
-    
-    # scikit-image is used for histogram matching, very convenient!
+        shaped_noise_fft[:,:,c] *= src_dist ** noise_q
     shaped_noise = np.real(_ifft2(shaped_noise_fft))
-    
-    #shaped_noise -= np.min(shaped_noise)
-    shaped_noise = np.clip(shaped_noise/ np.max(shaped_noise), 0., 1.)
-    #shaped_noise_blended = _np_src_image[:] * (1. - np_mask_rgb) + shaped_noise * np_mask_rgb
-    #shaped_noise[all_mask,:] = skimage.exposure.match_histograms(shaped_noise_blended[all_mask,:], contrast_adjusted_np_src[ref_mask,:], channel_axis=1)
-    shaped_noise[all_mask,:] = skimage.exposure.match_histograms(shaped_noise[all_mask,:], contrast_adjusted_np_src[ref_mask,:], channel_axis=1)
-    shaped_noise = np.clip(shaped_noise / np.max(shaped_noise), 0., 1.)
+    tmp_shaped_noise_mag = np.sum(shaped_noise**2)**(1/2)
+    shaped_noise = shaped_noise / tmp_shaped_noise_mag * original_shaped_noise_mag + 0.5 # brighten it back up to approx the same brightness, the histogram matching will fine-tune
     _save_debug_img(shaped_noise, "shaped_noise")
     
+    img_mask = np.ones((width, height), dtype=bool)
+    ref_mask = np_mask_grey < 0.99
     matched_noise = np.zeros((width, height, num_channels))
-    matched_noise[all_mask,:] = skimage.exposure.match_histograms(shaped_noise[all_mask,:], _np_src_image[ref_mask,:], channel_axis=1)
-    matched_noise[all_mask,:] = skimage.exposure.match_histograms(matched_noise[all_mask,:], _np_src_image[ref_mask,:], channel_axis=1)
-    #matched_noise[ref_mask,:] = skimage.exposure.match_histograms(matched_noise[ref_mask,:], _np_src_image[ref_mask,:], channel_axis=1)
-    _save_debug_img(matched_noise, "matched_noise")
+    matched_noise[img_mask,:] = skimage.exposure.match_histograms(shaped_noise[img_mask,:], _np_src_image[ref_mask,:], channel_axis=1)
+    
+    """
+    color_variation = 0.1
+    if color_variation > 0:
+        variation = np.random.random_sample((width, height, num_channels)) * 2. - 1.
+        matched_noise *= np.exp(variation * color_variation)
+    """
     
     """
     todo:
-    color_variation doesnt have to be a single number, the overall color tone of the out-painted area could be param controlled
+     1. we could generate a new sample with txt2img and the same prompt, then blend the sample histogram
+        with the source image histogram before histogram-matching the shaped noise, which would greatly enhance outcomes for src images
+        that have been mostly erased, and enhance color variation overall
+    
+     2. we could also project the phases of the shaped noise in frequency space to align with the phases of the src image in freq space
+        this would help features line-up a bit better and increase coherence and quality
+    
+     3. finally, the output of the in-painting pipeline could be fed into the img2img pipeline with a very low and same prompt to
+        merge the in-paint just a teensy bit better at the cost of small changes to unmasked areas
+        
     """
     
-    return np.clip(matched_noise, 0., 1.) 
+    return np.clip(matched_noise, 0., 1.)
     
 class CommandServer(BaseHTTPRequestHandler): # http command server
 
@@ -328,19 +350,18 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
         start_time = datetime.datetime.now()
         cmd["start_time"] = str(start_time)
         
-        # get params and set defaults
+        # get params
         try:
             num_samples = int(cmd["cmd_args"]["-n"]) if "-n" in cmd["cmd_args"] else 1
             init_image = cmd["in_attachments"][0] if len(cmd["in_attachments"]) > 0 else None
-            strength = float(cmd["cmd_args"]["-str"]) if "-str" in cmd["cmd_args"] else 0.5
+            strength = float(cmd["cmd_args"]["-str"]) if "-str" in cmd["cmd_args"] else 0.4
             guidance_scale = float(cmd["cmd_args"]["-scale"]) if "-scale" in cmd["cmd_args"] else None
             prompt = cmd["cmd_args"]["default_str"] if "default_str" in cmd["cmd_args"] else None
             width = int(cmd["cmd_args"]["-w"]) if "-w" in cmd["cmd_args"] else None
             height = int(cmd["cmd_args"]["-h"]) if "-h" in cmd["cmd_args"] else None
             num_inference_steps = int(cmd["cmd_args"]["-steps"]) if "-steps" in cmd["cmd_args"] else None
-            color_variation = float(cmd["cmd_args"]["-color"]) if "-color" in cmd["cmd_args"] else 0.
+            noise_factor = float(cmd["cmd_args"]["-noise"]) if "-noise" in cmd["cmd_args"] else 1.
             noise_q = float(cmd["cmd_args"]["-noise_q"]) if "-noise_q" in cmd["cmd_args"] else 0.99
-            mask_blend_factor = float(cmd["cmd_args"]["-blend"]) if "-blend" in cmd["cmd_args"] else 1.
         except Exception as e:
             cmd["status"] = -1 # error status
             cmd["error_txt"] = "Error getting params '" + str(e) + "'"
@@ -349,7 +370,7 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
         
         pipe = TXT2IMG_DIFFUSERS_PIPE
         
-        # validate params
+        # check params
         try:
             if num_inference_steps:
                 num_inference_steps = min(num_inference_steps, MAX_STEPS_LIMIT)
@@ -359,9 +380,7 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
                 guidance_scale = max(guidance_scale, 0.0)
             if num_samples:
                 num_samples = min(num_samples, MAX_OUTPUT_LIMIT)
-            if mask_blend_factor < 1.:
-                mask_blend_factor = 1.
-                
+            
             if init_image:
                 try:
                     init_image = Image.open(init_image)
@@ -381,6 +400,7 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
                         init_image = init_image.resize((width, height), resample=PIL.Image.LANCZOS)
 
                     # extract mask_image from alpha
+                    mask_image = None
                     if init_image.mode == "RGBA":
                         mask_image = init_image.split()[-1]
                         mask_image = PIL.ImageOps.invert(mask_image)
@@ -390,32 +410,22 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
                         if not mask_image.getbbox(): # if mask is all opaque anyway just use regular img2img pipe
                             mask_image = None
                         else:
-                            np_init = (np.asarray(init_image.convert("RGB"))/255.0).astype(np.float64) # annoyingly complex mask fixing
-                            np_mask_rgb = 1. - (np.asarray(mask_image.convert("RGB"))/255.0).astype(np.float64)
-                            np_mask_rgb -= np.min(np_mask_rgb)
-                            np_mask_rgb /= np.max(np_mask_rgb)
-                            np_mask_rgb = 1. - np_mask_rgb
-                            _save_debug_img(np_mask_rgb, "np_mask_rgb1")
-                            np_mask_rgb_hardened = 1. - (np_mask_rgb < 0.99).astype(np.float64)
-                            blurred = skimage.filters.gaussian(np_mask_rgb_hardened[:], sigma=32., channel_axis=2, truncate=32.)
-                            #np_mask_rgb_dilated = np_mask_rgb + blurred  # fixup mask todo: derive magic constants
-                            #np_mask_rgb = np_mask_rgb + blurred
-                            np_mask_rgb = np.clip((np_mask_rgb + blurred) * 0.7, 0., 1.)
-                            np_mask_rgb_dilated = np_mask_rgb[:]
-                            _save_debug_img(np_mask_rgb, "np_mask_rgb2")
+                            np_init = (np.asarray(init_image.convert("RGB"))/255.0).astype(np.float64)
+                            np_mask_rgb = (np.asarray(mask_image.convert("RGB"))/255.0).astype(np.float64)
                             
-                            """
-                            np_mask_rgb_dilated = np.clip(np_mask_rgb_dilated, 0., 1.)
-                            np_mask_rgb_dilated = 1. - np_mask_rgb_dilated
-                            np_mask_rgb_dilated -= np.min(np_mask_rgb_dilated)
-                            np_mask_rgb_dilated /= np.max(np_mask_rgb_dilated)
-                            np_mask_rgb_dilated = 1. - np_mask_rgb_dilated
-                            """
-                            _save_debug_img(np_mask_rgb_dilated, "np_mask_rgb_dilated")
+                            noised_image = init_image.copy()
+                            noised = np.asarray(noised_image)/255.
                             
-                    else:
-                        mask_image = None
-                        
+                            if noise_factor > 0.0:
+                                noise_rgb = _get_multiscale_noise(np_init, np_mask_rgb, noise_q)
+                                noised = np_init[:] * (1. - np_mask_rgb)
+                                noised[:] += noise_rgb * np_mask_rgb * noise_factor
+                                noised_image = PIL.Image.fromarray(np.clip(noised * 255., 0., 255.).astype(np.uint8), mode="RGB")
+                            
+                            init_image = noised_image.copy()                            
+                            _save_debug_img(init_image, "init_img")
+                            _save_debug_img(mask_image, "mask_img")
+                    
                     if mask_image: # choose a pipe
                         pipe = IMG_INP_DIFFUSERS_PIPE
                     else:
@@ -437,7 +447,8 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
             cmd["error_txt"] = "Error checking params '" + str(e) + "'"
             print(cmd["error_txt"] + "\n")
             return cmd
-            
+        
+        #pipe = None
         with autocast("cuda"):
             try:
                 # finally generate the actual samples
@@ -448,41 +459,6 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
                         sample = pipe(prompt=prompt, init_image=init_image, strength=strength, guidance_scale=guidance_scale, num_inference_steps=num_inference_steps)
                     elif pipe == IMG_INP_DIFFUSERS_PIPE:
                         print("Using img in-painting pipeline...")
-                        
-                        noise_rgb = _get_matched_noise(np_init, np_mask_rgb_dilated, noise_q, color_variation)
-                        blend_mask_rgb = (np_mask_rgb_dilated ** mask_blend_factor)
-                        #noised = (np_init[:] ** (1. - blend_mask_rgb)) * (noise_rgb ** blend_mask_rgb)
-                        blend_mask_rgb **= 16.# this constant controls how much to weight color tone control, either from noise or src in overlap region
-                        noised = (np_init[:] ** (1. - blend_mask_rgb)) * (noise_rgb ** blend_mask_rgb)
-                        _save_debug_img(noised, "noised_" + str(i+1))
-                        
-                        # one last thing, gotta colorize the noise from src while preserving vector mag of blended noise img
-                        #"""
-                        
-                        #np_init2 = np.clip(np_init[:] + np.random.normal(0.05, 1/24., (width, height, 3)), 1e-50, 1.)
-                        #np_mask_rgb2 = np.clip(np_mask_rgb[:] + np.random.normal(0.05, 1/24., (width, height, 3)), 1e-50, 1.)
-                        """
-                        np_init_mag_rgb = np.zeros((width, height, 3))
-                        np_init_mag_rgb[:,:,0] = np.sum(np_init**2, axis=2) ** 0.5
-                        np_init_mag_rgb[:,:,1] = np_init_mag_rgb[:,:,0]
-                        np_init_mag_rgb[:,:,2] = np_init_mag_rgb[:,:,0]
-                        np_init_mag_rgb[np.where(np_init_mag_rgb <= 1e-2)] = 1.
-                        #np_init2[np.where(np_init2 <= 1e-50)] = 1. 
-                        
-                        
-                        #noised *= np.clip(((np_init[:] ** 1.) / np_init_mag_rgb ) ** (1. - np.clip(np_mask_rgb*1.1, 0., 1.)), 0., 1.)
-                        noised *= (np_init[:] / np_init_mag_rgb ) ** (1. - np_mask_rgb)
-                        _save_debug_img(noised, "noised_s3" + str(i+1))
-                        noised = np_init[:] * (1. - np_mask_rgb)  + noised * np_mask_rgb
-                        #noised = np_init[:] + noised * np_mask_rgb2
-                        """
-                        
-                        init_image = PIL.Image.fromarray(np.clip(noised * 255., 0., 255.).astype(np.uint8), mode="RGB")
-
-                        _save_debug_img(init_image, "init_img_" + str(i+1))
-                        _save_debug_img(mask_image, "mask_img_" + str(i+1))                        
-                        _save_debug_img(blend_mask_rgb, "blend_mask_rgb_" + str(i+1))
-                        
                         sample = pipe(prompt=prompt, init_image=init_image, strength=strength, guidance_scale=guidance_scale, mask_image=mask_image, num_inference_steps=num_inference_steps)
                     else:
                         print("Using txt2img pipeline...")
@@ -564,48 +540,61 @@ if __name__ == "__main__":
         """
         
         # create pipes
-        print("Loading txt2img pipeline...")
-        TXT2IMG_DIFFUSERS_PIPE = StableDiffusionPipeline.from_pretrained(
-            CMD_SERVER_MODEL_NAME, 
-            revision=revision, 
-            torch_dtype=torch_dtype,
-        #    scheduler=scheduler,
-            use_auth_token=HUGGINGFACE_TOKEN
-        )
-        TXT2IMG_DIFFUSERS_PIPE = TXT2IMG_DIFFUSERS_PIPE.to("cuda")
+        TXT2IMG_DIFFUSERS_PIPE = None
+        IMG2IMG_DIFFUSERS_PIPE = None
+        IMG_INP_DIFFUSERS_PIPE = None
+        if txt2imgIsEnabled:
+            print("Loading txt2img pipeline...")
+            TXT2IMG_DIFFUSERS_PIPE = StableDiffusionPipeline.from_pretrained(
+                CMD_SERVER_MODEL_NAME, 
+                revision=revision, 
+                torch_dtype=torch_dtype,
+            #    scheduler=scheduler,
+                use_auth_token=HUGGINGFACE_TOKEN
+            )
+            TXT2IMG_DIFFUSERS_PIPE = TXT2IMG_DIFFUSERS_PIPE.to("cuda")
+       
+        if img2imgIsEnabled:
+            print("Loading img2img pipeline...")
+            IMG2IMG_DIFFUSERS_PIPE = StableDiffusionImg2ImgPipeline.from_pretrained(
+                CMD_SERVER_MODEL_NAME, 
+                revision=revision, 
+                torch_dtype=torch_dtype,
+            #    scheduler=scheduler,
+                use_auth_token=HUGGINGFACE_TOKEN,
+            )
+            IMG2IMG_DIFFUSERS_PIPE = IMG2IMG_DIFFUSERS_PIPE.to("cuda")
+
+        if imgInpIsEnabled:
+            print("Loading img_inp pipeline...")
+            IMG_INP_DIFFUSERS_PIPE = StableDiffusionInpaintPipeline.from_pretrained(
+                CMD_SERVER_MODEL_NAME, 
+                revision=revision, 
+                torch_dtype=torch_dtype,
+            #    scheduler=scheduler,
+                use_auth_token=HUGGINGFACE_TOKEN,
+            )
+            IMG_INP_DIFFUSERS_PIPE = IMG_INP_DIFFUSERS_PIPE.to("cuda")
         
-        print("Loading img2img pipeline...")
-        IMG2IMG_DIFFUSERS_PIPE = StableDiffusionImg2ImgPipeline.from_pretrained(
-            CMD_SERVER_MODEL_NAME, 
-            revision=revision, 
-            torch_dtype=torch_dtype,
-        #    scheduler=scheduler,
-            use_auth_token=HUGGINGFACE_TOKEN,
-        )
-        IMG2IMG_DIFFUSERS_PIPE = IMG2IMG_DIFFUSERS_PIPE.to("cuda")
-        
-        print("Loading img_inp pipeline...")
-        IMG_INP_DIFFUSERS_PIPE = StableDiffusionInpaintPipeline.from_pretrained(
-            CMD_SERVER_MODEL_NAME, 
-            revision=revision, 
-            torch_dtype=torch_dtype,
-        #    scheduler=scheduler,
-            use_auth_token=HUGGINGFACE_TOKEN,
-        )
-        IMG_INP_DIFFUSERS_PIPE = IMG_INP_DIFFUSERS_PIPE.to("cuda")
-    
+
         # if optimized use attention slicing for lower memory consumption
         if BOT_USE_OPTIMIZED:
-            TXT2IMG_DIFFUSERS_PIPE.enable_attention_slicing()
-            IMG2IMG_DIFFUSERS_PIPE.enable_attention_slicing()
-            IMG_INP_DIFFUSERS_PIPE.enable_attention_slicing()
+            if txt2imgIsEnabled:
+                TXT2IMG_DIFFUSERS_PIPE.enable_attention_slicing()
+            if img2imgIsEnabled:
+                IMG2IMG_DIFFUSERS_PIPE.enable_attention_slicing()
+            if imgInpIsEnabled:
+                IMG_INP_DIFFUSERS_PIPE.enable_attention_slicing()
         
         # replace safety checkers with dummy
-        setattr(TXT2IMG_DIFFUSERS_PIPE, "safety_checker", _dummy_checker)
-        setattr(IMG2IMG_DIFFUSERS_PIPE, "safety_checker", _dummy_checker)
-        setattr(IMG_INP_DIFFUSERS_PIPE, "safety_checker", _dummy_checker)
+        if txt2imgIsEnabled:
+            setattr(TXT2IMG_DIFFUSERS_PIPE, "safety_checker", _dummy_checker)
+        if img2imgIsEnabled:
+            setattr(IMG2IMG_DIFFUSERS_PIPE, "safety_checker", _dummy_checker)
+        if imgInpIsEnabled:
+            setattr(IMG_INP_DIFFUSERS_PIPE, "safety_checker", _dummy_checker)
     
-        #"""
+        """
         # reduce memory consumption (https://gist.github.com/fladdict/2115eb7ea32c9245e4f45642553aa3e9)
         IMG2IMG_DIFFUSERS_PIPE.vae = IMG_INP_DIFFUSERS_PIPE.vae = TXT2IMG_DIFFUSERS_PIPE.vae
         IMG2IMG_DIFFUSERS_PIPE.text_encoder = IMG_INP_DIFFUSERS_PIPE.text_encoder = TXT2IMG_DIFFUSERS_PIPE.text_encoder
@@ -613,7 +602,7 @@ if __name__ == "__main__":
         IMG2IMG_DIFFUSERS_PIPE.unet = IMG_INP_DIFFUSERS_PIPE.unet = TXT2IMG_DIFFUSERS_PIPE.unet
         IMG2IMG_DIFFUSERS_PIPE.feature_extractor = IMG_INP_DIFFUSERS_PIPE.feature_extractor = TXT2IMG_DIFFUSERS_PIPE.feature_extractor
         IMG2IMG_DIFFUSERS_PIPE.scheduler = IMG_INP_DIFFUSERS_PIPE.scheduler = TXT2IMG_DIFFUSERS_PIPE.scheduler
-        #"""
+        """
         
         print("Finished loading diffuser pipelines... Starting local command server...")
         web_server = HTTPServer((CMD_SERVER_BIND_HTTP_HOST, CMD_SERVER_BIND_HTTP_PORT), CommandServer)
