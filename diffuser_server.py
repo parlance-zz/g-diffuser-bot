@@ -178,14 +178,11 @@ def _get_masked_window_rgb(np_mask_grey, hardness=1.):
  This method is quite robust and has the added benefit of being fast independently of the size of the out-painted area.
  The effects of this method include things like helping the generator integrate the pre-existing view distance and camera angle.
  
- np_src_image is a float64 np array of shape [width,height,3] ( range 0..1)
- np_mask_rgb is a float64 np array of shape [width,height,3] ( range 0..1)
+ Carefully managing color and brightness with histogram matching is also essential to achieving good coherence.
+ 
  noise_q controls the exponent in the fall-off of the distribution can be any positive number, lower values means higher detail (range > 0, default 1.)
  color_variation controls how much freedom is allowed for the colors/palette of the out-painted area (range 0..1, default 0.01)
- returns shaped noise for blending into the src image with the supplied mask ( [width,height,3] range 0..1 )
- 
- The returned mask should be blended strongly into the src image, and mask hardening can improve the results.
- 
+
  This code is provided as is under the Unlicense (https://unlicense.org/)
  Although you have no obligation to do so, if you found this code helpful please find it in your heart to credit me.
  
@@ -206,8 +203,8 @@ def _get_matched_noise(_np_src_image, np_mask_rgb, noise_q, color_variation):
     np_mask_grey = (np.sum(np_mask_rgb, axis=2)/3.) 
     np_src_grey = (np.sum(np_src_image, axis=2)/3.) 
     all_mask = np.ones((width, height), dtype=bool)
-    img_mask = np_mask_grey > 0.5
-    ref_mask = np_mask_grey < 0.5
+    img_mask = np_mask_grey > 1e-6
+    ref_mask = np_mask_grey < 1e-3
     
     windowed_image = _np_src_image * (1.-_get_masked_window_rgb(np_mask_grey))
     windowed_image /= np.max(windowed_image)
@@ -239,19 +236,17 @@ def _get_matched_noise(_np_src_image, np_mask_rgb, noise_q, color_variation):
     
     # scikit-image is used for histogram matching, very convenient!
     shaped_noise = np.real(_ifft2(shaped_noise_fft))
-    
-    #shaped_noise -= np.min(shaped_noise)
-    shaped_noise = np.clip(shaped_noise/ np.max(shaped_noise), 0., 1.)
-    #shaped_noise_blended = _np_src_image[:] * (1. - np_mask_rgb) + shaped_noise * np_mask_rgb
-    #shaped_noise[all_mask,:] = skimage.exposure.match_histograms(shaped_noise_blended[all_mask,:], contrast_adjusted_np_src[ref_mask,:], channel_axis=1)
-    shaped_noise[all_mask,:] = skimage.exposure.match_histograms(shaped_noise[all_mask,:], contrast_adjusted_np_src[ref_mask,:], channel_axis=1)
-    shaped_noise = np.clip(shaped_noise / np.max(shaped_noise), 0., 1.)
+    shaped_noise -= np.min(shaped_noise)
+    shaped_noise /= np.max(shaped_noise)
+    shaped_noise[img_mask,:] = skimage.exposure.match_histograms(shaped_noise[img_mask,:]**1., contrast_adjusted_np_src[ref_mask,:], channel_axis=1)
+    shaped_noise = _np_src_image[:] * (1. - np_mask_rgb) + shaped_noise * np_mask_rgb
     _save_debug_img(shaped_noise, "shaped_noise")
     
     matched_noise = np.zeros((width, height, num_channels))
-    matched_noise[all_mask,:] = skimage.exposure.match_histograms(shaped_noise[all_mask,:], _np_src_image[ref_mask,:], channel_axis=1)
-    matched_noise[all_mask,:] = skimage.exposure.match_histograms(matched_noise[all_mask,:], _np_src_image[ref_mask,:], channel_axis=1)
-    #matched_noise[ref_mask,:] = skimage.exposure.match_histograms(matched_noise[ref_mask,:], _np_src_image[ref_mask,:], channel_axis=1)
+    matched_noise = shaped_noise[:]
+    #matched_noise[all_mask,:] = skimage.exposure.match_histograms(shaped_noise[all_mask,:], _np_src_image[ref_mask,:], channel_axis=1)
+    #matched_noise = _np_src_image[:] * (1. - np_mask_rgb) + matched_noise * np_mask_rgb
+    
     _save_debug_img(matched_noise, "matched_noise")
     
     """
@@ -359,8 +354,8 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
                 guidance_scale = max(guidance_scale, 0.0)
             if num_samples:
                 num_samples = min(num_samples, MAX_OUTPUT_LIMIT)
-            if mask_blend_factor < 1.:
-                mask_blend_factor = 1.
+            if mask_blend_factor < 1e-10:
+                mask_blend_factor = 1e-10
                 
             if init_image:
                 try:
@@ -397,11 +392,13 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
                             np_mask_rgb = 1. - np_mask_rgb
                             _save_debug_img(np_mask_rgb, "np_mask_rgb1")
                             np_mask_rgb_hardened = 1. - (np_mask_rgb < 0.99).astype(np.float64)
-                            blurred = skimage.filters.gaussian(np_mask_rgb_hardened[:], sigma=32., channel_axis=2, truncate=32.)
+                            blurred = skimage.filters.gaussian(np_mask_rgb_hardened[:], sigma=16., channel_axis=2, truncate=32.)
+                            blurred2 = skimage.filters.gaussian(np_mask_rgb_hardened[:], sigma=16., channel_axis=2, truncate=32.)
                             #np_mask_rgb_dilated = np_mask_rgb + blurred  # fixup mask todo: derive magic constants
                             #np_mask_rgb = np_mask_rgb + blurred
-                            np_mask_rgb = np.clip((np_mask_rgb + blurred) * 0.7, 0., 1.)
-                            np_mask_rgb_dilated = np_mask_rgb[:]
+                            np_mask_rgb_dilated = np.clip((np_mask_rgb + blurred2) * 0.7071, 0., 1.)
+                            np_mask_rgb = np.clip((np_mask_rgb + blurred) * 0.7071, 0., 1.)
+                            
                             _save_debug_img(np_mask_rgb, "np_mask_rgb2")
                             
                             """
@@ -449,11 +446,20 @@ class CommandServer(BaseHTTPRequestHandler): # http command server
                     elif pipe == IMG_INP_DIFFUSERS_PIPE:
                         print("Using img in-painting pipeline...")
                         
-                        noise_rgb = _get_matched_noise(np_init, np_mask_rgb_dilated, noise_q, color_variation)
-                        blend_mask_rgb = (np_mask_rgb_dilated ** mask_blend_factor)
-                        #noised = (np_init[:] ** (1. - blend_mask_rgb)) * (noise_rgb ** blend_mask_rgb)
-                        blend_mask_rgb **= 16.# this constant controls how much to weight color tone control, either from noise or src in overlap region
-                        noised = (np_init[:] ** (1. - blend_mask_rgb)) * (noise_rgb ** blend_mask_rgb)
+                        noise_rgb = _get_matched_noise(np_init, np_mask_rgb, noise_q, color_variation)
+                        blend_mask_rgb = np.clip(np_mask_rgb_dilated,0.,1.) ** (mask_blend_factor)
+                        noised = noise_rgb[:]
+                        #noised = ((np_init[:]**1.) ** (1. - blend_mask_rgb)) * ((noise_rgb**(1/1.)))# ** blend_mask_rgb)
+                        blend_mask_rgb **= (2.)
+                        noised = np_init[:] * (1. - blend_mask_rgb) + noised * blend_mask_rgb
+                        
+                        np_mask_grey = np.sum(np_mask_rgb, axis=2)/3.
+                        ref_mask =  np_mask_grey < 1e-3
+                        
+                        all_mask = np.ones((width, height), dtype=bool)
+                        noised[all_mask,:] = skimage.exposure.match_histograms(noised[all_mask,:]**1., noised[ref_mask,:], channel_axis=1)
+                        
+                        """
                         _save_debug_img(noised, "noised_" + str(i+1))
                         
                         # one last thing, gotta colorize the noise from src while preserving vector mag of blended noise img
