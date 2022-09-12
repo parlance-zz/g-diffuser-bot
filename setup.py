@@ -20,6 +20,7 @@ except ImportError:
 # install diffusers
 # pip install --upgrade git+https://github.com/huggingface/diffusers
 
+
 """
 # offline model download for diffusers
 git lfs install
