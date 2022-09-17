@@ -3,7 +3,7 @@ Sept 11/2022 Update - The BUG-FREE-ish implementation of the in/out-paint system
 With the Sept-11 update please use the following default params: -str 0.6, -scale 10, -blend 10, -color 0.005
 
 Edit: I have a feeling the outpaint implementation may garner some traffic. Please forgive the implementation as I've been very busy and trying
-to write code as fast as psosible. Thank you.
+to write code as fast as psosible. Thank you. Please also note this software is distributed under the MIT licenses, so LICENSE for more information.
 
 Real instructions and documentation to come later, but if you're feeling brave:
 
