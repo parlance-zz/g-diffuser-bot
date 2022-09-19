@@ -1,0 +1,19 @@
+name: g_diffuser_bot
+channels:
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.8.5
+  - pip=20.3
+  - cudatoolkit
+  - pytorch
+  - torchvision
+  - numpy
+  - pip:
+    - image
+    - scikit-image
+    - psutil
+    - pytimeparse
+    - diffusers
+    - transformers
+    - discord

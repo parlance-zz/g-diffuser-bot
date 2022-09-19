@@ -1,53 +1,62 @@
 """
+MIT License
 
- G-Diffuser-Bot for Discord (https://https://github.com/parlance-zz/g-diffuser-bot/)
- 
+Copyright (c) 2022 Christopher Friesen
+https://github.com/parlance-zz
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 """
 
-from g_diffuser_bot_params import *
+from g_diffuser_bot_defaults import *
+import g_diffuser_lib as gdl
 
 import os, sys
 os.chdir(ROOT_PATH)
 
 # -------------------------------------------------------------------------------------------
 
-import discord
-from discord.ext import commands
-from discord.ext import tasks
-
 import psutil
+import pytimeparse
+import pathlib
+import urllib
+import json
 import subprocess
 import glob
 import asyncio
 import aiohttp
 import uuid
 import shutil
-from PIL import Image
-import numpy as np
 import shlex
 import time
 import datetime
-import pytimeparse
-import pathlib
-import urllib
-import json
 
-if __name__ == "__main__": # if called from CLI start the bot
+import discord
+from discord.ext import commands
+from discord.ext import tasks
 
-    # this bot requires both message and message content intents (message content is a privileged intent)
-    intents = discord.Intents().default()
-    intents.messages = True
-    intents.dm_messages = True
-    intents.message_content = True
+import numpy as np
+from PIL import Image
 
-    client = commands.Bot(command_prefix=BOT_COMMAND_PREFIX, intents = intents)
-    client.remove_command('help') # required to make the custom help command work
-    game = discord.Game(name=BOT_ACTIVITY)
 
 class Command:
 
     def __init__(self, ctx=None, _copy=None):
-    
         global PARAM_LIST
     
         self._id = str(uuid.uuid4())
@@ -103,13 +112,14 @@ class Command:
         attributes["init_time"] = str(attributes["init_time"])
         attributes["start_time"] = str(attributes["start_time"])
         attributes["elapsed_time"] = str(attributes["elapsed_time"])
-        
         return attributes
         
-    def get_summary(self):
-        
-        summary = ("[" + self.init_time.strftime("%I:%M:%S %p")).replace("[0", "[") + "]  "
-        summary += "@" + self.init_user + "  " + self.message
+    def get_summary(self, no_init_time=False):
+        if no_init_time:
+            summary = ""
+        else:
+            summary = ("[" + self.init_time.strftime("%I:%M:%S %p")).replace("[0", "[") + "]  "
+        summary += "@" + self.init_user + " " + self.message
         
         if "-seed" in self.cmd_args:
             summary += " [-seed " + self.cmd_args["-seed"] + "]"
@@ -124,13 +134,11 @@ class Command:
             summary += " (cancelling)"
         elif self.status == -1:
             summary += " (error)"
-        
         return summary
         
 class CommandQueue:
 
     def __init__(self, queue_mode=0): #round-robin by default
-        
         global ROOT_PATH
         global BACKUP_PATH
         global BOT_STATE_DATA_FILE
@@ -146,11 +154,8 @@ class CommandQueue:
         self.queue_mode = queue_mode
         
         if data_file != "": # load existing data if given a data file path
-                        
             self.data_file_path = data_file
-            
             try:
-                
                 # try to make sure backup folder exists
                 pathlib.Path(BACKUP_PATH).mkdir(exist_ok=True)
 
@@ -191,12 +196,9 @@ class CommandQueue:
                 self.users_elapsed_time[cmd.init_user] = cmd.elapsed_time
                 
     def save(self):
-        
         global BACKUP_PATH
-        
         if self.data_file_path != "": # save command queue data if we have a data file path
             try:
-
                 file = Path(self.data_file_path)
                 file.touch(exist_ok=True)
                 
@@ -238,10 +240,8 @@ class CommandQueue:
         
     def get_next_pending(self, num_to_return=1, user=""):
     
-        pending_list = []
-        
+        pending_list = []        
         if self.queue_mode == 0: # round-robin
-        
             user_recent_started_time = {} # find oldest queued commands per user
             for cmd in self.cmd_list:
                 if cmd.status == 0: # queued
@@ -256,13 +256,11 @@ class CommandQueue:
                             user_recent_started_time[cmd.init_user] = cmd.start_time
                             
             if len(user_recent_started_time) > 0: # are there any queued commands?
-                
                 user_last_pending_cmd_index = {}
                 for user in user_recent_started_time.keys():
                     user_last_pending_cmd_index[user] = 0
                 
                 while len(pending_list) < num_to_return:
-                
                     next_user = min(user_recent_started_time, key=user_recent_started_time.get)
                     next_cmd = self.get_last_command(user=next_user, status_list=[0], get_first=True, start_index=user_last_pending_cmd_index[next_user])
                     
@@ -275,7 +273,6 @@ class CommandQueue:
                         break
                         
         else: # first-come first-serve
-        
             for cmd in self.cmd_list:
                 if cmd.status == 0: # queued
                     if (user == "") or (user == cmd.init_user):
@@ -299,7 +296,6 @@ class CommandQueue:
         return None
         
     def get_last_command(self, user=None, status_list = [0,1,2,3,-1], get_first=False, start_index=0): # by default gets the last command with any status
-        
         if len(self.cmd_list) == 0: return None
         if user == None: return self.cmd_list[-1]
         
@@ -337,7 +333,6 @@ class CommandQueue:
         return attachments        
         
     async def add_new(self, ctx): # add a new command to the queue
-        
         global MAX_REPEAT_LIMIT
         global MAX_QUEUE_LENGTH
 
@@ -380,7 +375,6 @@ class CommandQueue:
         self.cmd_list.append(cmd)
         
         if x_val != "": # repeat command           
-            
             try:
                 repeat_x = int(x_val) - 1
                 max_repeat_limit = MAX_REPEAT_LIMIT
@@ -406,7 +400,6 @@ class CommandQueue:
         return
         
     def get_queue_str(self, max_item_count=10, user=""): # returns a string summarizing all commands in queue
-    
         global MAX_QUEUE_PRINT_ITEMS    
         MAX_QUEUE_STR_LENGTH = 1600
         
@@ -428,14 +421,12 @@ class CommandQueue:
                 if (i >= max_item_count) or (i >= len(pending_list)):
                     break
                 
-
         if (i == 0) and (running_cmd == None):
             msg = "Empty!"
         
         queue_len = self.get_queue_length()
         if (len(msg) >= MAX_QUEUE_STR_LENGTH) or (i < (queue_len-1)): # truncate list if near max message length
             msg += " + " + str(self.get_queue_length() - i - 1) + " more..."
-            
         return msg
         
     def get_queue_length(self): # returns the number of commands running or waiting in queue
@@ -446,7 +437,7 @@ class CommandQueue:
         return length
 
     def start_command_server(self):
-        run_string = "python diffuser_server.py --start_server"
+        run_string = "python g_diffuser_server.py --start_server"
         self.command_server_process = _run_string(run_string)
         return
         
@@ -463,7 +454,6 @@ class CommandQueue:
         return
         
     async def get_command_server_status(self):
-        
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(self.cmd_server_url) as response:
@@ -474,7 +464,6 @@ class CommandQueue:
             return None
     
 def _set_attribs_from_json(obj, attribs, json_data):
-    
     for attrib in attribs.keys():
         _class = attribs[attrib]
         _val = json_data[attrib]
@@ -510,7 +499,6 @@ def _shlex_split(value):    #  did this to make things easier on windows
     return list(lex)
     
 def _parse_args(msg, param_list):
-
     tokens = _shlex_split(msg)
     args = {}
     extra_args = []
@@ -531,6 +519,7 @@ def _parse_args(msg, param_list):
     if len(extra_args) > 0:
         default_str = " ".join(extra_args)
         args["default_str"] = default_str
+        args["prompt"] = default_str
     
         try:
             default_int = int(default_str)
@@ -541,7 +530,6 @@ def _parse_args(msg, param_list):
     return tokens[0].lower(), args
 
 def _get_int_arg(name, cmd_args):
-    
     try:
         int_arg = int(cmd_args[name])
     except:
@@ -549,7 +537,6 @@ def _get_int_arg(name, cmd_args):
             int_arg = cmd_args["default_int"]
         except:
             int_arg = None
-    
     return int_arg
     
 def _get_file_extension_from_url(url):
@@ -559,7 +546,6 @@ def _get_file_extension_from_url(url):
     return ""
     
 async def _download_to_tmp(url):
-
     global ACCEPTED_ATTACHMENTS
     url_ext = _get_file_extension_from_url(url).lower()
     if not (url_ext in ACCEPTED_ATTACHMENTS):
@@ -585,28 +571,7 @@ async def _download_to_tmp(url):
         
     return tmp_file_path
     
-def _get_tmp_path(file_extension):
-    global TMP_ROOT_PATH
-    try: # try to make sure temp folder exists
-        pathlib.Path(TMP_ROOT_PATH).mkdir(exist_ok=True)
-    except Exception as e:
-        print("Error creating temp path: '" + TMP_ROOT_PATH + "' - " + str(e))
-    return TMP_ROOT_PATH + "/" + str(uuid.uuid4()) + file_extension
-    
-def _get_image_dims(img_path):
-    img = Image.open(img_path)
-    size = img.size
-    img.close()
-    return size
-
-def _merge_dicts(_d1, d2): # overwrites the attributes in _d1 in merge
-    d1 = _d1.copy()
-    for x in d2:
-        d1[x] = d2[x]
-    return d1
-
 def _restart_program():
-    
     global ROOT_PATH
     global CMD_QUEUE
     CMD_QUEUE.shutdown_command_server()
@@ -618,12 +583,10 @@ def _restart_program():
     run_string = 'python "' + ROOT_PATH + '/' + SCRIPT_FILE_NAME + '"'
     print(run_string)
     subprocess.Popen(run_string)
-    exit()
+    exit(0)
     
 def _auto_clean(clean_ratio=0.75):  # delete oldest images and json backups from temporary and backup paths
-
     global TMP_CLEAN_PATHS
-
     for path in TMP_CLEAN_PATHS:
         try:
             file_list = glob.glob(path)
@@ -639,12 +602,10 @@ def _auto_clean(clean_ratio=0.75):  # delete oldest images and json backups from
             
             print("Cleaned " + path)
         except Exception as e:
-            print("Error cleaning - " + path + " - " + str(e))
-            
+            print("Error cleaning - " + path + " - " + str(e))  
     return
     
 def _check_server_roles(ctx, role_name_list): # resolve and check the roles of a user against a list of role name strings
-
     if ("everyone" in role_name_list):
         return True
     
@@ -655,11 +616,9 @@ def _check_server_roles(ctx, role_name_list): # resolve and check the roles of a
             role_list.append(role)
         except:
             continue
-    
     for role in role_list:
         if role in ctx.message.author.roles:
             return True
-            
     return False
     
 def _p_kill(proc_pid):  # kill all child processes recursively as well, its the only way to be sure
@@ -674,9 +633,7 @@ def _p_kill(proc_pid):  # kill all child processes recursively as well, its the 
     return
     
 def _run_string(run_string):   # run shell command asynchronously to keep discord message pumps happy and allow cancellation
-
     global ROOT_PATH
-    
     os.chdir(ROOT_PATH)
     print(run_string)
     try:
@@ -687,13 +644,10 @@ def _run_string(run_string):   # run shell command asynchronously to keep discor
         
     if not process:
         print("Error running string '" + run_string + "' - " + str(e) + "...")
-        
     return process
     
 async def _top(ctx):    # replies to a message with a sorted list of all users and their run-time
-
     global CMD_QUEUE
-    
     msg = "Okay @" + ctx.message.author.name + ", here's the top users... \n"
     i = 0
     for user in sorted(CMD_QUEUE.users_elapsed_time, reverse=True, key=CMD_QUEUE.users_elapsed_time.get):
@@ -701,17 +655,14 @@ async def _top(ctx):    # replies to a message with a sorted list of all users a
         msg += str(i) + ": @" + user + " <" + str(datetime.timedelta(seconds=CMD_QUEUE.users_elapsed_time[user].seconds)) + "s>\n"
     if i == 0:
         msg = "No users yet!"
-        
     await ctx.send("@" + ctx.message.author.name + " : " + msg)
     
 async def _select(ctx): # crop an image from the user's last output image grid
-    
     global CMD_QUEUE
     global PARAM_LIST
     command, cmd_args = _parse_args(ctx.message.content, PARAM_LIST)
     
     output_attachments = []
-    
     try:
         user = ctx.message.author.name
         author = user
@@ -743,9 +694,9 @@ async def _select(ctx): # crop an image from the user's last output image grid
 @client.event
 async def on_ready():
 
-    global game
+    global BOT_ACTIVITY
+    await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=BOT_ACTIVITY))
     
-    await client.change_presence(activity=game)
     _process_commands_loop.start()
     return
  
@@ -794,6 +745,8 @@ async def leave_server(ctx):        # leave a server / guild that the bot is joi
     command, cmd_args = _parse_args(ctx.message.content, PARAM_LIST)
     if "-server" in cmd_args:
         server_name = str(cmd_args["-server"])
+        if "default_str" in cmd_args:
+            server_name += " " + "".join(cmd_args["default_str"])
         try:
             server = None
             server = discord.utils.get(client.guilds, name=server_name) # Get the server / guild by name
@@ -1093,7 +1046,7 @@ async def _process_commands_loop():
                 for out_file in cmd.out_attachments:
                     files.append(discord.File(out_file))
                     
-            msg = "Finished @" + cmd.init_user + "  " + cmd.get_summary()
+            msg = "Finished " + cmd.get_summary(no_init_time=True)
             if next_cmd == None: msg += " - Queue is empty!"
             if cmd.error_txt != "": msg += "\n" + cmd.error_txt
             
@@ -1152,17 +1105,32 @@ async def examples(ctx):
 async def on_message(message):
 
     global BOT_COMMAND_PREFIX
+    global BOT_COMMAND_LIST
+    global BOT_PARAM_LIST
     
     if message.author.bot: return
     if message.content.startswith(BOT_COMMAND_PREFIX) != True: return
+    
+    command, cmd_args = _parse_args(message.content, PARAM_LIST)
+    if command.lower().replace(BOT_COMMAND_PREFIX, "") not in BOT_COMMAND_LIST: return
     
     await client.process_commands(message)
 
 @client.event
 async def on_disconnect():
     await asyncio.sleep(10)
-    
-if __name__ == "__main__": # if called from CLI start the bot
+
+
+if __name__ == "__main__":
+
+    # this bot requires both message and message content intents (message content is a privileged intent)
+    intents = discord.Intents().default()
+    intents.messages = True
+    intents.dm_messages = True
+    intents.message_content = True
+
+    client = commands.Bot(command_prefix=BOT_COMMAND_PREFIX, intents = intents)
+    client.remove_command('help') # required to make the custom help command work
 
     CMD_QUEUE = CommandQueue(queue_mode=QUEUE_MODE)
     client.run(BOT_TOKEN, reconnect=True)
