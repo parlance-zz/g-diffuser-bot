@@ -83,3 +83,6 @@ Updating:
  Donations would also be greatly appreciated and will be used to fund further development. (ETH @ 0x8e4BbD53bfF9C0765eE1859C590A5334722F2086)
  
  Questions or comments can be sent to parlance@fifth-harmonic.com (https://github.com/parlance-zz/)
+ 
+ The algorithm is constantly evolving but some out-dated samples can be seen here: https://imgur.com/a/pwN6LHB
+ This section will be updated with better samples when I have time to create them.
