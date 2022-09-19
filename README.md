@@ -35,6 +35,7 @@ Installation:
  - run the discord bot with python g_diffuser_bot.py
  - alternatively, run the CLI interface with python g_diffuser_cli.py
  - You can use the CLI interface interactively with python g_diffuser_cli.py --interactive
+ - If you see an out of memory error set BOT_USE_OPTIMIZED = True in g_diffuser_bot_defaults.py, or use --use_optimized when running g_diffuser_cli.py
 
 Updating:
  - Simply download and replace your files with those from this repository. You probably won't need to replace your config and default settings files.
