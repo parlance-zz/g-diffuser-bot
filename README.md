@@ -39,3 +39,47 @@ Installation:
 
 Updating:
  - Simply download and replace your files with those from this repository. You probably won't need to replace your config and default settings files.
+ 
+ 
+ G-Diffuser Experimental Fourier Shaped Noise In/out-painting Explanation:
+ 
+ 
+  Why does this need to exist? I thought SD already did in/out-painting?:
+ 
+ This seems to be a common misconception. Non-latent diffusion models such as Dall-e can be readily used for in/out-painting
+ but the current SD in-painting pipeline is just regular img2img with a mask, and changing that would require training a
+ completely new model (at least to my understanding). In order to get good results, SD needs to have information in the
+ (completely) erased area of the image. Adding to the confusion is that the PNG file format is capable of saving color data in
+ (completely) erased areas of the image but most applications won't do this by default, and copying the image data to the "clipboard"
+ will erase the color data in the erased regions (at least in Windows). Code like this or patchmatch that can generate a
+ seed image (or "fixed code") will (at least for now) be required for seamless out-painting.
+ 
+ Although there are simple effective solutions for in-painting, out-painting can be especially challenging because there is no color data
+ in the masked area to help prompt the generator. Ideally, even for in-painting we'd like work effectively without that data as well.
+
+ By taking a fourier transform of the unmasked source image we get a function that tells us the presence, orientation, and scale of features
+ in that source. Shaping the init/seed/fixed code noise to the same distribution of feature scales, orientations, and positions/phases
+ increases (visual) output coherence by helping keep features aligned and of similar orientation and size. This technique is applicable to any continuous
+ generation task such as audio or video, each of which can be conceptualized as a series of out-painting steps where the last half of the input "frame" is erased.
+ TLDR: The fourier transform of the unmasked source image is a strong prior for shaping the noise distribution of in/out-painted areas
+ 
+ For multi-channel data such as color or stereo sound the "color tone" of the noise can be bled into the noise with gaussian convolution and
+ a final histogram match to the unmasked source image ensures the palette of the source is mostly preserved. SD is extremely sensitive to
+ careful color and "texture" matching to ensure features are appropriately "bound" if they neighbor each other in the transition zone.
+ 
+ The effects of both of these techiques in combination include helping the generator integrate the pre-existing view distance and camera angle,
+ as well as being more likely to complete partially erased features (like appropriately completing a partially erased arm, house, or tree).
+ 
+ Please note this implementation is written for clarity and correctness rather than performance.
+ 
+ Todo: To be investigated is the idea of using the same technique directly in latent space. Spatial properties are (at least roughly?) preserved
+ in latent space so the fourier transform should be usable there for the same reason convolutions are usable there. The ideas presented here
+ could also be combined or augmented with other existing techniques.
+ Todo: It would be trivial to add brightness, contrast, and overall palette control using simple parameters
+ Todo: There are some simple optimizations that can increase speed significantly, e.g. re-using FFTs and gaussian kernels
+
+ This code is provided under the MIT license -  Copyright (c) 2022 Christopher Friesen
+ To anyone who reads this I am seeking employment in related areas.
+ Donations would also be greatly appreciated and will be used to fund further development. (ETH @ 0x8e4BbD53bfF9C0765eE1859C590A5334722F2086)
+ 
+ Questions or comments can be sent to parlance@fifth-harmonic.com (https://github.com/parlance-zz/)
