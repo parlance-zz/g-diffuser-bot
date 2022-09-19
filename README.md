@@ -1,4 +1,4 @@
-MIT License
+This software is distributed under the MIT License
 
 Copyright (c) 2022 Christopher Friesen
 
