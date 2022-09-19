@@ -21,6 +21,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+g_diffuser_lib.py - shared functions and diffusers operations
+
 """
 
 from g_diffuser_bot_defaults import *
@@ -94,7 +98,9 @@ def _get_tmp_path(file_extension):
         pathlib.Path(TMP_ROOT_PATH).mkdir(exist_ok=True)
     except Exception as e:
         print("Error creating temp path: '" + TMP_ROOT_PATH + "' - " + str(e))
-    tmp_path = pathlib.Path(TMP_ROOT_PATH) / (str(uuid.uuid4()) + file_extension)
+        
+    uuid_str = str(uuid.uuid4())[0:len(uuid_str)//2] # shorten uuid, don't need that many digits
+    tmp_path = pathlib.Path(TMP_ROOT_PATH) / (uuid_str + file_extension)
     return tmp_path.absolute().as_posix()
 
 def _save_debug_img(np_image, name):
