@@ -13,3 +13,6 @@ Installation:
  - run the discord bot with python g_diffuser_bot.py
  - alternatively, run the CLI interface with python g_diffuser_cli.py
  - You can use the CLI interface interactively with python g_diffuser_cli.py --interactive
+
+Updating:
+ - Simply download and replace your files with those from those repository. You probably don't need to replace your config and default files.
