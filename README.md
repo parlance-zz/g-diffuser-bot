@@ -90,7 +90,7 @@ Updating:
     
     https://imgur.com/a/S6g5SmI
     
-    https://discord.com/channels/1021168973582184548/1021183939685142609
+    https://discord.gg/jS4vzBJxYz
     
     
  This section will be updated with better samples when I have time to create them.
