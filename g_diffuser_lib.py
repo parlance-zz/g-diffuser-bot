@@ -99,7 +99,8 @@ def _get_tmp_path(file_extension):
     except Exception as e:
         print("Error creating temp path: '" + TMP_ROOT_PATH + "' - " + str(e))
         
-    uuid_str = str(uuid.uuid4())[0:len(uuid_str)//2] # shorten uuid, don't need that many digits
+    uuid_str = str(uuid.uuid4())
+    uuid_str = uuid_str[0:len(uuid_str)//2] # shorten uuid, don't need that many digits
     tmp_path = pathlib.Path(TMP_ROOT_PATH) / (uuid_str + file_extension)
     return tmp_path.absolute().as_posix()
 
