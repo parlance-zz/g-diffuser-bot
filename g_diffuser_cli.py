@@ -135,9 +135,9 @@ def main():
     gdl._load_pipelines(args)
     
     if args.interactive:
-        print("Interactive mode: call sample() with keyword args, e.g.:")
-        print("sample(scale=5, prompt='my prompt')")
-        print("sample(scale=15, prompt='my other prompt, art by greg rutkowski', n=5, init_img='my_image_src.png')")
+        print("\nInteractive mode: call sample() with keyword args, e.g.:")
+        print("sample('my prompt')")
+        print("sample('my other prompt, art by greg rutkowski', n=5, init_img='my_image_src.png', scale=15, output='output.png')\n")
         global INTERACTIVE_BASE_ARGS
         INTERACTIVE_BASE_ARGS = args
         _cli_locals = argparse.Namespace()

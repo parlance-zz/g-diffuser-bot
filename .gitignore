@@ -8,3 +8,6 @@ __pycache__/
 g_diffuser_bot_config.py
 *.png
 *.json
+*.bat
+*.jpg
+*.jpeg

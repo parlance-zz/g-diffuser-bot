@@ -3,8 +3,8 @@ channels:
   - pytorch
   - defaults
 dependencies:
-  - python=3.8.5
-  - pip=20.3
+  - python
+  - pip
   - cudatoolkit
   - pytorch
   - torchvision
@@ -14,6 +14,7 @@ dependencies:
     - scikit-image
     - psutil
     - pytimeparse
-    - diffusers
     - transformers
     - discord
+    - ftfy
+    - git+https://github.com/huggingface/diffusers    

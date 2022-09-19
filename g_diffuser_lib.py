@@ -559,11 +559,15 @@ def _load_pipelines(args):
         else: pipe_list = ["txt2img"]
             
     if not args.use_optimized: use_optimized = BOT_USE_OPTIMIZED
+    else: use_optimized = args.use_optimized
     if not args.model_name: model_name = CMD_SERVER_MODEL_NAME
     if not args.hf_token: hf_token = HUGGINGFACE_TOKEN
     
-    if use_optimized == True: torch_dtype = torch.float16 # use fp16 in optimized mode
-    else: torch_dtype = None
+    if use_optimized:
+        torch_dtype = torch.float16 # use fp16 in optimized mode
+        if DEBUG_MODE: print("Using memory optimizations...")
+    else:
+        torch_dtype = None
     
     if DEBUG_MODE: load_start_time = datetime.datetime.now()
     loaded_pipes = {}
