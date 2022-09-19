@@ -15,4 +15,4 @@ Installation:
  - You can use the CLI interface interactively with python g_diffuser_cli.py --interactive
 
 Updating:
- - Simply download and replace your files with those from those repository. You probably don't need to replace your config and default settings files.
+ - Simply download and replace your files with those from this repository. You probably won't need to replace your config and default settings files.
