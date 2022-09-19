@@ -85,8 +85,12 @@ Updating:
  Questions or comments can be sent to parlance@fifth-harmonic.com (https://github.com/parlance-zz/)
  
  The algorithm is constantly evolving but some out-dated samples can be seen here:
+ 
     https://imgur.com/a/pwN6LHB
+    
     https://imgur.com/a/S6g5SmI
+    
     https://discord.com/channels/1021168973582184548/1021183939685142609
+    
     
  This section will be updated with better samples when I have time to create them.
