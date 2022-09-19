@@ -1,0 +1,10 @@
+stable-diffusion-v1-4/
+tmp/
+release/
+junk/
+backup/
+old/
+__pycache__/
+g_diffuser_bot_config.py
+*.png
+*.json
