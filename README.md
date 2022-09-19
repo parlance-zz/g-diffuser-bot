@@ -3,7 +3,7 @@ Sept 19/2022 Update - Please do not use this, this is a temporary repository for
 Installation:
  - clone / download this repository to a folder of your choice
  - download / install miniconda (https://docs.conda.io/en/latest/miniconda.html)
- - open a conda prompt, then navigate to the folder where you cloned this repository
+ - open a conda prompt, then navigate to the folder where you cloned / downloaded this repository
  - conda env create -f environment.yaml
  - edit g_diffuser_bot_config.py and g_diffuser_bot_defaults.py as appropriate, make sure to save!
  
