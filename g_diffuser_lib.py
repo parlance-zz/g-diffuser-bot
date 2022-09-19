@@ -48,7 +48,7 @@ import torch
 from torch import autocast
 from diffusers import StableDiffusionPipeline
 from diffusers import StableDiffusionInpaintPipeline # we don't need the img2img pipeline because inpaint is a superset of its functionality
-#from diffusers import LMSDiscreteScheduler # broken atm I believe
+#from diffusers import LMSDiscreteScheduler          # broken at the moment I believe
 
 def _get_image_dims(img_path):
     img = Image.open(img_path)
@@ -158,13 +158,13 @@ def _get_image_grid(imgs, layout): # make an image grid out of a set of images
 # helper fft routines that keep ortho normalization and auto-shift before and after fft, and can handle multi-channel images
 
 def _fft2(data):
-    if data.ndim > 2: # has multiple channels
+    if data.ndim > 2: # multiple channels
         out_fft = np.zeros((data.shape[0], data.shape[1], data.shape[2]), dtype=np.complex128)
         for c in range(data.shape[2]):
             c_data = data[:,:,c]
             out_fft[:,:,c] = np.fft.fft2(np.fft.fftshift(c_data),norm="ortho")
             out_fft[:,:,c] = np.fft.ifftshift(out_fft[:,:,c])
-    else: # one channel
+    else: # single channel
         out_fft = np.zeros((data.shape[0], data.shape[1]), dtype=np.complex128)
         out_fft[:,:] = np.fft.fft2(np.fft.fftshift(data),norm="ortho")
         out_fft[:,:] = np.fft.ifftshift(out_fft[:,:])
@@ -172,13 +172,13 @@ def _fft2(data):
     return out_fft
    
 def _ifft2(data):
-    if data.ndim > 2: # has multiple channels
+    if data.ndim > 2: # multiple channels
         out_ifft = np.zeros((data.shape[0], data.shape[1], data.shape[2]), dtype=np.complex128)
         for c in range(data.shape[2]):
             c_data = data[:,:,c]
             out_ifft[:,:,c] = np.fft.ifft2(np.fft.fftshift(c_data),norm="ortho")
             out_ifft[:,:,c] = np.fft.ifftshift(out_ifft[:,:,c])
-    else: # one channel
+    else: # single channel
         out_ifft = np.zeros((data.shape[0], data.shape[1]), dtype=np.complex128)
         out_ifft[:,:] = np.fft.ifft2(np.fft.fftshift(data),norm="ortho")
         out_ifft[:,:] = np.fft.ifftshift(out_ifft[:,:])
@@ -210,9 +210,7 @@ def _convolve(data1, data2):     # fast convolution with fft
     if data1.ndim != data2.ndim: # promote to rgb if mismatch
         if data1.ndim < 3: data1 = _np_img_grey_to_rgb(data1)
         if data2.ndim < 3: data2 = _np_img_grey_to_rgb(data2)
-    fft1 = _fft2(data1)
-    fft2 = _fft2(data2)
-    return np.real(_ifft2(fft1 * fft2))
+    return np.real(_ifft2(_fft2(data1) * _fft2(data2)))
 
 def _gaussian_blur(data, std=3.14):
     width = data.shape[0]
@@ -282,7 +280,8 @@ def _get_blend_masks(np_mask_rgb, mask_blend_factor, strength):  # np_mask_rgb i
     final_blend_mask = 1. - (1.-final_blend_mask) *  max_opacity # scale the blend mask by the max opacity of the original mask to support partial blending / style transfer
     _save_debug_img(final_blend_mask, "final_blend_mask")
     return mask_hardened, final_blend_mask, window_mask
-                            
+
+
 """
 
  Why does this need to exist? I thought SD already did in/out-painting?:
@@ -338,6 +337,7 @@ def _get_blend_masks(np_mask_rgb, mask_blend_factor, strength):  # np_mask_rgb i
  Questions or comments can be sent to parlance@fifth-harmonic.com (https://github.com/parlance-zz/)
  
 """
+
 
 def _get_matched_noise(np_init, mask_hardened, final_blend_mask, window_mask, noise_q): 
 
@@ -468,7 +468,6 @@ def _load_image(args):
 def _get_samples(args):
     global DEBUG_MODE
     global DEFAULT_RESOLUTION
-    #if DEBUG_MODE: print("Sampling with arguments:\n" + str(vars(args)) + "\n")
     
     if args.init_img != "":
         pipe_name = "img2img"
@@ -591,24 +590,7 @@ def _load_pipelines(args):
             pipe.enable_attention_slicing() # use attention slicing in optimized mode
             
         loaded_pipes[pipe_name] = pipe
-        
-    # reduce memory consumption (https://gist.github.com/fladdict/2115eb7ea32c9245e4f45642553aa3e9)
-    """
-    if len(pipe_list) > 1:
-        base_pipe_name = pipe_list[0]
-        base_pipe = loaded_pipes[base_pipe_name]
-        for pipe_name in pipe_list:
-            if pipe_name != base_pipe_name:
-                loaded_pipes[pipe_name].vae = base_pipe.vae
-                loaded_pipes[pipe_name].text_encoder = base_pipe.text_encoder
-                loaded_pipes[pipe_name].tokenizer = base_pipe.tokenizer
-                loaded_pipes[pipe_name].unet = base_pipe.unet
-                loaded_pipes[pipe_name].feature_extractor = base_pipe.feature_extractor
-                loaded_pipes[pipe_name].scheduler = base_pipe.scheduler
-    """ 
     if DEBUG_MODE: print("load pipelines time : " + str(datetime.datetime.now() - load_start_time))
 
     args.loaded_pipes = loaded_pipes
     return args.loaded_pipes
-    
-    
