@@ -19,7 +19,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Sept 19/2022 Update - Please do not use this, this is a temporary repository for breaking changes until they can be merged.
+Sept 19/2022 Update - PLEASE DO NOT USE THIS, this is a temporary repository for breaking changes until they can be merged.
 
 
 Installation:
