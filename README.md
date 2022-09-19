@@ -1,5 +1,3 @@
-This software is distributed under the MIT License
-
 Copyright (c) 2022 Christopher Friesen
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
