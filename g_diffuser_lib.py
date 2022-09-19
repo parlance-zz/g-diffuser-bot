@@ -586,6 +586,7 @@ def _load_pipelines(args):
         loaded_pipes[pipe_name] = pipe
         
     # reduce memory consumption (https://gist.github.com/fladdict/2115eb7ea32c9245e4f45642553aa3e9)
+    """
     if len(pipe_list) > 1:
         base_pipe_name = pipe_list[0]
         base_pipe = loaded_pipes[base_pipe_name]
@@ -597,7 +598,7 @@ def _load_pipelines(args):
                 loaded_pipes[pipe_name].unet = base_pipe.unet
                 loaded_pipes[pipe_name].feature_extractor = base_pipe.feature_extractor
                 loaded_pipes[pipe_name].scheduler = base_pipe.scheduler
-        
+    """ 
     if DEBUG_MODE: print("load pipelines time : " + str(datetime.datetime.now() - load_start_time))
 
     args.loaded_pipes = loaded_pipes
