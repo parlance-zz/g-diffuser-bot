@@ -429,8 +429,9 @@ def load_image(args):
     if (width, height) != init_image.size:
         if DEBUG_MODE: print("Resizing input image to (" + str(width) + ", " + str(height) + ")")
         init_image = init_image.resize((width, height), resample=PIL.Image.LANCZOS)
-        args.w = width
-        args.h = height
+        
+    args.w = width
+    args.h = height
         
     if init_image.mode == "RGBA":
         # prep masks and shaped noise, note that you only need to prep masks once if you're doing multiple samples
