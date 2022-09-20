@@ -141,7 +141,7 @@ def main():
     if args.interactive:
         print("\nInteractive mode: call sample() with keyword args, e.g.:")
         print("sample('my prompt')")
-        print("sample('my other prompt, art by greg rutkowski', n=5, init_img='my_image_src.png', scale=15, output='output.png')\n")
+        print("sample('my other prompt, art by greg rutkowski', n=5, init_img='my_image_src.png', scale=15, output='output.png', repeat=True)\n")
         cli_locals = argparse.Namespace()
         cli_locals.sample = _cli_get_samples
         global INTERACTIVE_CLI_ARGS
@@ -160,15 +160,19 @@ def _cli_get_samples(prompt=None, **kwargs):
     args = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), kwargs))
     if prompt: args.prompt = prompt
     
-    samples = gdl.get_samples(args)
-    gdl.save_samples(samples, args)
-    INTERACTIVE_CLI_ARGS = args
-    
-    print("")
-    if DEBUG_MODE:
-        args_copy = argparse.Namespace(**vars(args))
-        args_copy.loaded_pipes = None
-        return args_copy
+    if "repeat" in args: repeat = args.repeat
+    else: repeat = False
+    if repeat: print("Repeating sample...")
+    while True:
+        samples = gdl.get_samples(args)
+        gdl.save_samples(samples, args)
+        INTERACTIVE_CLI_ARGS = args
+        if DEBUG_MODE:
+            args_copy = argparse.Namespace(**vars(args))
+            args_copy.loaded_pipes = None
+            print(args_copy)
+        print("")    
+        if not repeat: break
     return
     
     

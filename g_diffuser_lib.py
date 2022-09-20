@@ -409,7 +409,7 @@ def get_matched_noise(np_init, mask_hardened, final_blend_mask, window_mask, noi
     save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_pre-histo-match")
     """
     
-    schrodinger_kernel = get_gaussian(width, height, std=1j*width**.125) * (np.random.random_sample((width, height))*2. - 1.)# * np.random.random_sample((width, height))
+    schrodinger_kernel = get_gaussian(width, height, std=1j*width**.125 + (noise_q-1.)) * (np.random.random_sample((width, height))*2. - 1.)# * np.random.random_sample((width, height))
     shaped_noise_rgb = np.absolute(convolve(schrodinger_kernel, windowed_image))
     shaped_noise_rgb = normalize_image(shaped_noise_rgb)
     save_debug_img(shaped_noise_rgb, "shaped_noise_rgb")
