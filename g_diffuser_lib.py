@@ -429,7 +429,6 @@ def load_image(args):
     if (width, height) != init_image.size:
         if DEBUG_MODE: print("Resizing input image to (" + str(width) + ", " + str(height) + ")")
         init_image = init_image.resize((width, height), resample=PIL.Image.LANCZOS)
-        
     args.w = width
     args.h = height
         
@@ -439,9 +438,12 @@ def load_image(args):
         init_image = init_image.convert("RGB")
         np_init = (np.asarray(init_image.convert("RGB"))/255.).astype(np.float64)
         np_mask_rgb = (np.asarray(mask_image.convert("RGB"))/255.).astype(np.float64)
+        if DEBUG_MODE:
+            if np.min(np_mask_rgb) > 0.: print("Warning: Image mask doesn't have any fully transparent area")
+            if np.max(np_mask_rgb) < 1.: print("Warning: Image mask doesn't have any opaque area")
 
         if DEBUG_MODE: mask_start_time = datetime.datetime.now()
-        mask_hardened, final_blend_mask, window_mask = get_blend_masks(np_mask_rgb, args.blend, args.str)
+        mask_hardened, final_blend_mask, window_mask = get_blend_masks(np_mask_rgb, args.blend, args.strength)
         if DEBUG_MODE: print("get_blend_masks time : " + str(datetime.datetime.now() - mask_start_time))
         mask_image = PIL.Image.fromarray(np.clip(final_blend_mask*255., 0., 255.).astype(np.uint8), mode="RGB")
         
@@ -450,13 +452,11 @@ def load_image(args):
         if DEBUG_MODE: print("get_matched_noise time : " + str(datetime.datetime.now() - noised_start_time))
         init_image = PIL.Image.fromarray(np.clip(shaped_noise*255., 0., 255.).astype(np.uint8), mode="RGB")
     else:
-        final_blend_mask = np.ones(width, height) * (1.-args.str)
+        final_blend_mask = np_img_grey_to_rgb(np.ones((args.w, args.h)) * np.clip(args.strength, 0., 1.))
         mask_image = PIL.Image.fromarray(np.clip(final_blend_mask*255., 0., 255.).astype(np.uint8), mode="RGB")
     
     if DEBUG_MODE:
-        if np.min(np_mask_rgb) > 0.: print("Warning: Image mask doesn't have any fully transparent area")
-        if np.max(np_mask_rgb) < 1.: print("Warning: Image mask doesn't have any opaque area")
-        if args.str > 0.: print("Warning: Overriding mask maximum opacity with user-supplied strength : " + str(args.str))
+        if args.strength > 0.: print("Warning: Overriding mask maximum opacity with user-supplied strength : " + str(args.strength))
 
     return init_image, mask_image
         

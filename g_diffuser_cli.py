@@ -84,10 +84,10 @@ def main():
         help="augments falloff of matched noise distribution ( > 0). lower means smaller features and higher means larger features",
     )
     parser.add_argument(
-        "--str",
+        "--strength",
         type=float,
         default=0,
-        help="'strength', overall amount to change the input image",
+        help="overall amount to change the input image",
     )
     parser.add_argument(
         "--n",
@@ -166,8 +166,9 @@ def _cli_get_samples(prompt=None, **kwargs):
     
     print("")
     if DEBUG_MODE:
-        args.loaded_pipes = None
-        return args
+        args_copy = argparse.Namespace(**vars(args))
+        args_copy.loaded_pipes = None
+        return args_copy
     return
     
     
