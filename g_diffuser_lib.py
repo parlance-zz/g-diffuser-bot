@@ -50,19 +50,16 @@ from diffusers import StableDiffusionPipeline
 from diffusers import StableDiffusionInpaintPipeline # we don't need the img2img pipeline because inpaint is a superset of its functionality
 #from diffusers import LMSDiscreteScheduler          # broken at the moment I believe
 
-def _get_image_dims(img_path):
+def get_image_dims(img_path):
     img = Image.open(img_path)
     size = img.size
     img.close()
     return size
 
-def _merge_dicts(_d1, d2): # overwrites the attributes in _d1 in merge
-    d1 = _d1.copy()
-    for x in d2:
-        d1[x] = d2[x]
-    return d1
+def merge_dicts(d1, d2): # overwrites the attributes in d1 in merge
+    return dict(d1, **d2)
     
-def _valid_resolution(width, height, init_image=None): # cap max dimension at max res and ensure size is 
+def valid_resolution(width, height, init_image=None): # cap max dimension at max res and ensure size is 
                                                        # a correct multiple of granularity while
                                                        # preserving aspect ratio (best we can anyway)
     global DEFAULT_RESOLUTION
@@ -92,7 +89,7 @@ def _valid_resolution(width, height, init_image=None): # cap max dimension at ma
 
     return width, height
     
-def _get_tmp_path(file_extension):
+def get_tmp_path(file_extension):
     global TMP_ROOT_PATH
     try: # try to make sure temp folder exists
         pathlib.Path(TMP_ROOT_PATH).mkdir(exist_ok=True)
@@ -104,7 +101,7 @@ def _get_tmp_path(file_extension):
     tmp_path = pathlib.Path(TMP_ROOT_PATH) / (uuid_str + file_extension)
     return tmp_path.absolute().as_posix()
 
-def _save_debug_img(np_image, name):
+def save_debug_img(np_image, name):
     global DEBUG_MODE
     if not DEBUG_MODE: return
     global TMP_ROOT_PATH
@@ -128,21 +125,21 @@ def _save_debug_img(np_image, name):
     else:
         np_image.save(image_path)
     
-def _dummy_checker(images, **kwargs): # replacement func to disable safety_checker in diffusers
+def dummy_checker(images, **kwargs): # replacement func to disable safety_checker in diffusers
     return images, False
 
-def _factorize(num):
+def factorize(num):
     return [n for n in range(1, num + 1) if num % n == 0]
     
-def _get_grid_layout(num_samples):
-    factors = _factorize(num_samples)
+def get_grid_layout(num_samples):
+    factors = factorize(num_samples)
     median_factor = factors[len(factors)//2]
     columns = median_factor
     rows = num_samples // columns
     
     return (rows, columns)
     
-def _get_image_grid(imgs, layout): # make an image grid out of a set of images
+def get_image_grid(imgs, layout): # make an image grid out of a set of images
     assert len(imgs) == layout[0]*layout[1]
     w, h = imgs[0].size
     grid = Image.new('RGB', size=(layout[1]*w, layout[0]*h))
@@ -157,7 +154,7 @@ def _get_image_grid(imgs, layout): # make an image grid out of a set of images
 
 # helper fft routines that keep ortho normalization and auto-shift before and after fft, and can handle multi-channel images
 
-def _fft2(data):
+def fft2(data):
     if data.ndim > 2: # multiple channels
         out_fft = np.zeros((data.shape[0], data.shape[1], data.shape[2]), dtype=np.complex128)
         for c in range(data.shape[2]):
@@ -171,7 +168,7 @@ def _fft2(data):
     
     return out_fft
    
-def _ifft2(data):
+def ifft2(data):
     if data.ndim > 2: # multiple channels
         out_ifft = np.zeros((data.shape[0], data.shape[1], data.shape[2]), dtype=np.complex128)
         for c in range(data.shape[2]):
@@ -185,7 +182,7 @@ def _ifft2(data):
         
     return out_ifft
             
-def _get_gaussian(width, height, std=3.14, edge_filter=False): # simple gaussian kernel
+def get_gaussian(width, height, std=3.14, edge_filter=False): # simple gaussian kernel
 
     window_scale_x = float(width / min(width, height))  # for non-square aspect ratios we still want a circular gaussian
     window_scale_y = float(height / min(width, height)) 
@@ -206,46 +203,46 @@ def _get_gaussian(width, height, std=3.14, edge_filter=False): # simple gaussian
     else:
         return gaussian
 
-def _convolve(data1, data2):     # fast convolution with fft
+def convolve(data1, data2):     # fast convolution with fft
     if data1.ndim != data2.ndim: # promote to rgb if mismatch
-        if data1.ndim < 3: data1 = _np_img_grey_to_rgb(data1)
-        if data2.ndim < 3: data2 = _np_img_grey_to_rgb(data2)
-    return np.real(_ifft2(_fft2(data1) * _fft2(data2)))
+        if data1.ndim < 3: data1 = np_img_grey_to_rgb(data1)
+        if data2.ndim < 3: data2 = np_img_grey_to_rgb(data2)
+    return np.real(ifft2(fft2(data1) * fft2(data2)))
 
-def _gaussian_blur(data, std=3.14):
+def gaussian_blur(data, std=3.14):
     width = data.shape[0]
     height = data.shape[1]
-    kernel = _get_gaussian(width, height, std)
-    return _convolve(data, kernel / np.sqrt(np.sum(kernel*kernel)))
+    kernel = get_gaussian(width, height, std)
+    return convolve(data, kernel / np.sqrt(np.sum(kernel*kernel)))
  
-def _normalize_image(data):
+def normalize_image(data):
     normalized = data - np.min(data)
     normalized_max = np.max(normalized)
     assert(normalized_max > 0.)
     return normalized / normalized_max
  
-def _np_img_rgb_to_grey(data):
+def np_img_rgb_to_grey(data):
     if data.ndim == 2: return data
     return np.sum(data, axis=2)/3.
     
-def _np_img_grey_to_rgb(data):
+def np_img_grey_to_rgb(data):
     if data.ndim == 3: return data
     return np.expand_dims(data, 2) * np.ones((1, 1, 3))
 
-def _color_match_image(image, match_to, amount=1.):
+def color_match_image(image, match_to, amount=1.):
     image_hsv = color.rgb2hsv(image)
     match_to_hsv = color.rgb2hsv(match_to)
     image_hsv[:,:,1] = image_hsv[:,:,1]*(1.-amount) + amount*match_to_hsv[:,:,1] # overwrite hue and saturation preserving value
     image_hsv[:,:,0] = image_hsv[:,:,0]*(1.-amount) + amount*match_to_hsv[:,:,0]
     return color.hsv2rgb(image_hsv)
     
-def _brightness_match_image(image, match_to, amount=1.):
+def brightness_match_image(image, match_to, amount=1.):
     image_hsv = color.rgb2hsv(image)
     image_hsv[:,:,2] = image_hsv[:,:,2]*(1.-amount) + amount*color.rgb2hsv(match_to)[:,:,2] # overwrite value preserving hue and saturation
     return color.hsv2rgb(image_hsv)
     
 # prepare masks for in/out-painting
-def _get_blend_masks(np_mask_rgb, mask_blend_factor, strength):  # np_mask_rgb is an np array of rgb data in (0..1)
+def get_blend_masks(np_mask_rgb, mask_blend_factor, strength):  # np_mask_rgb is an np array of rgb data in (0..1)
                                                                  # mask_blend_factor ( > 0.) adjusts blend hardness, with 1. corresponding closely to the original mask and higher values approaching the hard edge of the original mask
                                                                  # strength overrides (if > 0.) the maximum opacity in the user mask to support style transfer type applications
     assert(np_mask_rgb.ndim == 3) # needs to be a 3 channel mask
@@ -254,23 +251,23 @@ def _get_blend_masks(np_mask_rgb, mask_blend_factor, strength):  # np_mask_rgb i
     
     assert(mask_blend_factor > 0.)
     assert(np.average(np_mask_rgb) > 0.) # images where every pixel is fully masked will trigger this assert
-    _save_debug_img(np_mask_rgb, "np_mask_rgb")
+    save_debug_img(np_mask_rgb, "np_mask_rgb")
     
     mask_hardened = 1. - (np_mask_rgb > 0.).astype(np.float64)
-    _save_debug_img(mask_hardened, "mask_hardened")
+    save_debug_img(mask_hardened, "mask_hardened")
 
     # this fits a blurred interior mask that avoids bleeding over the outside of the original mask
-    blend_mask = np.clip(_gaussian_blur(mask_hardened*1250.,std=500.), 0., 1.)
+    blend_mask = np.clip(gaussian_blur(mask_hardened*1250.,std=500.), 0., 1.)
     blend_mask /= np.max(blend_mask)
-    _save_debug_img(blend_mask, "blend_mask")
+    save_debug_img(blend_mask, "blend_mask")
     
     final_blend_mask = blend_mask ** mask_blend_factor             # and adjust hardness by the blend factor
-    final_blend_mask = _gaussian_blur(final_blend_mask*1.1, std=500.)  # one final very small blur to prevent aliasing from blend factor or bad user masks
-    final_blend_mask = _normalize_image(final_blend_mask)
+    final_blend_mask = gaussian_blur(final_blend_mask*1.1, std=500.)  # one final very small blur to prevent aliasing from blend factor or bad user masks
+    final_blend_mask = normalize_image(final_blend_mask)
      
     window_mask = np.minimum(final_blend_mask[:] + 0.025, 1.)
     assert(np.average(window_mask) < 1.)
-    _save_debug_img(window_mask, "window_mask")
+    save_debug_img(window_mask, "window_mask")
     
     if strength == 0.:
         max_opacity = np.max(np_mask_rgb)
@@ -278,7 +275,7 @@ def _get_blend_masks(np_mask_rgb, mask_blend_factor, strength):  # np_mask_rgb i
         max_opacity = np.clip(strength, 0., 1.)
     
     final_blend_mask = 1. - (1.-final_blend_mask) *  max_opacity # scale the blend mask by the max opacity of the original mask to support partial blending / style transfer
-    _save_debug_img(final_blend_mask, "final_blend_mask")
+    save_debug_img(final_blend_mask, "final_blend_mask")
     return mask_hardened, final_blend_mask, window_mask
 
 
@@ -294,9 +291,6 @@ def _get_blend_masks(np_mask_rgb, mask_blend_factor, strength):  # np_mask_rgb i
  will erase the color data in the erased regions (at least in Windows). Code like this or patchmatch that can generate a
  seed image (or "fixed code") will (at least for now) be required for seamless out-painting.
  
- Explanation:
- 
- Getting good results in/out-painting with stable diffusion can be challenging.
  Although there are simple effective solutions for in-painting, out-painting can be especially challenging because there is no color data
  in the masked area to help prompt the generator. Ideally, even for in-painting we'd like work effectively without that data as well.
 
@@ -339,7 +333,7 @@ def _get_blend_masks(np_mask_rgb, mask_blend_factor, strength):  # np_mask_rgb i
 """
 
 
-def _get_matched_noise(np_init, mask_hardened, final_blend_mask, window_mask, noise_q): 
+def get_matched_noise(np_init, mask_hardened, final_blend_mask, window_mask, noise_q): 
 
     assert(noise_q > 0.)
     
@@ -347,10 +341,10 @@ def _get_matched_noise(np_init, mask_hardened, final_blend_mask, window_mask, no
     height = np_init.shape[1]
     num_channels = np_init.shape[2]
     
-    edge_kernel = _get_gaussian(width, height, std=1e5, edge_filter=True)
-    edges = _convolve(np_init, edge_kernel) * (1.-window_mask) **0.01 #........................
+    edge_kernel = get_gaussian(width, height, std=1e5, edge_filter=True)
+    edges = convolve(np_init, edge_kernel) * (1.-window_mask) **0.01 #........................
     edges /= np.max(edges)
-    _save_debug_img(edges, "edges")
+    save_debug_img(edges, "edges")
     
     windowed_image = np_init * (1.-window_mask)
     color_bleed = np.zeros((width, height, num_channels)) # start with just the average color of the unmasked source
@@ -358,20 +352,20 @@ def _get_matched_noise(np_init, mask_hardened, final_blend_mask, window_mask, no
         color_bleed[:,:,c] = np.clip(np.average(windowed_image[:,:,c]) / np.average(1.-window_mask[:,:,c]), 0., 1.)
     for i in range(3):
         std = 16. * (10**i)
-        blurred = _normalize_image(_gaussian_blur(edges*2., std=std))
+        blurred = normalize_image(gaussian_blur(edges*2., std=std))
         color_bleed *= blurred + 1.
         
     color_bleed /= np.max(color_bleed)
-    color_bleed = _normalize_image(color_bleed)
-    #color_bleed = _normalize_image_brightness(color_bleed)
-    _save_debug_img(color_bleed, "color_bleed")
+    color_bleed = normalize_image(color_bleed)
+    #color_bleed = normalize_image_brightness(color_bleed)
+    save_debug_img(color_bleed, "color_bleed")
     
     windowed_image += color_bleed * window_mask
-    _save_debug_img(windowed_image, "windowed_src_img")
+    save_debug_img(windowed_image, "windowed_src_img")
     
-    #windowed_image_grey = _np_img_rgb_to_grey(windowed_image)
-    #src_fft = _fft2(windowed_image_grey) # get source image feature statistics
-    src_fft = _fft2(windowed_image) # get source image feature statistics
+    #windowed_image_grey = np_img_rgb_to_grey(windowed_image)
+    #src_fft = fft2(windowed_image_grey) # get source image feature statistics
+    src_fft = fft2(windowed_image) # get source image feature statistics
     
     src_dist = np.absolute(src_fft[:])
     src_dist_max = np.max(src_dist)
@@ -385,14 +379,14 @@ def _get_matched_noise(np_init, mask_hardened, final_blend_mask, window_mask, no
     src_dist_rgb = src_dist[:]
     src_phase_rgb = src_phase[:]
     
-    _save_debug_img(_normalize_image(src_dist_rgb)*1e5, "windowed_src_dist")
-    _save_debug_img(_normalize_image(np.angle(src_phase_rgb)), "windowed_src_phase")
+    save_debug_img(normalize_image(src_dist_rgb)*1e5, "windowed_src_dist")
+    save_debug_img(normalize_image(np.angle(src_phase_rgb)), "windowed_src_phase")
     
     #noise = np.random.random_sample((width, height))*2. - 1.
     #noise_rgb = _np_img_grey_to_rgb(noise)
     noise_rgb = np.random.random_sample((width, height, num_channels)) 
     
-    shaped_noise_fft = _fft2(noise_rgb)*2. - 1.
+    shaped_noise_fft = fft2(noise_rgb)*2. - 1.
     shaped_noise_fft_abs = np.absolute(shaped_noise_fft)
     #shaped_noise_fft = shaped_noise_fft * src_dist_rgb # * src_phase_rgb #* 3.14 # perform the actual shaping
     shaped_noise_fft = np.absolute(shaped_noise_fft) * src_dist_rgb * src_phase_rgb #* 3.14 # perform the actual shaping
@@ -401,37 +395,37 @@ def _get_matched_noise(np_init, mask_hardened, final_blend_mask, window_mask, no
     shaped_noise_fft *= np.sum(np.absolute(src_fft - np.average(src_fft))**2)**0.5
     shaped_noise_fft += np.average(src_fft)
     
-    _save_debug_img(_normalize_image(np.absolute(shaped_noise_fft))*1e5, "shaped_noise_fft_postshape")
-    _save_debug_img(_normalize_image(np.angle(shaped_noise_fft)), "shaped_noise_phase_postshape")
+    save_debug_img(normalize_image(np.absolute(shaped_noise_fft))*1e5, "shaped_noise_fft_postshape")
+    save_debug_img(normalize_image(np.angle(shaped_noise_fft)), "shaped_noise_phase_postshape")
     
-    shaped_noise_rgb = np.real(_ifft2(shaped_noise_fft))
-    shaped_noise_rgb = _normalize_image(shaped_noise_rgb)
-    _save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_pre-colorize")
-    shaped_noise_rgb = _color_match_image(shaped_noise_rgb, color_bleed)
-    _save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_pre-histo-match")
+    shaped_noise_rgb = np.real(ifft2(shaped_noise_fft))
+    shaped_noise_rgb = normalize_image(shaped_noise_rgb)
+    save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_pre-colorize")
+    shaped_noise_rgb = color_match_image(shaped_noise_rgb, color_bleed)
+    save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_pre-histo-match")
     
     all_mask = np.ones((width, height), dtype=bool)
-    ref_mask = _np_img_rgb_to_grey(mask_hardened) < 0.99    
+    ref_mask = np_img_rgb_to_grey(mask_hardened) < 0.99    
     shaped_noise_rgb[all_mask,:] = skimage.exposure.match_histograms(
         shaped_noise_rgb[all_mask,:], 
         np_init[ref_mask,:]**2,
         channel_axis=1
     )
-    _save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_post-histo-match")
+    save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_post-histo-match")
      
     #shaped_noise_rgb = np_init * (1. - final_blend_mask) + shaped_noise_rgb * final_blend_mask
-    #_save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_post-final-blend")
+    #save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_post-final-blend")
     
     return np.clip(shaped_noise_rgb, 0., 1.) 
     
 # ************* in/out-painting code ends here *************
 
-def _load_image(args):
+def load_image(args):
     global DEBUG_MODE
     
     # load and resize input image to multiple of 64x64
     init_image = Image.open(args.init_img)
-    width, height = _valid_resolution(args.w, args.h, init_image=init_image)
+    width, height = valid_resolution(args.w, args.h, init_image=init_image)
     if (width, height) != init_image.size:
         if DEBUG_MODE: print("Resizing input image to (" + str(width) + ", " + str(height) + ")")
         init_image = init_image.resize((width, height), resample=PIL.Image.LANCZOS)
@@ -446,13 +440,13 @@ def _load_image(args):
         np_mask_rgb = (np.asarray(mask_image.convert("RGB"))/255.).astype(np.float64)
 
         if DEBUG_MODE: mask_start_time = datetime.datetime.now()
-        mask_hardened, final_blend_mask, window_mask = _get_blend_masks(np_mask_rgb, args.blend, args.str)
-        if DEBUG_MODE: print("_get_blend_masks time : " + str(datetime.datetime.now() - mask_start_time))
+        mask_hardened, final_blend_mask, window_mask = get_blend_masks(np_mask_rgb, args.blend, args.str)
+        if DEBUG_MODE: print("get_blend_masks time : " + str(datetime.datetime.now() - mask_start_time))
         mask_image = PIL.Image.fromarray(np.clip(final_blend_mask*255., 0., 255.).astype(np.uint8), mode="RGB")
         
         if DEBUG_MODE: noised_start_time = datetime.datetime.now()
-        shaped_noise = _get_matched_noise(np_init, mask_hardened, final_blend_mask, window_mask, args.noise_q)
-        if DEBUG_MODE: print("_get_matched_noise time : " + str(datetime.datetime.now() - noised_start_time))
+        shaped_noise = get_matched_noise(np_init, mask_hardened, final_blend_mask, window_mask, args.noise_q)
+        if DEBUG_MODE: print("get_matched_noise time : " + str(datetime.datetime.now() - noised_start_time))
         init_image = PIL.Image.fromarray(np.clip(shaped_noise*255., 0., 255.).astype(np.uint8), mode="RGB")
     else:
         final_blend_mask = np.ones(width, height) * (1.-args.str)
@@ -465,14 +459,14 @@ def _load_image(args):
 
     return init_image, mask_image
         
-def _get_samples(args):
+def get_samples(args):
     global DEBUG_MODE
     global DEFAULT_RESOLUTION
     
     if args.init_img != "":
         pipe_name = "img2img"
-        init_image, mask_image = _load_image(args)
-        strength = 0.9999 # the real "strength" will be applied to the mask by _load_image
+        init_image, mask_image = load_image(args)
+        strength = 0.9999 # the real "strength" will be applied to the mask by load_image
     else:
         pipe_name = "txt2img"
         init_image = None
@@ -485,52 +479,43 @@ def _get_samples(args):
         sampling_start_time = datetime.datetime.now()
         print("Using " + pipe_name + " pipeline...")
     
+    args.used_pipe = pipe_name
     samples = []
     with autocast("cuda"):
         pipe = args.loaded_pipes[pipe_name]
         assert(pipe)
-           
-        prompt = args.prompt
-        BATCH_SIZE = 1 # higher batch size doesn't seem much faster and it significantly hurts memory usage, so hard-coding for now
-        if BATCH_SIZE > 1: # todo: break into chunks of batch size
-            if args.n > 1:
-                prompt = [args.prompt]*args.n
-            samples = pipe(
-                prompt=prompt,
-                init_image=init_image,
-                strength=strength,
-                guidance_scale=args.scale,
-                mask_image=mask_image,
-                num_inference_steps=args.steps,
-                width=args.w,
-                height=args.h,
-            )
-            samples = samples["sample"]
-        else:
-            for n in range(args.n):
+        
+        for n in range(args.n): # batched mode doesn't seem to accomplish much besides using more memory
+            if pipe_name == "txt2img":
                 sample = pipe(
-                    prompt=prompt,
+                    prompt=args.prompt,
+                    guidance_scale=args.scale,
+                    num_inference_steps=args.steps,
+                    width=args.w,
+                    height=args.h,
+                )
+            else:
+                sample = pipe(
+                    prompt=args.prompt,
                     init_image=init_image,
                     strength=strength,
                     guidance_scale=args.scale,
                     mask_image=mask_image,
                     num_inference_steps=args.steps,
-                    width=args.w,
-                    height=args.h,                    
                 )
-                samples.append(sample["sample"][0])
+            samples.append(sample["sample"][0])
 
     if DEBUG_MODE: print("total sampling time : " + str(datetime.datetime.now() - sampling_start_time))
     return samples
 
-def _save_samples(samples, args):
+def save_samples(samples, args):
     # combine individual samples to create main output
-    if len(samples) > 1: output_image = _get_image_grid(samples, _get_grid_layout(len(samples)))
+    if len(samples) > 1: output_image = get_image_grid(samples, get_grid_layout(len(samples)))
     else: output_image = samples[0]
     if args.output:
         output_path = args.output
     else:
-        output_path = _get_tmp_path(".png")
+        output_path = get_tmp_path(".png")
         args.output = output_path
     output_image.save(output_path)
     print("Saved " + output_path)
@@ -538,7 +523,7 @@ def _save_samples(samples, args):
     args.output_samples = [] # if n_samples > 1, save individual samples in tmp outputs as well
     if len(samples) > 1:
         for sample in samples:
-            output_path = _get_tmp_path(".png")
+            output_path = get_tmp_path(".png")
             sample.save(output_path)
             print("Saved " + output_path)
             args.output_samples.append(output_path)
@@ -549,7 +534,7 @@ def _save_samples(samples, args):
     
     return args.output_samples
     
-def _load_pipelines(args):
+def load_pipelines(args):
     global DEBUG_MODE
     global HUGGINGFACE_TOKEN
     global CMD_SERVER_MODEL_NAME
@@ -585,7 +570,7 @@ def _load_pipelines(args):
             use_auth_token=hf_token,
         )
         pipe = pipe.to("cuda")
-        setattr(pipe, "safety_checker", _dummy_checker)
+        setattr(pipe, "safety_checker", dummy_checker)
         if use_optimized == True:
             pipe.enable_attention_slicing() # use attention slicing in optimized mode
             
@@ -593,4 +578,5 @@ def _load_pipelines(args):
     if DEBUG_MODE: print("load pipelines time : " + str(datetime.datetime.now() - load_start_time))
 
     args.loaded_pipes = loaded_pipes
+    args.pipe_list = pipe_list
     return args.loaded_pipes

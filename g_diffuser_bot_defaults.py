@@ -1,17 +1,15 @@
 from g_diffuser_bot_config import *
 
+from pathlib import Path
+import argparse
+
 # --- bot params and defaults -----
 
-BOT_ACTIVITY = BOT_COMMAND_PREFIX + "help, " + BOT_COMMAND_PREFIX + "about"
-BOT_USE_OPTIMIZED = False  # IMPORTANT - Set to true if you encounter errors running commands due to low memory
-            
-# default paths
-from pathlib import Path
-ROOT_PATH = Path(__file__).parent.absolute()
-TMP_ROOT_PATH = (ROOT_PATH / "tmp").as_posix()                       # make sure this is a valid path (it will be created if it does not exist)
-BACKUP_PATH = (ROOT_PATH / "backup").as_posix()                      # make sure this is a valid path (it will be created if it does not exist)
-BOT_STATE_DATA_FILE = (ROOT_PATH / "g-diffuser-bot.json").as_posix() # used for persisting command queue, top user list and input image paths
-ROOT_PATH = ROOT_PATH.as_posix()
+#cmd_defaults = argparse.Namespace()
+#cmd_defaults.use_optimized = False  # IMPORTANT - Set to true if you encounter errors running commands due to low memory
+ 
+BOT_USE_OPTIMIZED = False 
+
 
 # default params for commands, these are overriden by any user supplied params
 DEFAULT_CMD_PARAMS = { "-n": "1", "-steps": "50", "-scale": "12"}
@@ -32,6 +30,13 @@ MAX_QUEUE_PRINT_ITEMS = 4          # max number of items to show for !queue comm
 
 LOAD_PIPE_LIST = None # None loads all pipes
 #LOAD_PIPE_LIST = ["txt2img", "img2img"] # if you run out of memory trying to load all the pipes you can choose a subset here
+
+# default paths
+ROOT_PATH = Path(__file__).parent.absolute()
+TMP_ROOT_PATH = (ROOT_PATH / "tmp").as_posix()                       # make sure this is a valid path (it will be created if it does not exist)
+BACKUP_PATH = (ROOT_PATH / "backup").as_posix()                      # make sure this is a valid path (it will be created if it does not exist)
+BOT_STATE_DATA_FILE = (ROOT_PATH / "g-diffuser-bot.json").as_posix() # used for persisting command queue, top user list and input image paths
+ROOT_PATH = ROOT_PATH.as_posix()
 
 ACCEPTED_ATTACHMENTS = [".png", ".jpg", ".jpeg"] # attachments in bot commands not matching this list will not be downloaded
 

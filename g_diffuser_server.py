@@ -28,7 +28,7 @@ g_diffuser_server.py - localhost webserver for executing g-diffuser commands
 """
 
 from g_diffuser_bot_defaults import *
-from g_diffuser_lib import *
+import g_diffuser_lib as gdl
 
 import os, sys
 os.chdir(ROOT_PATH)

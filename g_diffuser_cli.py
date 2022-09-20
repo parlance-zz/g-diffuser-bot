@@ -45,19 +45,19 @@ def main():
         type=str,
         nargs="?",
         default="",
-        help="the prompt to condition on",
+        help="the prompt to condition generation on",
     )
     parser.add_argument(
         "--steps",
         type=int,
         default=50,
-        help="number of sampling steps",
+        help="number of sampling steps (number of times to refine image)",
     )
     parser.add_argument(
         "--scale",
         type=float,
         default=12,
-        help="unconditional guidance scale",
+        help="guidance scale (amount of change per step)",
     )
     parser.add_argument(
         "--init-img",
@@ -81,13 +81,13 @@ def main():
         "--noise_q",
         type=float,
         default=1.5,
-        help="augments falloff of matched noise distribution ( > 0). lower means smaller features and higher means larger",
+        help="augments falloff of matched noise distribution ( > 0). lower means smaller features and higher means larger features",
     )
     parser.add_argument(
         "--str",
         type=float,
         default=0,
-        help="overall amount to change the input image",
+        help="'strength', overall amount to change the input image",
     )
     parser.add_argument(
         "--n",
@@ -99,13 +99,13 @@ def main():
         "--w",
         type=int,
         default=None,
-        help="override width of input image",
+        help="set output width or override width of input image",
     )
     parser.add_argument(
         "--h",
         type=int,
         default=None,
-        help="override height of input image",
+        help="set output height or override height of input image",
     )
     parser.add_argument(
         "--model-name",
@@ -136,36 +136,38 @@ def main():
         parser.print_help()
         exit(1)
     
-    gdl._load_pipelines(args)
+    gdl.load_pipelines(args)
     
     if args.interactive:
         print("\nInteractive mode: call sample() with keyword args, e.g.:")
         print("sample('my prompt')")
         print("sample('my other prompt, art by greg rutkowski', n=5, init_img='my_image_src.png', scale=15, output='output.png')\n")
-        global INTERACTIVE_BASE_ARGS
-        INTERACTIVE_BASE_ARGS = args
-        _cli_locals = argparse.Namespace()
-        _cli_locals.sample = _cli_get_samples
-        _cli_locals.args = args
-        code.interact(local=vars(_cli_locals))
+        cli_locals = argparse.Namespace()
+        cli_locals.sample = _cli_get_samples
+        global INTERACTIVE_CLI_ARGS
+        INTERACTIVE_CLI_ARGS = args
+        code.interact(local=dict(globals(), **vars(cli_locals)))
         exit(0)
     else:
-        samples = gdl._get_samples(args)
-        gdl._save_samples(samples, args)
+        samples = gdl.get_samples(args)
+        gdl.save_samples(samples, args)
 
 def _cli_get_samples(prompt=None, **kwargs):
     global DEBUG_MODE
     if DEBUG_MODE: importlib.reload(gdl)
     
-    global INTERACTIVE_BASE_ARGS
-    base_args_dict = vars(INTERACTIVE_BASE_ARGS)
-    merged_args = argparse.Namespace(**gdl._merge_dicts(base_args_dict, kwargs))
-    if prompt: merged_args.prompt = prompt
+    global INTERACTIVE_CLI_ARGS
+    args = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), kwargs))
+    if prompt: args.prompt = prompt
     
-    samples = gdl._get_samples(merged_args)
-    gdl._save_samples(samples, merged_args)
+    samples = gdl.get_samples(args)
+    gdl.save_samples(samples, args)
+    INTERACTIVE_CLI_ARGS = args
+    
     print("")
-    
+    if DEBUG_MODE:
+        args.loaded_pipes = None
+        return args
     return
     
     
