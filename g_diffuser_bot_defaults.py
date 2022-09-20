@@ -30,7 +30,8 @@ MAX_QUEUE_PRINT_ITEMS = 4          # max number of items to show for !queue comm
 
 
 LOAD_PIPE_LIST = None # None loads all pipes
-#LOAD_PIPE_LIST = ["txt2img", "img2img"] # if you run out of memory trying to load all the pipes you can choose a subset here
+#LOAD_PIPE_LIST = ["txt2img"] # if you run out of memory trying to load all the pipes you can choose just one here
+#LOAD_PIPE_LIST = ["img2img"]
 
 # default paths
 ROOT_PATH = Path(__file__).parent.absolute()

@@ -203,17 +203,17 @@ def get_gaussian(width, height, std=3.14, edge_filter=False): # simple gaussian 
     else:
         return gaussian
 
-def convolve(data1, data2):     # fast convolution with fft
+def convolve(data1, data2):      # fast convolution with fft
     if data1.ndim != data2.ndim: # promote to rgb if mismatch
         if data1.ndim < 3: data1 = np_img_grey_to_rgb(data1)
         if data2.ndim < 3: data2 = np_img_grey_to_rgb(data2)
-    return np.real(ifft2(fft2(data1) * fft2(data2)))
+    return ifft2(fft2(data1) * fft2(data2))
 
 def gaussian_blur(data, std=3.14):
     width = data.shape[0]
     height = data.shape[1]
     kernel = get_gaussian(width, height, std)
-    return convolve(data, kernel / np.sqrt(np.sum(kernel*kernel)))
+    return np.real(convolve(data, kernel / np.sqrt(np.sum(kernel*kernel))))
  
 def normalize_image(data):
     normalized = data - np.min(data)
@@ -229,17 +229,10 @@ def np_img_grey_to_rgb(data):
     if data.ndim == 3: return data
     return np.expand_dims(data, 2) * np.ones((1, 1, 3))
 
-def color_match_image(image, match_to, amount=1.):
+def hsv_blend_image(image, match_to, hsv_mask):
     image_hsv = color.rgb2hsv(image)
     match_to_hsv = color.rgb2hsv(match_to)
-    image_hsv[:,:,1] = image_hsv[:,:,1]*(1.-amount) + amount*match_to_hsv[:,:,1] # overwrite hue and saturation preserving value
-    image_hsv[:,:,0] = image_hsv[:,:,0]*(1.-amount) + amount*match_to_hsv[:,:,0]
-    return color.hsv2rgb(image_hsv)
-    
-def brightness_match_image(image, match_to, amount=1.):
-    image_hsv = color.rgb2hsv(image)
-    image_hsv[:,:,2] = image_hsv[:,:,2]*(1.-amount) + amount*color.rgb2hsv(match_to)[:,:,2] # overwrite value preserving hue and saturation
-    return color.hsv2rgb(image_hsv)
+    return color.hsv2rgb(image_hsv * (1.-hsv_mask) + hsv_mask * match_to_hsv)
     
 # prepare masks for in/out-painting
 def get_blend_masks(np_mask_rgb, mask_blend_factor, strength):  # np_mask_rgb is an np array of rgb data in (0..1)
@@ -341,8 +334,9 @@ def get_matched_noise(np_init, mask_hardened, final_blend_mask, window_mask, noi
     height = np_init.shape[1]
     num_channels = np_init.shape[2]
     
+    """
     edge_kernel = get_gaussian(width, height, std=1e5, edge_filter=True)
-    edges = convolve(np_init, edge_kernel) * (1.-window_mask) **0.01 #........................
+    edges = np.real(convolve(np_init, edge_kernel)) * (1.-window_mask) **0.01 #........................
     edges /= np.max(edges)
     save_debug_img(edges, "edges")
     
@@ -360,9 +354,13 @@ def get_matched_noise(np_init, mask_hardened, final_blend_mask, window_mask, noi
     #color_bleed = normalize_image_brightness(color_bleed)
     save_debug_img(color_bleed, "color_bleed")
     
-    windowed_image += color_bleed * window_mask
+    #windowed_image += color_bleed * window_mask
+    """
+    windowed_image = np_init[:]
     save_debug_img(windowed_image, "windowed_src_img")
     
+    
+    """
     #windowed_image_grey = np_img_rgb_to_grey(windowed_image)
     #src_fft = fft2(windowed_image_grey) # get source image feature statistics
     src_fft = fft2(windowed_image) # get source image feature statistics
@@ -401,9 +399,34 @@ def get_matched_noise(np_init, mask_hardened, final_blend_mask, window_mask, noi
     shaped_noise_rgb = np.real(ifft2(shaped_noise_fft))
     shaped_noise_rgb = normalize_image(shaped_noise_rgb)
     save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_pre-colorize")
-    shaped_noise_rgb = color_match_image(shaped_noise_rgb, color_bleed)
+    shaped_noise_rgb = hsv_blend_image(shaped_noise_rgb, color_bleed)
     save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_pre-histo-match")
+    """
     
+    schrodinger_kernel = get_gaussian(width, height, std=1j*width*2. + noise_q) * (np.random.random_sample((width, height))*2. - 1.)
+    shaped_noise_rgb = np.absolute(convolve(schrodinger_kernel, windowed_image))
+    shaped_noise_rgb = normalize_image(shaped_noise_rgb)
+    save_debug_img(shaped_noise_rgb, "shaped_noise_rgb")
+    
+    #shaped_noise_rgb = np_init * (1. - final_blend_mask**.5) + shaped_noise_rgb * final_blend_mask**.5
+    #save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_wtf2")
+    
+    #colorized = hsv_blend_image(shaped_noise_rgb, np_init)
+    hsv_blend_mask = (1. - final_blend_mask)
+    #hsv_blend_mask[:,:,0] *= 0.5
+    #hsv_blend_mask[:,:,1] *= 0.7071
+    #hsv_blend_mask[:,:,2] *= 0.7071
+    shaped_noise_rgb = hsv_blend_image(shaped_noise_rgb, np_init, hsv_blend_mask)
+    save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_colorized")
+    
+    #shaped_noise_rgb = colorized * (1. - final_blend_mask) + shaped_noise_rgb * final_blend_mask
+    #save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_colorized_blend")
+    
+    #shaped_noise_rgb = np_init * (1. - final_blend_mask) + shaped_noise_rgb * final_blend_mask
+    #save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_final_blend")
+
+    
+    """
     all_mask = np.ones((width, height), dtype=bool)
     ref_mask = np_img_rgb_to_grey(mask_hardened) < 0.99    
     shaped_noise_rgb[all_mask,:] = skimage.exposure.match_histograms(
@@ -412,7 +435,8 @@ def get_matched_noise(np_init, mask_hardened, final_blend_mask, window_mask, noi
         channel_axis=1
     )
     save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_post-histo-match")
-     
+    """
+    
     #shaped_noise_rgb = np_init * (1. - final_blend_mask) + shaped_noise_rgb * final_blend_mask
     #save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_post-final-blend")
     

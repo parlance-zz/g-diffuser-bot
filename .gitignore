@@ -2,6 +2,8 @@
 *.pyo
 __pycache__/
 stable-diffusion-v1-4/
+waifu-diffusion/
+models/
 tmp/
 release/
 junk/
