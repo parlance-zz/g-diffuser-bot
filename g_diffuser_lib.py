@@ -605,7 +605,7 @@ def load_pipelines(args):
     
     if use_optimized:
         torch_dtype = torch.float16 # use fp16 in optimized mode
-        if DEBUG_MODE: print("Using memory optimizations...")
+        print("Using memory optimizations...")
     else:
         torch_dtype = None
     

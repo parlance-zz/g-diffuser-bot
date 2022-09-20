@@ -126,6 +126,13 @@ def main():
         help="enable memory optimizations that are currently available in diffusers",
     )
     parser.add_argument(
+        "--debug",
+        action='store_true',
+        default=None,
+        help="enable verbose CLI output and debug image dumps",
+    )
+    
+    parser.add_argument(
         "--interactive",
         action='store_true',
         default=False,
@@ -136,13 +143,19 @@ def main():
         parser.print_help()
         exit(1)
     
+    global DEBUG_MODE
+    if args.debug != None:
+        DEBUG_MODE = args.debug
+        
     gdl.load_pipelines(args)
     
     if args.interactive:
-        print("\nInteractive mode: call sample() with keyword args, e.g.:")
-        print("sample('my prompt')")
-        print("sample('my other prompt, art by greg rutkowski', n=5, init_img='my_image_src.png', scale=15, output='output.png', repeat=True)\n")
-        print("Parameters entered as command line arguments will be merged into your initial sample params, sample params are remembered on subsequent calls by default")
+        print("\nInteractive mode: call sample() with keyword args and use exit() when done, e.g.:")
+        print("sample('my prompt', n=3, scale=15)")
+        print("sample('art by greg rutkowski', init_img='my_image_src.png', repeat=True)\n")
+        print("Parameters entered as command-line arguments will be merged into your initial sample params, sample params are preserved on subsequent calls by default\n")
+        
+        if not DEBUG_MODE: print("Enable --debug for verbose output\n")
         cli_locals = argparse.Namespace()
         cli_locals.sample = _cli_get_samples
         global INTERACTIVE_CLI_ARGS
