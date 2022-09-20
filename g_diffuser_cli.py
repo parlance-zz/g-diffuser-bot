@@ -150,7 +150,7 @@ def main():
     gdl.load_pipelines(args)
     
     if args.interactive:
-        print("\nInteractive mode: call sample() with keyword args and use exit() when done, e.g.:")
+        print("\nInteractive mode: call sample() with keyword args and use exit() when done, press ctrl+c to abort a repeating command:")
         print("sample('my prompt', n=3, scale=15)")
         print("sample('art by greg rutkowski', init_img='my_image_src.png', repeat=True)\n")
         print("Parameters entered as command-line arguments will be merged into your initial sample params, sample params are preserved on subsequent calls by default\n")
