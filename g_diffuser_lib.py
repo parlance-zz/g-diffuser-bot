@@ -457,7 +457,7 @@ def load_image(args):
         mask_image = PIL.Image.fromarray(np.clip(final_blend_mask*255., 0., 255.).astype(np.uint8), mode="RGB")
     
     if DEBUG_MODE:
-        if args.strength > 0.: print("Warning: Overriding mask maximum opacity with user-supplied strength : " + str(args.strength))
+        if args.strength > 0.: print("Warning: Overriding mask maximum opacity with strength : " + str(args.strength))
 
     return init_image, mask_image
         
@@ -552,7 +552,7 @@ def load_pipelines(args):
             
     if not args.use_optimized: use_optimized = BOT_USE_OPTIMIZED
     else: use_optimized = args.use_optimized
-    if not args.model_name: model_name = CMD_SERVER_MODEL_NAME
+    if not args.model_name: args.model_name = CMD_SERVER_MODEL_NAME
     if not args.hf_token: hf_token = HUGGINGFACE_TOKEN
     
     if use_optimized:
@@ -566,7 +566,7 @@ def load_pipelines(args):
     for pipe_name in pipe_list:
         print("Loading " + pipe_name + " pipeline...")
         pipe = pipe_map[pipe_name].from_pretrained(
-            model_name, 
+            args.model_name, 
             torch_dtype=torch_dtype,
             use_auth_token=hf_token,
         )
