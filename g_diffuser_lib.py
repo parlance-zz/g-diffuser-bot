@@ -445,7 +445,7 @@ def get_matched_noise(np_init, final_blend_mask, noise_q):
     
     #"""
     all_mask = np.ones((width, height), dtype=bool)
-    ref_mask = np_img_rgb_to_grey(1.-normalize_image(final_blend_mask)) > 0.95
+    ref_mask = np_img_rgb_to_grey(1.-normalize_image(final_blend_mask)) > 0.5
     save_debug_img(ref_mask.astype(np.float64), "histo_ref_mask")
     
     shaped_noise_rgb[all_mask,:] = skimage.exposure.match_histograms(

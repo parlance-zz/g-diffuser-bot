@@ -142,6 +142,7 @@ def main():
         print("\nInteractive mode: call sample() with keyword args, e.g.:")
         print("sample('my prompt')")
         print("sample('my other prompt, art by greg rutkowski', n=5, init_img='my_image_src.png', scale=15, output='output.png', repeat=True)\n")
+        print("Parameters entered as command line arguments will be merged into your initial sample params, sample params are remembered on subsequent calls by default")
         cli_locals = argparse.Namespace()
         cli_locals.sample = _cli_get_samples
         global INTERACTIVE_CLI_ARGS
