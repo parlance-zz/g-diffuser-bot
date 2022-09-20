@@ -24,3 +24,15 @@ Good luck!
 - If you do attach an image but it has no alpha channel, it will be treated as image to image.
 - If you do attach an image and it has an alpha channel, it will be used for in-painting.
 - You don't need to worry about "erasing color values" under transparency, but when erasing try to avoid cutting things out into squares.
+
+
+ The out-painting algorithm is constantly evolving but some out-dated samples can be seen here:
+ 
+    https://imgur.com/a/pwN6LHB
+    
+    https://imgur.com/a/S6g5SmI
+    
+    https://discord.gg/jS4vzBJxYz
+    
+    
+ This section will be updated with better samples when I have time to create them.
