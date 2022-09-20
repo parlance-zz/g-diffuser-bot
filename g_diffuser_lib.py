@@ -452,6 +452,7 @@ def load_image(args):
         if DEBUG_MODE: print("get_matched_noise time : " + str(datetime.datetime.now() - noised_start_time))
         init_image = PIL.Image.fromarray(np.clip(shaped_noise*255., 0., 255.).astype(np.uint8), mode="RGB")
     else:
+        if args.strength == 0.: args.strength = 0.5 # todo: non-hardcoded default
         final_blend_mask = np_img_grey_to_rgb(np.ones((args.w, args.h)) * np.clip(args.strength, 0., 1.))
         mask_image = PIL.Image.fromarray(np.clip(final_blend_mask*255., 0., 255.).astype(np.uint8), mode="RGB")
     
@@ -513,13 +514,12 @@ def save_samples(samples, args):
     # combine individual samples to create main output
     if len(samples) > 1: output_image = get_image_grid(samples, get_grid_layout(len(samples)))
     else: output_image = samples[0]
-    if args.output:
-        output_path = args.output
-    else:
-        output_path = get_tmp_path(".png")
-        args.output = output_path
-    output_image.save(output_path)
-    print("Saved " + output_path)
+
+    # todo: temporarily break output path specification while we refactor to support target folders instead
+    
+    args.output = get_tmp_path(".png")
+    output_image.save(args.output)
+    print("Saved " + args.output)
     
     args.output_samples = [] # if n_samples > 1, save individual samples in tmp outputs as well
     if len(samples) > 1:
