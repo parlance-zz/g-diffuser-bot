@@ -37,6 +37,8 @@ import datetime
 import argparse
 import code
 import importlib
+import json
+from pathlib import Path
 
 def main():
     parser = argparse.ArgumentParser()
@@ -166,11 +168,17 @@ def main():
         samples = gdl.get_samples(args)
         gdl.save_samples(samples, args)
 
+def strip_args(args): # remove args we wouldn't want to print or serialize
+    args_copy = argparse.Namespace(**vars(args))
+    args_copy.loaded_pipes = None
+    return args_copy
+    
 def cli_get_samples(prompt=None, **kwargs):
+    global TMP_ROOT_PATH
     global INTERACTIVE_CLI_ARGS
+    
     args = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), kwargs))
     if prompt: args.prompt = prompt
-    
     if "repeat" in args: repeat = args.repeat
     else: repeat = False
     if repeat: print("Repeating sample...")
@@ -181,15 +189,19 @@ def cli_get_samples(prompt=None, **kwargs):
         samples = gdl.get_samples(args)
         gdl.save_samples(samples, args)
         INTERACTIVE_CLI_ARGS = args
-        
-        if args.debug:
-            args_copy = argparse.Namespace(**vars(args))
-            args_copy.loaded_pipes = None # we don't need these lines polluting the debug output
-            print(args_copy)
+        if args.debug: print(strip_args(args))
             
         print("")
         if not repeat: break
 
+    try: # save the last used args in a json temp file for convenience
+        saved_args_file_path = (Path(TMP_ROOT_PATH) / "_debug_last_sample_args.json").as_posix()
+        with open(saved_args_file_path, "w") as file:
+            json.dump(vars(strip_args(args)), file)
+            file.close()
+    except Exception as e:
+        if args.debug: print("Error saving sample args - " + str(e))
+        
     return
     
     
