@@ -326,7 +326,7 @@ def get_matched_noise(np_init, final_blend_mask, noise_q):
     assert(noise_q > 0.)
     #noise_rgb = np.random.random_sample((width, height)) - 0.5
     #noise_rgb *= np.random.random_sample((width, height)) ** (50. * noise_q) # todo: instead of 64 match with stats
-    noise_rgb = np.exp(-1j*2*np.pi * np.random.random_sample((width, height))) * 22. # sqr(width)?
+    noise_rgb = np.exp(-1j*2*np.pi * np.random.random_sample((width, height))) * 50. # sqr(width)?
     noise_rgb *= np.random.random_sample((width, height)) ** (50. * noise_q) # todo: instead of 64 match with stats
     noise_rgb = np.real(noise_rgb)
     colorfulness = 0. # todo: we also VERY BADLY need to control contrast and BRIGHTNESS
@@ -339,7 +339,7 @@ def get_matched_noise(np_init, final_blend_mask, noise_q):
     save_debug_img(shaped_noise_rgb, "shaped_noise_rgb")
     
     #hsv_blend_mask = (1. - final_blend_mask)*final_blend_mask
-    offset = 0.5
+    offset = 1e-17#0.0125
     hsv_blend_mask = (1. - final_blend_mask) * np.clip(final_blend_mask-1e-20, 0., 1.)**offset
     hsv_blend_mask = normalize_image(hsv_blend_mask)
     
@@ -347,7 +347,7 @@ def get_matched_noise(np_init, final_blend_mask, noise_q):
     hsv_blend_mask = np.minimum(normalize_image(gaussian_blur(hsv_blend_mask, std=4000.)) + 1e-8, 1.)
     offset_hsv_blend_mask = np.maximum(np.absolute(np.log(hsv_blend_mask)) ** (1/2), 0.)
     offset_hsv_blend_mask -= np.min(offset_hsv_blend_mask)
-    hardness = 1e-8 # 0.3 
+    hardness = 12500 # 7.5 # 1e-8 # 0.3 
     hsv_blend_mask = normalize_image(np.exp(-hardness * offset_hsv_blend_mask**2))
     #hsv_blend_mask[:,:,0] *= 1.
     #hsv_blend_mask[:,:,1] *= 0.05
