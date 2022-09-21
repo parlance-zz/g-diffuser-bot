@@ -1124,6 +1124,70 @@ async def on_message(message):
 async def on_disconnect():
     await asyncio.sleep(10)
 
+####################################
+# Easter Egg Commands for Nerds <3 #
+####################################
+@client.command()
+# Ping command to check latency
+async def ping(ctx):  # When the ping command is used
+    await ctx.reply(f"Pong! \nLatency: {round(client.latency * 1000)}ms")  # Reply with "Pong! Latency: {bot latency}ms"
+
+@client.command()
+# D&D 5e dice roller
+async def roll(ctx, dice: str):
+    """Rolls a dice using #d# format. Example: 1d20"""
+    try:
+        rolls, limit = map(int, dice.split('d'))  # Split the command string into number of dice and die faces
+    except Exception:  # If the dice string is not in the correct format
+        await ctx.reply('Format has to be in NdN!. Example: `!roll 2d12`')  # Reply with "Format has to be in NdN!"
+        return  # Exit the function
+    result = ', '.join(str(random.randint(1, limit)) for r in range(rolls))  # Roll the dice
+    await ctx.reply(result)  # Reply with the result
+
+@client.event
+# Function to reply to general introductions (Useful for testing permissions)
+async def on_message(message):
+    if message.content == "Hello".lower():  # If the message is "Hello"
+        await message.channel.send("Hey!")  # Send "Hey!" in the same channel
+    elif message.content == "Goodbye".lower():  # If the message is "Goodbye"
+        await message.channel.send("Bye!")  # Send "Bye!" in the same channel
+    elif message.content == "Hey".lower():  # If the message is "Hey"
+        await message.channel.send("Hello!")  # Send "Hello!" in the same channel
+    elif message.content == "How are you?".lower():  # If the message is "How are you?"
+        await message.channel.send("I'm fine, thanks!")  # Send "I'm fine, thanks!" in the same channel
+    elif message.content == "What's up?".lower():  # If the message is "What's up?"
+        await message.channel.send("Nothing much, you?")  # Send "Nothing much, you?" in the same channel
+    elif message.content == "Whats up?".lower():  # If the message is "Whats up?"
+        await message.channel.send("Nothing much, you?")  # Send "Nothing much, you?" in the same channel
+    elif message.content == "What's your name?".lower():  # If the message is "What's your name?"
+        await message.channel.send(
+            "My name is StableDiffuser!")  # Send "My name is StableDiffuser!" in the same channel
+    await client.process_commands(message)  # Process commands
+
+
+# 8ball command
+@client.command(aliases=["8ball", "oracle"])
+async def eightball(ctx, *, question):  # When the eightball command is used
+    # Responses for yes/no questions
+    responses = ["Yes, unless you screw it up", "Well Duh!", "Trust me, you don't want to know.",
+                 "It's hard to say.", "I have a headache. Ask again later.", "Don’t bet on it.",
+                 "It is certain.", "Meh.", "Probably.", "Lol no.", "Even a blind squirrel finds a nut sometimes.",
+                 "My sources say no, but they also said that Donald Trump won the election... so.",
+                 "It doesn't look good.", "Don't know. Don't care.", "Not in your wildest dreams.",
+                 "Signs point to yes.", "Very doubtful.", "Without a doubt.", "Yes.", "Yes – definitely.",
+                 "Yes, but do it drunk af.", "I am busy right now, can I ignore you some other time?",
+                 "When people ask me stupid questions, it is my legal obligation to give a sarcastic remark.",
+                 "Life’s good, you should get one.", "I don’t know, but I’m sure it’s something really important.",
+                 "No, but if had a dollar for every smart thing you asked me... I’d be poor.",
+                 "no, but at least your mom thinks you’re pretty.", "No, but I’m sure you’ll find someone who will.",
+                 "My imaginary friend says that you need a therapist.", "Have you tried lost your mind? no? try it.", 
+                 "Why are you asking me? I’m just a bot.", "I don’t know, but I’m sure it’s something really important.",
+                 "Yes, but you’ll have to ask your mom.", "No, but I’m sure you’ll find someone who will.", 
+                 "when the sun rises in the west and sets in the east, then yes.", "When pigs fly. Yes."
+                 ]  # List of responses
+                 # Note, this list is not truely random. If you want it to be the random function be balanced, you need to have an equal amound of yes/no responses.
+    #  Reply with "Question: {question} Answer: {random response}"
+    await ctx.reply(f"Question: {question}\nAnswer: {random.choice(responses)}")
 
 if __name__ == "__main__":
 
