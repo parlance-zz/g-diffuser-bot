@@ -128,7 +128,7 @@ def main():
     parser.add_argument(
         "--debug",
         action='store_true',
-        default=None,
+        default=False,
         help="enable verbose CLI output and debug image dumps",
     )
     
@@ -143,26 +143,21 @@ def main():
         parser.print_help()
         exit(1)
     
-    global DEBUG_MODE
-    if args.debug != None:
-        DEBUG_MODE = args.debug
-    else:
-        if DEBUG_MODE: args.debug = DEBUG_MODE
-        
+    if args.debug: print("Debug mode enabled (verbose output, debug file dumps)")
+    else: print("(Use --debug for verbose output)")
+    
     gdl.load_pipelines(args)
     
     if args.interactive:
+        global INTERACTIVE_CLI_ARGS
+        
         print("\nInteractive mode: call sample() with keyword args and use exit() when done, press ctrl+c to abort a repeating command:")
         print("sample('my prompt', n=3, scale=15)")
         print("sample('art by greg rutkowski', init_img='my_image_src.png', repeat=True)\n")
         print("Parameters entered as command-line arguments will be merged into your initial sample params, sample params are preserved on subsequent calls to sample()\n")
         
-        if not DEBUG_MODE: print("Enable --debug for verbose output\n")
-        else: print("DEBUG_MODE enabled (verbose output, debug file dumps)\n")
-        
         cli_locals = argparse.Namespace()
         cli_locals.sample = cli_get_samples
-        global INTERACTIVE_CLI_ARGS
         INTERACTIVE_CLI_ARGS = args
         cli_locals.args = args
         code.interact(local=dict(globals(), **vars(cli_locals)))
@@ -172,7 +167,6 @@ def main():
         gdl.save_samples(samples, args)
 
 def cli_get_samples(prompt=None, **kwargs):
-    global DEBUG_MODE
     global INTERACTIVE_CLI_ARGS
     args = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), kwargs))
     if prompt: args.prompt = prompt
@@ -180,17 +174,22 @@ def cli_get_samples(prompt=None, **kwargs):
     if "repeat" in args: repeat = args.repeat
     else: repeat = False
     if repeat: print("Repeating sample...")
+    
     while True:
-        if DEBUG_MODE: importlib.reload(gdl)
+        if args.debug: importlib.reload(gdl)
+        
         samples = gdl.get_samples(args)
         gdl.save_samples(samples, args)
         INTERACTIVE_CLI_ARGS = args
-        if DEBUG_MODE:
+        
+        if args.debug:
             args_copy = argparse.Namespace(**vars(args))
-            args_copy.loaded_pipes = None
+            args_copy.loaded_pipes = None # we don't need these lines polluting the debug output
             print(args_copy)
-        print("")    
+            
+        print("")
         if not repeat: break
+
     return
     
     
