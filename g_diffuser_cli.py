@@ -50,13 +50,13 @@ def main():
     parser.add_argument(
         "--steps",
         type=int,
-        default=50,
+        default=30,
         help="number of sampling steps (number of times to refine image)",
     )
     parser.add_argument(
         "--scale",
         type=float,
-        default=12,
+        default=10,
         help="guidance scale (amount of change per step)",
     )
     parser.add_argument(
@@ -146,6 +146,8 @@ def main():
     global DEBUG_MODE
     if args.debug != None:
         DEBUG_MODE = args.debug
+    else:
+        if DEBUG_MODE: args.debug = DEBUG_MODE
         
     gdl.load_pipelines(args)
     
@@ -156,17 +158,20 @@ def main():
         print("Parameters entered as command-line arguments will be merged into your initial sample params, sample params are preserved on subsequent calls to sample()\n")
         
         if not DEBUG_MODE: print("Enable --debug for verbose output\n")
+        else: print("DEBUG_MODE enabled (verbose output, debug file dumps)\n")
+        
         cli_locals = argparse.Namespace()
-        cli_locals.sample = _cli_get_samples
+        cli_locals.sample = cli_get_samples
         global INTERACTIVE_CLI_ARGS
         INTERACTIVE_CLI_ARGS = args
+        cli_locals.args = args
         code.interact(local=dict(globals(), **vars(cli_locals)))
         exit(0)
     else:
         samples = gdl.get_samples(args)
         gdl.save_samples(samples, args)
 
-def _cli_get_samples(prompt=None, **kwargs):
+def cli_get_samples(prompt=None, **kwargs):
     global DEBUG_MODE
     global INTERACTIVE_CLI_ARGS
     args = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), kwargs))

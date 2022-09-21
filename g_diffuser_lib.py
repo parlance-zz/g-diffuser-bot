@@ -103,8 +103,6 @@ def get_tmp_path(file_extension):
     return tmp_path.absolute().as_posix()
 
 def save_debug_img(np_image, name):
-    global DEBUG_MODE
-    if not DEBUG_MODE: return
     global TMP_ROOT_PATH
     if not TMP_ROOT_PATH: return
     
@@ -241,21 +239,21 @@ def hsv_blend_image(image, match_to, hsv_mask=None):
     return color.hsv2rgb(image_hsv * (1.-hsv_mask) + hsv_mask * match_to_hsv)
     
 # prepare masks for in/out-painting
-def get_blend_mask(np_mask_rgb, mask_blend_factor, strength):  # np_mask_rgb is an np array of rgb data in (0..1)
+def get_blend_mask(np_mask_rgb, args):  # np_mask_rgb is an np array of rgb data in (0..1)
                                                                  # mask_blend_factor ( > 0.) adjusts blend hardness, with 1. corresponding closely to the original mask and higher values approaching the hard edge of the original mask
                                                                  # strength overrides (if > 0.) the maximum opacity in the user mask to support style transfer type applications
     assert(np_mask_rgb.ndim == 3) # needs to be a 3 channel mask
     width = np_mask_rgb.shape[0]
     height = np_mask_rgb.shape[1]
     
-    save_debug_img(np_mask_rgb, "np_mask_rgb")
-    if strength == 0.:
+    if args.debug: save_debug_img(np_mask_rgb, "np_mask_rgb")
+    if args.strength == 0.:
         max_opacity = np.max(np_mask_rgb)
     else:
-        max_opacity = np.clip(strength, 0., 1.)
+        max_opacity = np.clip(args.strength, 0., 1.)
     
     final_blend_mask = 1. - (1.-normalize_image(gaussian_blur(1.-np_mask_rgb, std=1000.))) * max_opacity
-    save_debug_img(final_blend_mask, "final_blend_mask")
+    if args.debug: save_debug_img(final_blend_mask, "final_blend_mask")
     return final_blend_mask
 
 """
@@ -312,7 +310,7 @@ def get_blend_mask(np_mask_rgb, mask_blend_factor, strength):  # np_mask_rgb is 
 """
 
 
-def get_matched_noise(np_init, final_blend_mask, noise_q): 
+def get_matched_noise(np_init, final_blend_mask, args): 
 
     assert(noise_q > 0.)
     
@@ -320,26 +318,22 @@ def get_matched_noise(np_init, final_blend_mask, noise_q):
     height = np_init.shape[1]
     num_channels = np_init.shape[2]
     
+    # todo: experiment with transforming everything to HSV space FIRST
     windowed_image = np_init * (1.-final_blend_mask)
-    save_debug_img(windowed_image, "windowed_src_img")
+    if args.debug: save_debug_img(windowed_image, "windowed_src_img")
     
-    assert(noise_q > 0.)
-    #noise_rgb = np.random.random_sample((width, height)) - 0.5
-    #noise_rgb *= np.random.random_sample((width, height)) ** (50. * noise_q) # todo: instead of 64 match with stats
-    noise_rgb = np.exp(-1j*2*np.pi * np.random.random_sample((width, height))) * 50. # sqr(width)?
-    noise_rgb *= np.random.random_sample((width, height)) ** (50. * noise_q) # todo: instead of 64 match with stats
+    assert(args.noise_q > 0.)
+    noise_rgb = np.exp(-1j*2*np.pi * np.random.random_sample((width, height))) * 25. # todo: instead of 25 match with stats
+    noise_rgb *= np.random.random_sample((width, height)) ** (50. * args.noise_q) # todo: instead of 50 match with stats
     noise_rgb = np.real(noise_rgb)
     colorfulness = 0. # todo: we also VERY BADLY need to control contrast and BRIGHTNESS
     noise_rgb = ((noise_rgb+0.5)*colorfulness + np_img_rgb_to_grey(noise_rgb+0.5)*(1.-colorfulness))-0.5
     
-    schrodinger_kernel = get_gaussian(width, height, std=1j*2345234) * noise_rgb
+    schrodinger_kernel = get_gaussian(width, height, std=1j*2345234) * noise_rgb # todo: find a good magic number
     shaped_noise_rgb = np.absolute(convolve(schrodinger_kernel, windowed_image))
-    #shaped_noise_rgb = normalize_image(shaped_noise_rgb)
-    #shaped_noise_rgb *= 64. # todo: temporary renorm hack
-    save_debug_img(shaped_noise_rgb, "shaped_noise_rgb")
+    if args.debug: save_debug_img(shaped_noise_rgb, "shaped_noise_rgb")
     
-    #hsv_blend_mask = (1. - final_blend_mask)*final_blend_mask
-    offset = 1e-17#0.0125
+    offset = 0.1 # 1e-17 # 0.0125 # todo: create mask offset function that can set a lower offset
     hsv_blend_mask = (1. - final_blend_mask) * np.clip(final_blend_mask-1e-20, 0., 1.)**offset
     hsv_blend_mask = normalize_image(hsv_blend_mask)
     
@@ -349,23 +343,24 @@ def get_matched_noise(np_init, final_blend_mask, noise_q):
     offset_hsv_blend_mask -= np.min(offset_hsv_blend_mask)
     hardness = 12500 # 7.5 # 1e-8 # 0.3 
     hsv_blend_mask = normalize_image(np.exp(-hardness * offset_hsv_blend_mask**2))
-    #hsv_blend_mask[:,:,0] *= 1.
+    #hsv_blend_mask[:,:,0] *= 1. # todo: experiment with this again
     #hsv_blend_mask[:,:,1] *= 0.05
     #hsv_blend_mask[:,:,2] *= 0.618
     #hsv_blend_mask *= 0.95
-    save_debug_img(hsv_blend_mask, "hsv_blend_mask")
+    if args.debug: save_debug_img(hsv_blend_mask, "hsv_blend_mask")
     
     shaped_noise_rgb = hsv_blend_image(shaped_noise_rgb, np_init, hsv_blend_mask)
-    save_debug_img(shaped_noise_rgb, "shaped_noise_post_hsv_blend")
+    if args.debug: save_debug_img(shaped_noise_rgb, "shaped_noise_post_hsv_blend")
     
     all_mask = np.ones((width, height), dtype=bool)
     ref_mask = normalize_image(np_img_rgb_to_grey(1.-final_blend_mask))
     img_mask = ref_mask <= 0.99
     ref_mask = ref_mask > 0.1
-    save_debug_img(ref_mask.astype(np.float64), "histo_ref_mask")
-    save_debug_img(img_mask.astype(np.float64), "histo_img_mask")
+    if args.debug:
+        save_debug_img(ref_mask.astype(np.float64), "histo_ref_mask")
+        save_debug_img(img_mask.astype(np.float64), "histo_img_mask")
     
-    
+    # todo: experiment with these again
     """
     matched_noise_rgb = shaped_noise_rgb.copy()
     #matched_noise_rgb[img_mask,:] = skimage.exposure.match_histograms(
@@ -398,13 +393,11 @@ def get_matched_noise(np_init, final_blend_mask, noise_q):
 # ************* in/out-painting code ends here *************
 
 def load_image(args):
-    global DEBUG_MODE
-    
     # load and resize input image to multiple of 64x64
     init_image = Image.open(args.init_img)
     width, height = valid_resolution(args.w, args.h, init_image=init_image)
     if (width, height) != init_image.size:
-        if DEBUG_MODE: print("Resizing input image to (" + str(width) + ", " + str(height) + ")")
+        if args.debug: print("Resizing input image to (" + str(width) + ", " + str(height) + ")")
         init_image = init_image.resize((width, height), resample=PIL.Image.LANCZOS)
     args.w = width
     args.h = height
@@ -415,31 +408,30 @@ def load_image(args):
         init_image = init_image.convert("RGB")
         np_init = (np.asarray(init_image.convert("RGB"))/255.).astype(np.float64)
         np_mask_rgb = (np.asarray(mask_image.convert("RGB"))/255.).astype(np.float64)
-        if DEBUG_MODE:
+        if args.debug:
             if np.min(np_mask_rgb) > 0.: print("Warning: Image mask doesn't have any fully transparent area")
             if np.max(np_mask_rgb) < 1.: print("Warning: Image mask doesn't have any opaque area")
 
-        if DEBUG_MODE: mask_start_time = datetime.datetime.now()
-        final_blend_mask = get_blend_mask(np_mask_rgb, args.blend, args.strength)
-        if DEBUG_MODE: print("get_blend_masks time : " + str(datetime.datetime.now() - mask_start_time))
+        if args.debug: mask_start_time = datetime.datetime.now()
+        final_blend_mask = get_blend_mask(np_mask_rgb, args.blend)
+        if args.debug: print("get_blend_masks time : " + str(datetime.datetime.now() - mask_start_time))
         mask_image = PIL.Image.fromarray(np.clip(final_blend_mask*255., 0., 255.).astype(np.uint8), mode="RGB")
         
-        if DEBUG_MODE: noised_start_time = datetime.datetime.now()
-        shaped_noise = get_matched_noise(np_init, final_blend_mask, args.noise_q)
-        if DEBUG_MODE: print("get_matched_noise time : " + str(datetime.datetime.now() - noised_start_time))
+        if args.debug: noised_start_time = datetime.datetime.now()
+        shaped_noise = get_matched_noise(np_init, final_blend_mask, args)
+        if args.debug: print("get_matched_noise time : " + str(datetime.datetime.now() - noised_start_time))
         init_image = PIL.Image.fromarray(np.clip(shaped_noise*255., 0., 255.).astype(np.uint8), mode="RGB")
     else:
         if args.strength == 0.: args.strength = 0.5 # todo: non-hardcoded default
-        final_blend_mask = np_img_grey_to_rgb(np.ones((args.w, args.h)) * np.clip(args.strength**(0.1), 0., 1.)) # todo: find strength mapping or do a better job of seeding
+        final_blend_mask = np_img_grey_to_rgb(np.ones((args.w, args.h)) * np.clip(args.strength**(0.075), 0., 1.)) # todo: find strength mapping or do a better job of seeding
         mask_image = PIL.Image.fromarray(np.clip(final_blend_mask*255., 0., 255.).astype(np.uint8), mode="RGB")
     
-    if DEBUG_MODE:
+    if args.debug:
         if args.strength > 0.: print("Warning: Overriding mask maximum opacity with strength : " + str(args.strength))
 
     return init_image, mask_image
         
 def get_samples(args):
-    global DEBUG_MODE
     global DEFAULT_RESOLUTION
     
     if args.init_img != "":
@@ -454,7 +446,7 @@ def get_samples(args):
         if not args.w: args.w = DEFAULT_RESOLUTION[0]
         if not args.h: args.h = DEFAULT_RESOLUTION[1]
         
-    if DEBUG_MODE:
+    if args.debug:
         sampling_start_time = datetime.datetime.now()
         print("Using " + pipe_name + " pipeline...")
     
@@ -484,7 +476,7 @@ def get_samples(args):
                 )
             samples.append(sample["sample"][0])
 
-    if DEBUG_MODE: print("total sampling time : " + str(datetime.datetime.now() - sampling_start_time))
+    if args.debug: print("total sampling time : " + str(datetime.datetime.now() - sampling_start_time))
     return samples
 
 def save_samples(samples, args):
@@ -513,7 +505,6 @@ def save_samples(samples, args):
     return args.output_samples
     
 def load_pipelines(args):
-    global DEBUG_MODE
     global HUGGINGFACE_TOKEN
     global CMD_SERVER_MODEL_NAME
     global BOT_USE_OPTIMIZED
@@ -538,7 +529,7 @@ def load_pipelines(args):
     else:
         torch_dtype = None
     
-    if DEBUG_MODE: load_start_time = datetime.datetime.now()
+    if args.debug: load_start_time = datetime.datetime.now()
     loaded_pipes = {}
     for pipe_name in pipe_list:
         print("Loading " + pipe_name + " pipeline...")
@@ -553,7 +544,7 @@ def load_pipelines(args):
             pipe.enable_attention_slicing() # use attention slicing in optimized mode
             
         loaded_pipes[pipe_name] = pipe
-    if DEBUG_MODE: print("load pipelines time : " + str(datetime.datetime.now() - load_start_time))
+    if args.debug: print("load pipelines time : " + str(datetime.datetime.now() - load_start_time))
 
     args.loaded_pipes = loaded_pipes
     args.pipe_list = pipe_list
