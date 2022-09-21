@@ -20,3 +20,10 @@ HUGGINGFACE_TOKEN = None
 CMD_SERVER_MODEL_NAME = "./stable-diffusion-v1-4"  # local relative path to downloaded model
 
 DEBUG_MODE = False # if you want more detailed error information and debug file dumps enable this
+
+# default paths - change if you need to
+ROOT_PATH = Path(__file__).parent.absolute()
+TMP_ROOT_PATH = (ROOT_PATH / "tmp").as_posix()                       # make sure this is a valid path (it will be created if it does not exist)
+BACKUP_PATH = (ROOT_PATH / "backup").as_posix()                      # make sure this is a valid path (it will be created if it does not exist)
+BOT_STATE_DATA_FILE = (ROOT_PATH / "g-diffuser-bot.json").as_posix() # used for persisting command queue, top user list and input image paths
+ROOT_PATH = ROOT_PATH.as_posix()
