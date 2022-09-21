@@ -153,7 +153,7 @@ def main():
         print("\nInteractive mode: call sample() with keyword args and use exit() when done, press ctrl+c to abort a repeating command:")
         print("sample('my prompt', n=3, scale=15)")
         print("sample('art by greg rutkowski', init_img='my_image_src.png', repeat=True)\n")
-        print("Parameters entered as command-line arguments will be merged into your initial sample params, sample params are preserved on subsequent calls by default\n")
+        print("Parameters entered as command-line arguments will be merged into your initial sample params, sample params are preserved on subsequent calls to sample()\n")
         
         if not DEBUG_MODE: print("Enable --debug for verbose output\n")
         cli_locals = argparse.Namespace()
