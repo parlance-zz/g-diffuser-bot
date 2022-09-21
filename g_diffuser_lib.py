@@ -412,8 +412,11 @@ def get_matched_noise(np_init, final_blend_mask, noise_q):
     shaped_noise_rgb = hsv_blend_image(shaped_noise_rgb, color_bleed)
     save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_pre-histo-match")
     """
-    
-    schrodinger_kernel = get_gaussian(width, height, std=1j*width**.125 + (noise_q-1.)) * (np.random.random_sample((width, height))*2. - 1.)# * np.random.random_sample((width, height))
+    noise_rgb = np.random.random_sample((width, height)) - 0.5
+    noise_rgb *= np.random.random_sample((width, height))
+    noise_rgb = ((noise_rgb+0.5)*0. + np_img_rgb_to_grey(noise_rgb+0.5)*1.)-0.5
+    assert(noise_q > 0.)
+    schrodinger_kernel = get_gaussian(width, height, std=1j/noise_q) * noise_rgb
     shaped_noise_rgb = np.absolute(convolve(schrodinger_kernel, windowed_image))
     shaped_noise_rgb = normalize_image(shaped_noise_rgb)
     save_debug_img(shaped_noise_rgb, "shaped_noise_rgb")
@@ -432,48 +435,58 @@ def get_matched_noise(np_init, final_blend_mask, noise_q):
 
     #shaped_noise_rgb = np.clip(shaped_noise_rgb * 1.1, 0., 1.)
     #hsv_blend_mask = final_blend_mask.copy()
-    hsv_blend_mask = normalize_image((1. - final_blend_mask)*final_blend_mask)
-    max_opacity = np.max(hsv_blend_mask)
+    hsv_blend_mask = normalize_image(normalize_image(1. - final_blend_mask)*normalize_image(final_blend_mask))
+    hsv_blend_mask **= 0.5
+    #max_opacity = np.max(hsv_blend_mask)
     hsv_blend_mask = np.minimum(normalize_image(gaussian_blur(hsv_blend_mask, std=5000.)) + 1e-8, 1.)
-    offset = -0.01 # 0. #-0.1
+    offset = -4.5 # -5.5     # 2.6 # -0.5 # -0.01 # 0. #-0.1
     hsv_blend_mask_offset = np.maximum(np.absolute(np.log(hsv_blend_mask)) ** (1/2) - offset, 0.)
-    hardness = 0.001
-    hsv_blend_mask = normalize_image(np.exp(-hardness * hsv_blend_mask_offset**2)) * max_opacity
+    hardness = 0.1 #1.
+    hsv_blend_mask = normalize_image(np.exp(-hardness * hsv_blend_mask_offset**2)) *normalize_image(final_blend_mask)
+    hsv_blend_mask **= 0.5
     hsv_blend_mask[:,:,0] *= 1.
     hsv_blend_mask[:,:,1] *= 0.05
     hsv_blend_mask[:,:,2] *= 0.618
+    hsv_blend_mask = normalize_image(hsv_blend_mask)
     #hsv_blend_mask *= normalize_image((1. - final_blend_mask)*final_blend_mask)
     #hsv_blend_mask[:,:,2] = 0.    
+    tmp = color.rgb2hsv(hsv_blend_mask)
+    #tmp[:,:,2] = 1.
+    hsv_blend_mask = color.hsv2rgb(tmp)
     
     save_debug_img(hsv_blend_mask, "hsv_blend_mask")
     shaped_noise_rgb = hsv_blend_image(shaped_noise_rgb, np_init, hsv_blend_mask)
     save_debug_img(shaped_noise_rgb, "shaped_noise_post_hsv_blend")
     
-    #shaped_noise_rgb = colorized * (1. - final_blend_mask) + shaped_noise_rgb * final_blend_mask
-    #save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_colorized_blend")
     
-    #shaped_noise_rgb = np_init * (1. - final_blend_mask) + shaped_noise_rgb * final_blend_mask
-    #save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_final_blend")
-
-    
-    """
-    #all_mask = np.ones((width, height), dtype=bool)
+    all_mask = np.ones((width, height), dtype=bool)
     ref_mask = normalize_image(np_img_rgb_to_grey(1.-final_blend_mask))
-    img_mask = ref_mask <= 1.
-    ref_mask = ref_mask > 0.
+    img_mask = ref_mask <= 0.99 # 1.
+    ref_mask = ref_mask > 0.1
     
     save_debug_img(ref_mask.astype(np.float64), "histo_ref_mask")
     save_debug_img(img_mask.astype(np.float64), "histo_img_mask")
     
     #shaped_noise_rgb[all_mask,:] = skimage.exposure.match_histograms(
-    shaped_noise_rgb[img_mask,:] = skimage.exposure.match_histograms(
+    matched_noise_rgb = shaped_noise_rgb.copy()
+    matched_noise_rgb[img_mask,:] = skimage.exposure.match_histograms(
         #shaped_noise_rgb[all_mask,:], 
         shaped_noise_rgb[img_mask,:], 
         np_init[ref_mask,:],
         channel_axis=1
     )
+    shaped_noise_rgb = shaped_noise_rgb*(1.-0.618) + matched_noise_rgb*0.618
     save_debug_img(shaped_noise_rgb, "shaped_noise_rgb_post-histo-match")
     
+    
+    """
+    shaped_noise_rgb[img_mask,:] = skimage.exposure.match_histograms(
+    #shaped_noise_rgb[all_mask,:] = skimage.exposure.match_histograms(
+        #shaped_noise_rgb[all_mask,:], 
+        shaped_noise_rgb[img_mask,:], 
+        np_init[ref_mask,:],
+        channel_axis=1
+    )
     """
 
     
