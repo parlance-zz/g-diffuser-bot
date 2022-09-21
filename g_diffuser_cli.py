@@ -168,8 +168,6 @@ def main():
 
 def _cli_get_samples(prompt=None, **kwargs):
     global DEBUG_MODE
-    if DEBUG_MODE: importlib.reload(gdl)
-    
     global INTERACTIVE_CLI_ARGS
     args = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), kwargs))
     if prompt: args.prompt = prompt
@@ -178,6 +176,7 @@ def _cli_get_samples(prompt=None, **kwargs):
     else: repeat = False
     if repeat: print("Repeating sample...")
     while True:
+        if DEBUG_MODE: importlib.reload(gdl)
         samples = gdl.get_samples(args)
         gdl.save_samples(samples, args)
         INTERACTIVE_CLI_ARGS = args

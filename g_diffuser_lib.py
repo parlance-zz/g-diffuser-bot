@@ -435,9 +435,9 @@ def get_matched_noise(np_init, final_blend_mask, noise_q):
     hsv_blend_mask = normalize_image((1. - final_blend_mask)*final_blend_mask)
     max_opacity = np.max(hsv_blend_mask)
     hsv_blend_mask = np.minimum(normalize_image(gaussian_blur(hsv_blend_mask, std=5000.)) + 1e-8, 1.)
-    offset = 0.#0.12 #0.5
+    offset = -0.01 # 0. #-0.1
     hsv_blend_mask_offset = np.maximum(np.absolute(np.log(hsv_blend_mask)) ** (1/2) - offset, 0.)
-    hardness = 0.5 # 1.
+    hardness = 0.001
     hsv_blend_mask = normalize_image(np.exp(-hardness * hsv_blend_mask_offset**2)) * max_opacity
     hsv_blend_mask[:,:,0] *= 1.
     hsv_blend_mask[:,:,1] *= 0.05
