@@ -127,7 +127,7 @@ def save_json(_dict, file_path):
     (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True)
 
     with open(file_path, "w") as file:
-        json.dump(_dict, file)
+        json.dump(_dict, file, indent=4)
         file.close()
     return file_path
     

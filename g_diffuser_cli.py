@@ -42,6 +42,8 @@ VERSION_STRING = "g-diffuser-cli v0.2"
 
 def main():
     global VERSION_STRING
+    global INTERACTIVE_CLI_ARGS
+    INTERACTIVE_CLI_ARGS = argparse.Namespace()
     
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -79,7 +81,7 @@ def main():
         "--noise_q",
         type=float,
         default=1.,
-        help="augments falloff of matched noise distribution ( > 0). lower means smaller features and higher means larger features",
+        help="augments falloff of matched noise distribution for in/out-painting (noise_q > 0), lower values mean smaller features and higher means larger features",
     )
     parser.add_argument(
         "--strength",
@@ -109,8 +111,8 @@ def main():
         "--model-name",
         type=str,
         default="",
-        help="relative local path to downloaded diffusers model, or name of model if using a huggingface token",
-    )   
+        help="path to downloaded diffusers model (relative to default models path), or name of model if using a huggingface token",
+    )
     parser.add_argument(
         "--use_optimized",
         action='store_true',
@@ -129,20 +131,29 @@ def main():
         default=False,
         help="enters an interactive command line mode to generate multiple samples",
     )
-    args = parser.parse_args()
-    
-    if (args.prompt == "") and (args.interactive == False):
+    parser.add_argument(
+        "--load-args",
+        type=str,
+        default="no_preload",
+        help="preload and use a saved set of sample arguments from a json file in your inputs path",
+    )    
+    args = parser.parse_args()    
+    if (args.prompt == "") and (args.interactive == False) and (args.load_args == "no_preload"):
         parser.print_help()
         exit(1)
+        
     if args.debug: print(VERSION_STRING + ": --debug enabled (verbose output on, writing debug file dumps to tmp...)")
     else: print(VERSION_STRING + ": use --debug to enable verbose output and writing debug files to tmp...")
-    if (not args.interactive) and args.debug: print("Current args: " + str(gdl.strip_args(args))+"\n")
-    
+    if args.load_args != "no_preload":
+        print("")
+        cli_load_args(args.load_args)
+        args = INTERACTIVE_CLI_ARGS
+    else:
+        INTERACTIVE_CLI_ARGS = args
+        
     gdl.load_pipelines(args)
     
     if args.interactive:
-        global INTERACTIVE_CLI_ARGS
-        
         print("\nInteractive mode: call sample() with keyword args and use exit() when done:")
         print("sample('my prompt', n=3, scale=15)")
         print("sample('art by greg rutkowski', init_img='my_image_src.png', repeat=True, debug=True)")
@@ -154,7 +165,6 @@ def main():
         print("cls() # clear the command window if things get cluttered\n")
         print("Current args: " + str(gdl.strip_args(args))+"\n")
         
-        INTERACTIVE_CLI_ARGS = args
         cli_locals = argparse.Namespace()
         cli_locals.sample = cli_get_samples
         cli_locals.show_args = cli_show_args
@@ -165,6 +175,8 @@ def main():
         code.interact(local=dict(globals(), **vars(cli_locals)))
         exit(0)
     else:
+        if args.load_args == "no_preload": print("Sample arguments: " + str(gdl.strip_args(args))+"\n")
+        
         samples = gdl.get_samples(args)
         gdl.save_samples(samples, args)
         
