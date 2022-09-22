@@ -135,7 +135,7 @@ def main():
     )
     args = parser.parse_args()
     
-    print("")
+    print("g-diffuser-cli v0.1")
     if (args.prompt == "") and (args.interactive == False):
         parser.print_help()
         exit(1)
