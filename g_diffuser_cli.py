@@ -147,6 +147,7 @@ def main():
     if args.load_args != "no_preload":
         print("")
         cli_load_args(args.load_args)
+        INTERACTIVE_CLI_ARGS.load_args = args.load_args
         args = INTERACTIVE_CLI_ARGS
     else:
         INTERACTIVE_CLI_ARGS = args
