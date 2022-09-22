@@ -19,7 +19,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-Sept 22/2022 Update - This is a temporary repository for breaking changes until they can be merged. This branch has the latest out-painting implementation.
+Sept 22/2022 Update - This is a temporary repository for breaking changes until they can be merged.
+                    - This branch has the latest out-painting implementation.
+                    - Major overhaul to how arguments, parameters, and input/output files are handled
 
 
 Installation:
