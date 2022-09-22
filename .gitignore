@@ -1,0 +1,17 @@
+*.pyc
+*.pyo
+__pycache__/
+stable-diffusion-v1-4/
+waifu-diffusion/
+models/
+tmp/
+release/
+junk/
+backup/
+old/
+g_diffuser_bot_config.py
+*.png
+*.json
+*.bat
+*.jpg
+*.jpeg
