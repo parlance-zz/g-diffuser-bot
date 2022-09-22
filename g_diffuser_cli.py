@@ -27,18 +27,16 @@ g_diffuser_cli.py - command line interface for g-diffuser
 
 """
 
-from g_diffuser_bot_defaults import *
 import g_diffuser_lib as gdl
+from g_diffuser_config import DEFAULT_PATHS
 
 import os, sys
-os.chdir(ROOT_PATH)
+os.chdir(DEFAULT_PATHS.root)
 
 import datetime
 import argparse
 import code
 import importlib
-import json
-from pathlib import Path
 
 VERSION_STRING = "g-diffuser-cli v0.1"
 
@@ -51,7 +49,7 @@ def main():
         type=str,
         nargs="?",
         default="",
-        help="the prompt to condition generation on",
+        help="the prompt to condition sampling on",
     )
     parser.add_argument(
         "--steps",
@@ -86,7 +84,7 @@ def main():
     parser.add_argument(
         "--strength",
         type=float,
-        default=0,
+        default=0.,
         help="overall amount to change the input image",
     )
     parser.add_argument(
@@ -112,13 +110,7 @@ def main():
         type=str,
         default="",
         help="relative local path to downloaded diffusers model, or name of model if using a huggingface token",
-    )
-    parser.add_argument(
-        "--hf-token",
-        type=str,
-        default="",
-        help="your huggingface developer access token (if you are using one)",
-    )    
+    )   
     parser.add_argument(
         "--use_optimized",
         action='store_true',
@@ -144,6 +136,7 @@ def main():
         exit(1)
     if args.debug: print(VERSION_STRING + ": --debug enabled (verbose output on, writing debug file dumps to tmp...)")
     else: print(VERSION_STRING + ": use --debug to enable verbose output and writing debug files to tmp...")
+    if (not args.interactive) and args.debug: print("Current args: " + str(gdl.strip_args(args))+"\n")
     
     gdl.load_pipelines(args)
     
@@ -172,9 +165,15 @@ def main():
     else:
         samples = gdl.get_samples(args)
         gdl.save_samples(samples, args)
-
+        
+        try: # try to save the last used args in a json file for convenience
+            gdl.save_json(vars(gdl.strip_args(args)), "args")
+        except Exception as e:
+            if args.debug: print("Error saving sample args - " + str(e))
+            
+    return
+    
 def cli_get_samples(prompt=None, **kwargs):
-    global TMP_ROOT_PATH
     global INTERACTIVE_CLI_ARGS
     
     args = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), kwargs))
@@ -192,7 +191,7 @@ def cli_get_samples(prompt=None, **kwargs):
         INTERACTIVE_CLI_ARGS = args # preserve args for next call to sample()
         if args.debug: print(str(gdl.strip_args(args))+"\n")
         try: # try to save the last used args in a json tmp file for convenience
-            gdl.save_debug_json(vars(gdl.strip_args(args)), "last_sample_args")
+            gdl.save_json(vars(gdl.strip_args(args)), "args")
         except Exception as e:
             if args.debug: print("Error saving sample args - " + str(e))
             
@@ -208,18 +207,17 @@ def cli_load_args(name=""):
     global INTERACTIVE_CLI_ARGS
     try:
         if not name: name = "last_sample_args"
-        saved_args_dict = gdl.load_debug_json(name)
+        saved_args_dict = gdl.load_json(name)
         INTERACTIVE_CLI_ARGS = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), saved_args_dict))
         print("Loaded args from file: " + str(gdl.strip_args(INTERACTIVE_CLI_ARGS))+"\n")
     except Exception as e:
         print("Error loading last args from file - " + str(e))
-        
     return
     
 def cli_save_args(name):
     global INTERACTIVE_CLI_ARGS
     try:
-        saved_path = gdl.save_debug_json(vars(gdl.strip_args(INTERACTIVE_CLI_ARGS)), name)
+        saved_path = gdl.save_json(vars(gdl.strip_args(INTERACTIVE_CLI_ARGS)), name)
         print("Saved " + saved_path)
     except Exception as e:
         if args.debug: print("Error saving args - " + str(e))

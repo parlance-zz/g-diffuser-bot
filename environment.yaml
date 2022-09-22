@@ -1,4 +1,4 @@
-name: g_diffuser_bot
+name: g_diffuser
 channels:
   - pytorch
   - defaults

@@ -57,6 +57,76 @@ from discord.ext import tasks
 import numpy as np
 from PIL import Image
 
+BOT_COMMAND_LIST = ["gen", "queue", "cancel", "top", "select", "show_input", "shutdown", "clean", "restart", "clear", "leave_server", "list_servers", "help", "about", "examples"]
+PARAM_LIST = ["-str", "-scale", "-seed", "-steps", "-x", "-mine", "-all", "-num", "-force", "-user", "-w", "-h", "-n", "-none", "-color", "-noise_q", "-blend", "-server"]
+
+# help and about strings, these must be 2000 characters or less
+
+ABOUT_TXT = """This is a simple discord bot for stable-diffusion and provides access to the most common commands as well as a few others.
+
+Commands can be used in any channel the bot is in, provided you have the appropriate server role. For a list of commands, use !help
+
+Please use discretion in your prompts as the safety filter has been disabled. Repeated violations will result in banning.
+If you do happen to generate anything questionable please delete the message yourself or contact a mod ASAP. The watermarking feature has been left enabled to minimize potential harm.
+
+For more information on the G-Diffuser-Bot please see https://github.com/parlance-zz/g-diffuser-bot
+"""
+
+HELP_TXT1 = """
+User Commands:
+  !gen : Generates a new sample with the given prompt, parameters, and input attachments
+  !queue : Shows running / waiting commands in the queue [-mine]
+  !cancel : Cancels your last command, or optionally a specific number of commands (can be used while running) [-all]
+  !top : Shows the top users' total running time
+  !select : Crops an image by number from your last result and make it your input image (left to right, top to bottom) [-none]
+  !show_input : Shows your current input image (skips the queue)
+ 
+Admin Commands:
+  !shutdown : Cancel all pending / running commands and shutdown the bot (can only be used by bot owner)
+  !clean : Delete temporary files in SD folders, [-force] will delete temporary files that may still be referenced (can only be used by bot owner) [-force]
+  !restart : Restart the bot after the command queue is idle
+  !clear : Cancel all or only a specific user's pending / running commands [-all] [-user]
+  !list_servers : List the names of all servers / guilds the bot is joined to
+  !leave_server : Leave the specified server [-server server name]
+"""
+
+HELP_TXT2=""" 
+Parameter Notes:
+  -seed : Any whole number (default random)
+  -scale : Can be any positive real number (default 10). Controls the unconditional guidance scale. Good values are between 3-20.
+  -str : Number between 0 and 1, (default 0.5). Controls how much to change the input image. 
+  -steps : Any whole number from 10 to 300 (default 50). Controls how many times to iteratively refine the sample.
+  -x : Repeat the given command some number of times.
+  -w : Set the output width  (this will be rounded to a multiple of 64)
+  -h : Set the output height (this will be rounded to a multiple of 64)
+  -n : Choose the number of samples to generate at once
+  -color : How much color variation to add when in/out-painting, if you use this try small values (0..1, default 0.)
+  -noise_q : Controls the exponent in the in/out-painting noise distribution. Higher values means larger features and lower values means
+             smaller features. (range > 0., default 1.)
+  -blend : Can be used to adjust mask hardness when in/out-painting, higher values is sharper (range >= 0., default 1 (no change))
+  
+Examples:
+  To see examples of valid commands use !examples
+"""
+
+EXAMPLES_TXT = """
+Example commands:
+!gen an astronaut riding a horse on the moon
+!gen painting of an island by lisa frank -seed 10
+!gen baroque painting of a mystical island treehouse on the ocean, chrono trigger, trending on artstation, soft lighting, vivid colors, extremely detailed, very intricate
+!gen my little pony in space marine armor from warhammer 40k, trending on artstation, intricate detail, 3d render, gritty, dark colors, cinematic lighting, cosmic background with colorful constellations -scale 10 -seed 174468 -steps 50
+!gen baroque painting of a mystical island treehouse on the ocean, chrono trigger, trending on artstation, soft lighting, vivid colors, extremely detailed, very intricate -scale 14 -seed 252229
+"""
+
+
+
+"""
+Input images:
+  Commands that require an input image will use the image you attach to your message. If you do not attach an image it will attempt to use the last image you attached.
+  The select command can be used to turn your last command's output image into your next input image, please see !select above.
+"""
+
+
 
 class Command:
 

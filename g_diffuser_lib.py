@@ -27,7 +27,8 @@ g_diffuser_lib.py - shared functions and diffusers operations
 
 """
 
-from g_diffuser_bot_defaults import *
+from g_diffuser_config import DEFAULT_PATHS, MODEL_DEFAULTS
+from g_diffuser_defaults import DEFAULT_SAMPLE_SETTINGS
 
 import time
 import datetime
@@ -61,54 +62,44 @@ def get_image_dims(img_path):
 def merge_dicts(d1, d2): # overwrites the attributes in d1 in merge
     return dict(d1, **d2)
     
-def valid_resolution(width, height, init_image=None):  # cap max dimension at max res and ensure size is 
-                                                       # a correct multiple of granularity while
-                                                       # preserving aspect ratio (best we can anyway)
-    global DEFAULT_RESOLUTION
-    global MAX_RESOLUTION
-    
-    RESOLUTION_GRANULARITY = 64 # hard-coded for SD for now
+def valid_resolution(width, height, init_image=None):  # clip dimensions at max resolution, while keeping the correct resolution granularity,
+                                                       # while roughly preserving aspect ratio. if width or height are None they are taken from the init_image
+    global DEFAULT_SAMPLE_SETTINGS
     
     if not init_image:
-        if not width: width = DEFAULT_RESOLUTION[0]
-        if not height: height = DEFAULT_RESOLUTION[1]
+        if not width: width = DEFAULT_SAMPLE_SETTINGS.resolution[0]
+        if not height: height = DEFAULT_SAMPLE_SETTINGS.resolution[1]
     else:
         if not width: width = init_image.size[0]
         if not height: height = init_image.size[1]
         
     aspect_ratio = width / height 
-    if width > MAX_RESOLUTION[0]:
-        width = MAX_RESOLUTION[0]
+    if width > DEFAULT_SAMPLE_SETTINGS.max_resolution[0]:
+        width = DEFAULT_SAMPLE_SETTINGS.max_resolution[0]
         height = int(width / aspect_ratio + .5)
-    if height > MAX_RESOLUTION[1]:
-        height = MAX_RESOLUTION[1]
+    if height > DEFAULT_SAMPLE_SETTINGS.max_resolution[1]:
+        height = DEFAULT_SAMPLE_SETTINGS.max_resolution[1]
         width = int(height * aspect_ratio + .5)
         
-    width = int(width / float(RESOLUTION_GRANULARITY) + 0.5) * RESOLUTION_GRANULARITY
-    height = int(height / float(RESOLUTION_GRANULARITY) + 0.5) * RESOLUTION_GRANULARITY
-    if width < RESOLUTION_GRANULARITY: width = RESOLUTION_GRANULARITY
-    if height < RESOLUTION_GRANULARITY: height = RESOLUTION_GRANULARITY
+    width = int(width / float(DEFAULT_SAMPLE_SETTINGS.resolution_granularity) + 0.5) * DEFAULT_SAMPLE_SETTINGS.resolution_granularity
+    height = int(height / float(DEFAULT_SAMPLE_SETTINGS.resolution_granularity) + 0.5) * DEFAULT_SAMPLE_SETTINGS.resolution_granularity
+    width = np.maximum(width, DEFAULT_SAMPLE_SETTINGS.resolution_granularity)
+    height = np.maximum(height, DEFAULT_SAMPLE_SETTINGS.resolution_granularity)
 
     return width, height
     
-def get_tmp_path(file_extension):
-    global TMP_ROOT_PATH
-    try: # try to make sure temp folder exists
-        pathlib.Path(TMP_ROOT_PATH).mkdir(exist_ok=True)
-    except Exception as e:
-        print("Error creating temp path: '" + TMP_ROOT_PATH + "' - " + str(e))
-        
+def get_random_file_path(base_path, file_extension):
     uuid_str = str(uuid.uuid4())
     uuid_str = uuid_str[0:len(uuid_str)//2] # shorten uuid, don't need that many digits
-    tmp_path = pathlib.Path(TMP_ROOT_PATH) / (uuid_str + file_extension)
-    return tmp_path.absolute().as_posix()
+    rnd_file_path = pathlib.Path(base_path) / (uuid_str + file_extension)
+    return rnd_file_path.absolute().as_posix()
 
 def save_debug_img(np_image, name):
-    global TMP_ROOT_PATH
-    if not TMP_ROOT_PATH: return
+    global DEFAULT_PATHS
+    if not DEFAULT_PATHS.debug: return
+    pathlib.Path(DEFAULT_PATHS.debug).mkdir(exist_ok=True)
     
-    pathlib.Path(TMP_ROOT_PATH).mkdir(exist_ok=True)
-    image_path = TMP_ROOT_PATH + "/_debug_" + name + ".png"
+    image_path = DEFAULT_PATHS.debug + "/" + name + ".png"
     if type(np_image) == np.ndarray:
         if np_image.ndim == 2:
             mode = "L"
@@ -122,21 +113,23 @@ def save_debug_img(np_image, name):
         np_image.save(image_path)
     return image_path
 
-def save_debug_json(_dict, name):
-    global TMP_ROOT_PATH
-    if not TMP_ROOT_PATH: return
+def save_json(_dict, name):
+    global DEFAULT_PATHS
+    if not DEFAULT_PATHS.inputs: return
+    pathlib.Path(DEFAULT_PATHS.inputs).mkdir(exist_ok=True)
     
-    saved_json_file_path = (Path(TMP_ROOT_PATH) / ("_debug_" + name + ".json")).as_posix()
+    saved_json_file_path = (pathlib.Path(DEFAULT_PATHS.inputs) / (name + ".json")).as_posix()
     with open(saved_json_file_path, "w") as file:
         json.dump(_dict, file)
         file.close()
     return saved_json_file_path
     
-def load_debug_json(name):
-    global TMP_ROOT_PATH
-    assert(TMP_ROOT_PATH)
+def load_json(name):
+    global DEFAULT_PATHS
+    assert(DEFAULT_PATHS.inputs)
+    pathlib.Path(DEFAULT_PATHS.inputs).mkdir(exist_ok=True)
     
-    saved_json_file_path = (Path(TMP_ROOT_PATH) / ("_debug_" + name + ".json")).as_posix()
+    saved_json_file_path = (pathlib.Path(DEFAULT_PATHS.inputs) / (name + ".json")).as_posix()
     with open(saved_json_file_path, "r") as file:
         data = json.load(file)
         file.close()
@@ -144,7 +137,7 @@ def load_debug_json(name):
     
 def strip_args(args): # remove args we wouldn't want to print or serialize
     args_stripped = argparse.Namespace(**vars(args))
-    del args_stripped.loaded_pipes
+    if "loaded_pipes" in args_stripped: del args_stripped.loaded_pipes
     return args_stripped
     
 def dummy_checker(images, **kwargs): # replacement func to disable safety_checker in diffusers
@@ -351,7 +344,7 @@ def get_matched_noise(np_init, final_blend_mask, args):
     shaped_noise_rgb = np.absolute(convolve(schrodinger_kernel, windowed_image))
     if args.debug: save_debug_img(shaped_noise_rgb, "shaped_noise_rgb")
     
-    offset = 0.1 # 1e-17 # 0.0125 # todo: create mask offset function that can set a lower offset
+    offset =  1e-10#0.005 # 0.0125 # todo: create mask offset function that can set a lower offset
     hsv_blend_mask = (1. - final_blend_mask) * np.clip(final_blend_mask-1e-20, 0., 1.)**offset
     hsv_blend_mask = normalize_image(hsv_blend_mask)
     
@@ -359,7 +352,7 @@ def get_matched_noise(np_init, final_blend_mask, args):
     hsv_blend_mask = np.minimum(normalize_image(gaussian_blur(hsv_blend_mask, std=4000.)) + 1e-8, 1.)
     offset_hsv_blend_mask = np.maximum(np.absolute(np.log(hsv_blend_mask)) ** (1/2), 0.)
     offset_hsv_blend_mask -= np.min(offset_hsv_blend_mask)
-    hardness = 12500 # 7.5 # 1e-8 # 0.3 
+    hardness = 1 # 7.5 # 1e-8 # 0.3 
     hsv_blend_mask = normalize_image(np.exp(-hardness * offset_hsv_blend_mask**2))
     #hsv_blend_mask[:,:,0] *= 1. # todo: experiment with this again
     #hsv_blend_mask[:,:,1] *= 0.05
@@ -411,8 +404,12 @@ def get_matched_noise(np_init, final_blend_mask, args):
 # ************* in/out-painting code ends here *************
 
 def load_image(args):
+    global DEFAULT_PATHS
+    assert(DEFAULT_PATHS.inputs)
+    final_init_img_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_img).as_posix()
+    
     # load and resize input image to multiple of 64x64
-    init_image = Image.open(args.init_img)
+    init_image = Image.open(final_init_img_path)
     width, height = valid_resolution(args.w, args.h, init_image=init_image)
     if (width, height) != init_image.size:
         if args.debug: print("Resizing input image to (" + str(width) + ", " + str(height) + ")")
@@ -450,19 +447,19 @@ def load_image(args):
     return init_image, mask_image
         
 def get_samples(args):
-    global DEFAULT_RESOLUTION
+    global DEFAULT_SAMPLE_SETTINGS
     
     if args.init_img != "":
         pipe_name = "img2img"
-        init_image, mask_image = load_image(args)
         strength = 0.9999 # the real "strength" will be applied to the mask by load_image
+        init_image, mask_image = load_image(args)
     else:
         pipe_name = "txt2img"
         init_image = None
         mask_image = None
         strength = None
-        if not args.w: args.w = DEFAULT_RESOLUTION[0]
-        if not args.h: args.h = DEFAULT_RESOLUTION[1]
+        if not args.w: args.w = DEFAULT_SAMPLE_SETTINGS.resolution[0]
+        if not args.h: args.h = DEFAULT_SAMPLE_SETTINGS.resolution[1]
         
     if args.debug:
         sampling_start_time = datetime.datetime.now()
@@ -498,20 +495,22 @@ def get_samples(args):
     return samples
 
 def save_samples(samples, args):
+    global DEFAULT_PATHS
+    
     # combine individual samples to create main output
     if len(samples) > 1: output_image = get_image_grid(samples, get_grid_layout(len(samples)))
     else: output_image = samples[0]
 
     # todo: temporarily break output path specification while we refactor to support target folders instead
     
-    args.output = get_tmp_path(".png")
+    args.output = get_random_file_path(DEFAULT_PATHS.outputs, ".png")
     output_image.save(args.output)
     print("Saved " + args.output)
     
     args.output_samples = [] # if n_samples > 1, save individual samples in tmp outputs as well
     if len(samples) > 1:
         for sample in samples:
-            output_path = get_tmp_path(".png")
+            output_path = get_random_file_path(DEFAULT_PATHS.outputs, ".png")
             sample.save(output_path)
             print("Saved " + output_path)
             args.output_samples.append(output_path)
@@ -523,25 +522,29 @@ def save_samples(samples, args):
     return args.output_samples
     
 def load_pipelines(args):
-    global HUGGINGFACE_TOKEN
-    global CMD_SERVER_MODEL_NAME
-    global BOT_USE_OPTIMIZED
-    global LOAD_PIPE_LIST
+    global DEFAULT_PATHS
+    global MODEL_DEFAULTS
     
     pipe_map = { "txt2img": StableDiffusionPipeline, "img2img": StableDiffusionInpaintPipeline }
     if args.interactive:
-        if LOAD_PIPE_LIST != None: pipe_list = LOAD_PIPE_LIST
+        if "pipe_list" in MODEL_DEFAULTS: pipe_list = MODEL_DEFAULTS.pipe_list
         else: pipe_list = list(pipe_map.keys())
     else:
         if args.init_img: pipe_list = ["img2img"]
         else: pipe_list = ["txt2img"]
-            
-    if not args.use_optimized: use_optimized = BOT_USE_OPTIMIZED
-    else: use_optimized = args.use_optimized
-    if not args.model_name: args.model_name = CMD_SERVER_MODEL_NAME
-    if not args.hf_token: hf_token = HUGGINGFACE_TOKEN
     
-    print("Using model: " + args.model_name)
+    hf_token = None
+    if "hf_token" in MODEL_DEFAULTS: hf_token = MODEL_DEFAULTS.hf_token
+    if "hf_token" in args: hf_token = args.hf_token
+    use_optimized = MODEL_DEFAULTS.use_optimized
+    if "use_optimized" in args: use_optimized = args.use_optimized
+    
+    if args.model_name: model_name = args.model_name
+    else: model_name = MODEL_DEFAULTS.model_name
+    if not hf_token: final_model_name = (pathlib.Path(DEFAULT_PATHS.models) / model_name).as_posix()
+    else: final_model_name = model_name
+    
+    print("Using model: " + MODEL_DEFAULTS.model_name)
     if use_optimized:
         torch_dtype = torch.float16 # use fp16 in optimized mode
         print("Using memory optimizations...")
@@ -553,7 +556,7 @@ def load_pipelines(args):
     for pipe_name in pipe_list:
         print("Loading " + pipe_name + " pipeline...")
         pipe = pipe_map[pipe_name].from_pretrained(
-            args.model_name, 
+            final_model_name, 
             torch_dtype=torch_dtype,
             use_auth_token=hf_token,
         )
@@ -567,4 +570,6 @@ def load_pipelines(args):
 
     args.loaded_pipes = loaded_pipes
     args.pipe_list = pipe_list
+    args.model_name = model_name
+    args.hf_token = hf_token
     return args.loaded_pipes
