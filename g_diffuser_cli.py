@@ -40,7 +40,11 @@ import importlib
 import json
 from pathlib import Path
 
+VERSION_STRING = "g-diffuser-cli v0.1"
+
 def main():
+    global VERSION_STRING
+    
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--prompt",
@@ -135,13 +139,13 @@ def main():
     )
     args = parser.parse_args()
     
-    print("g-diffuser-cli v0.1")
+    
     if (args.prompt == "") and (args.interactive == False):
         parser.print_help()
         exit(1)
     
-    if args.debug: print("Debug mode enabled (verbose output on, writing debug file dumps to tmp...)")
-    else: print("Use --debug to enable verbose output and writing debug files to tmp...")
+    if args.debug: print(VERSION_STRING + ": --debug enabled (verbose output on, writing debug file dumps to tmp...)")
+    else: print(VERSION_STRING + ": use --debug to enable verbose output and writing debug files to tmp...")
     
     gdl.load_pipelines(args)
     
