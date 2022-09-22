@@ -52,13 +52,13 @@ def main():
     parser.add_argument(
         "--steps",
         type=int,
-        default=30,
+        default=32,
         help="number of sampling steps (number of times to refine image)",
     )
     parser.add_argument(
         "--scale",
         type=float,
-        default=10,
+        default=11,
         help="guidance scale (amount of change per step)",
     )
     parser.add_argument(
@@ -76,7 +76,7 @@ def main():
     parser.add_argument(
         "--noise_q",
         type=float,
-        default=1.5,
+        default=1.,
         help="augments falloff of matched noise distribution ( > 0). lower means smaller features and higher means larger features",
     )
     parser.add_argument(
@@ -150,7 +150,7 @@ def main():
         
         print("\nInteractive mode: call sample() with keyword args and use exit() when done:")
         print("sample('my prompt', n=3, scale=15)")
-        print("sample('art by greg rutkowski', init_img='my_image_src.png', repeat=True)")
+        print("sample('art by greg rutkowski', init_img='my_image_src.png', repeat=True, debug=True)")
         print("sample()    # sample() can be used without any args to use your last args instead")
         print("show_args() # shows the current input/output arguments")
         print("load_args() # load the last used args (from auto-save file)\n")
@@ -201,9 +201,13 @@ def cli_show_args():
     
 def cli_load_args():
     global INTERACTIVE_CLI_ARGS
-    saved_args_dict = gdl.load_debug_json("last_sample_args")
-    INTERACTIVE_CLI_ARGS = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), saved_args_dict))
-    print("Loaded args from file: " + str(gdl.strip_args(INTERACTIVE_CLI_ARGS))+"\n")
+    try:
+        saved_args_dict = gdl.load_debug_json("last_sample_args")
+        INTERACTIVE_CLI_ARGS = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), saved_args_dict))
+        print("Loaded args from file: " + str(gdl.strip_args(INTERACTIVE_CLI_ARGS))+"\n")
+    except Exception as e:
+        print("Error loading last args from file - " + str(e))
+        
     return
     
 if __name__ == "__main__":
