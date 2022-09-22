@@ -455,6 +455,7 @@ def load_image(args):
         
 def get_samples(args):
     global DEFAULT_SAMPLE_SETTINGS
+    global MODEL_DEFAULTS
     
     if args.init_img != "":
         pipe_name = "img2img"
@@ -472,6 +473,7 @@ def get_samples(args):
         sampling_start_time = datetime.datetime.now()
         print("Using " + pipe_name + " pipeline...")
     
+    args.model_name = MODEL_DEFAULTS.model_name
     args.used_pipe = pipe_name
     samples = []
     with autocast("cuda"):
@@ -554,7 +556,10 @@ def load_pipelines(args):
     if not hf_token: final_model_name = (pathlib.Path(DEFAULT_PATHS.models) / model_name).as_posix()
     else: final_model_name = model_name
     
-    print("Using model: " + MODEL_DEFAULTS.model_name)
+    args.model_name = final_model_name
+    MODEL_DEFAULTS.model_name = final_model_name
+    
+    print("Using model: " + final_model_name)
     if use_optimized:
         torch_dtype = torch.float16 # use fp16 in optimized mode
         print("Using memory optimizations...")
