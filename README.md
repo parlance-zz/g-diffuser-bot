@@ -29,19 +29,20 @@ Installation:
  - download / install miniconda (https://docs.conda.io/en/latest/miniconda.html)
  - open a conda prompt, then navigate to the folder where you cloned / downloaded this repository
  - conda env create -f environment.yaml
- - edit g_diffuser_config.py and g_diffuser_defaults.py as appropriate, make sure to save!
+ - optional: edit g_diffuser_config.py and g_diffuser_defaults.py as appropriate, make sure to save!
  - place any pre-downloaded models into the models folder, if you want to use a hugging-face token instead enter it in g_diffuser_config.py
  
  Running:
  - open a conda prompt, then navigate to the g-diffuser folder
  - conda activate g_diffuser
+ - optional: on Windows you can open prompt.bat to do the above automatically
  - run the discord bot with python g_diffuser_bot.py
  - alternatively, run the CLI interface with python g_diffuser_cli.py
  - You can use the CLI interface interactively with python g_diffuser_cli.py --interactive
  - If you see an out of memory error use --use_optimized or change the default setting in g_diffuser_config.py
 
 Updating:
- - Simply download and replace your files with those from this repository. You probably won't need to replace your config and default settings files.
+ - Simply download and replace your files with those from this repository. You probably won't need to replace your config and default settings files, but you may need to merge changes.
  
  
  G-Diffuser Experimental Fourier Shaped Noise In/out-painting Explanation:
