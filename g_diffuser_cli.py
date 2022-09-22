@@ -155,7 +155,9 @@ def main():
         print("sample('art by greg rutkowski', init_img='my_image_src.png', repeat=True, debug=True)")
         print("sample()    # sample() can be used without any args to use your last args instead")
         print("show_args() # shows the current input/output arguments")
-        print("load_args() # load the last used args (from auto-save file)\n")
+        print("load_args() # load the last used args (from auto-save file)")
+        print("load_args('my_fav_args') # you can load a named arg file")
+        print("save_args('my_fav_args') # you can save a named arg file\n")
         print("Current args: " + str(gdl.strip_args(args))+"\n")
         
         INTERACTIVE_CLI_ARGS = args
@@ -164,6 +166,7 @@ def main():
         cli_locals.show_args = cli_show_args
         cli_locals.load_args = cli_load_args
         cli_locals.load_last_args = cli_load_args
+        cli_locals.save_args = cli_save_args
         code.interact(local=dict(globals(), **vars(cli_locals)))
         exit(0)
     else:
@@ -194,7 +197,6 @@ def cli_get_samples(prompt=None, **kwargs):
             if args.debug: print("Error saving sample args - " + str(e))
             
         if not repeat: break
-        
     return
     
 def cli_show_args():
@@ -213,6 +215,16 @@ def cli_load_args(name=""):
         print("Error loading last args from file - " + str(e))
         
     return
+    
+def cli_save_args(name):
+    global INTERACTIVE_CLI_ARGS
+    try:
+        saved_path = gdl.save_debug_json(vars(gdl.strip_args(INTERACTIVE_CLI_ARGS)), name)
+        print("Saved " + saved_path)
+    except Exception as e:
+        if args.debug: print("Error saving args - " + str(e))
+    return
+    
     
 if __name__ == "__main__":
     main()

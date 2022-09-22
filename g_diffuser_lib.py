@@ -120,7 +120,7 @@ def save_debug_img(np_image, name):
         pil_image.save(image_path)
     else:
         np_image.save(image_path)
-    return
+    return image_path
 
 def save_debug_json(_dict, name):
     global TMP_ROOT_PATH
@@ -130,7 +130,7 @@ def save_debug_json(_dict, name):
     with open(saved_json_file_path, "w") as file:
         json.dump(_dict, file)
         file.close()
-    return
+    return saved_json_file_path
     
 def load_debug_json(name):
     global TMP_ROOT_PATH
