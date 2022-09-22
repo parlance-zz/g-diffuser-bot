@@ -332,8 +332,6 @@ def get_blend_mask(np_mask_rgb, args):  # np_mask_rgb is an np array of rgb data
 
 def get_matched_noise(np_init, final_blend_mask, args): 
 
-    assert(noise_q > 0.)
-    
     width = np_init.shape[0]
     height = np_init.shape[1]
     num_channels = np_init.shape[2]

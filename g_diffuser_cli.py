@@ -139,11 +139,9 @@ def main():
     )
     args = parser.parse_args()
     
-    
     if (args.prompt == "") and (args.interactive == False):
         parser.print_help()
         exit(1)
-    
     if args.debug: print(VERSION_STRING + ": --debug enabled (verbose output on, writing debug file dumps to tmp...)")
     else: print(VERSION_STRING + ": use --debug to enable verbose output and writing debug files to tmp...")
     
@@ -165,6 +163,7 @@ def main():
         cli_locals.sample = cli_get_samples
         cli_locals.show_args = cli_show_args
         cli_locals.load_args = cli_load_args
+        cli_locals.load_last_args = cli_load_args
         code.interact(local=dict(globals(), **vars(cli_locals)))
         exit(0)
     else:
@@ -189,12 +188,12 @@ def cli_get_samples(prompt=None, **kwargs):
         
         INTERACTIVE_CLI_ARGS = args # preserve args for next call to sample()
         if args.debug: print(str(gdl.strip_args(args))+"\n")
+        try: # try to save the last used args in a json tmp file for convenience
+            gdl.save_debug_json(vars(gdl.strip_args(args)), "last_sample_args")
+        except Exception as e:
+            if args.debug: print("Error saving sample args - " + str(e))
+            
         if not repeat: break
-
-    try: # save the last used args in a json temp file for convenience
-        gdl.save_debug_json(vars(gdl.strip_args(args)), "last_sample_args")
-    except Exception as e:
-        if args.debug: print("Error saving sample args - " + str(e))
         
     return
     
