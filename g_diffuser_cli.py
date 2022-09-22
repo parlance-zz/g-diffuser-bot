@@ -147,19 +147,20 @@ def main():
         exit(1)
     
     if args.debug: print("Debug mode enabled (verbose output on, writing debug file dumps to tmp...)")
-    else: print("(Use --debug for verbose output)")
+    else: print("Use --debug to enable verbose output and writing debug files to tmp...")
     
     gdl.load_pipelines(args)
     
     if args.interactive:
         global INTERACTIVE_CLI_ARGS
         
-        print("\nInteractive mode: call sample() with keyword args and use exit() when done, press ctrl+c to abort repeating command:")
+        print("\nInteractive mode: call sample() with keyword args and use exit() when done:")
         print("sample('my prompt', n=3, scale=15)")
         print("sample('art by greg rutkowski', init_img='my_image_src.png', repeat=True)")
-        print("show_args()  # can be used to show the current input/output arguments\n")
-        print("Parameters entered as command-line arguments will be merged into your initial sample params, sample params are preserved on subsequent calls to sample()\n")
-        print(str(gdl.strip_args(args))+"\n")
+        print("sample()    # sample() can be used without any args to use your last args instead")
+        print("show_args() # shows the current input/output arguments")
+        print("load_args() # load the last used args (from auto-save file)\n")
+        print("Current args: " + str(gdl.strip_args(args))+"\n")
         
         INTERACTIVE_CLI_ARGS = args
         cli_locals = argparse.Namespace()
@@ -208,8 +209,8 @@ def cli_load_args():
     global INTERACTIVE_CLI_ARGS
     saved_args_dict = gdl.load_debug_json("last_sample_args")
     INTERACTIVE_CLI_ARGS = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), saved_args_dict))
-    print(gdl.strip_args(INTERACTIVE_CLI_ARGS))
+    print("Loaded args: " + str(gdl.strip_args(INTERACTIVE_CLI_ARGS)))
     return
     
 if __name__ == "__main__":
-    main()    
+    main()
