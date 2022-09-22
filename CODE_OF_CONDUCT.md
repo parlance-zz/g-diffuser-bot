@@ -33,7 +33,7 @@ If a community member engages in unacceptable behavior, the community organizers
 
 If you are subject to or witness unacceptable behavior, or have any other concerns, please notify a community organizer as soon as possible.
 
-If there are an issue with community organizers please let me know at parlance@fifth-harmonic.com.
+If there is an issue with community organizers please let me know at parlance@fifth-harmonic.com.
 
 ## 6. Addressing Grievances
 
