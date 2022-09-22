@@ -1,11 +1,6 @@
 *.pyc
 *.pyo
 __pycache__/
-temp/*
-backups/*
-outputs/*
-debug/*
-models/*
 *.png
 *.json
 *.jpg
