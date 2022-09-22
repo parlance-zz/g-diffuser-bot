@@ -433,7 +433,7 @@ def load_image(args):
             if np.max(np_mask_rgb) < 1.: print("Warning: Image mask doesn't have any opaque area")
 
         if args.debug: mask_start_time = datetime.datetime.now()
-        final_blend_mask = get_blend_mask(np_mask_rgb, args.blend)
+        final_blend_mask = get_blend_mask(np_mask_rgb, args)
         if args.debug: print("get_blend_masks time : " + str(datetime.datetime.now() - mask_start_time))
         mask_image = PIL.Image.fromarray(np.clip(final_blend_mask*255., 0., 255.).astype(np.uint8), mode="RGB")
         

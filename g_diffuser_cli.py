@@ -74,12 +74,6 @@ def main():
         default="",
     )
     parser.add_argument(
-        "--blend",
-        type=float,
-        default=1,
-        help="use to set mask hardness ( > 0), 1 is near default hardness, lower is softer and higher is harder",
-    )
-    parser.add_argument(
         "--noise_q",
         type=float,
         default=1.5,
@@ -190,7 +184,7 @@ def cli_get_samples(prompt=None, **kwargs):
         gdl.save_samples(samples, args)
         
         INTERACTIVE_CLI_ARGS = args # preserve args for next call to sample()
-        if args.debug: print(gdl.strip_args(args))
+        if args.debug: print(str(gdl.strip_args(args))+"\n")
         if not repeat: break
 
     try: # save the last used args in a json temp file for convenience
@@ -202,14 +196,14 @@ def cli_get_samples(prompt=None, **kwargs):
     
 def cli_show_args():
     global INTERACTIVE_CLI_ARGS
-    print(gdl.strip_args(INTERACTIVE_CLI_ARGS))
+    print("Current args: " + str(gdl.strip_args(INTERACTIVE_CLI_ARGS))+"\n")
     return
     
 def cli_load_args():
     global INTERACTIVE_CLI_ARGS
     saved_args_dict = gdl.load_debug_json("last_sample_args")
     INTERACTIVE_CLI_ARGS = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), saved_args_dict))
-    print("Loaded args: " + str(gdl.strip_args(INTERACTIVE_CLI_ARGS)))
+    print("Loaded args from file: " + str(gdl.strip_args(INTERACTIVE_CLI_ARGS))+"\n")
     return
     
 if __name__ == "__main__":
