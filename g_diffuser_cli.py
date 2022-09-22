@@ -133,7 +133,6 @@ def main():
         default=False,
         help="enable verbose CLI output and debug image dumps",
     )
-    
     parser.add_argument(
         "--interactive",
         action='store_true',
@@ -141,11 +140,13 @@ def main():
         help="enters an interactive command line mode to generate multiple samples",
     )
     args = parser.parse_args()
+    
+    print("")
     if (args.prompt == "") and (args.interactive == False):
         parser.print_help()
         exit(1)
     
-    if args.debug: print("Debug mode enabled (verbose output, debug file dumps)")
+    if args.debug: print("Debug mode enabled (verbose output on, writing debug file dumps to tmp...)")
     else: print("(Use --debug for verbose output)")
     
     gdl.load_pipelines(args)
@@ -153,26 +154,24 @@ def main():
     if args.interactive:
         global INTERACTIVE_CLI_ARGS
         
-        print("\nInteractive mode: call sample() with keyword args and use exit() when done, press ctrl+c to abort a repeating command:")
+        print("\nInteractive mode: call sample() with keyword args and use exit() when done, press ctrl+c to abort repeating command:")
         print("sample('my prompt', n=3, scale=15)")
-        print("sample('art by greg rutkowski', init_img='my_image_src.png', repeat=True)\n")
+        print("sample('art by greg rutkowski', init_img='my_image_src.png', repeat=True)")
+        print("show_args()  # can be used to show the current input/output arguments\n")
         print("Parameters entered as command-line arguments will be merged into your initial sample params, sample params are preserved on subsequent calls to sample()\n")
+        print(str(gdl.strip_args(args))+"\n")
         
+        INTERACTIVE_CLI_ARGS = args
         cli_locals = argparse.Namespace()
         cli_locals.sample = cli_get_samples
-        INTERACTIVE_CLI_ARGS = args
-        cli_locals.args = args
+        cli_locals.show_args = cli_show_args
+        cli_locals.load_args = cli_load_args
         code.interact(local=dict(globals(), **vars(cli_locals)))
         exit(0)
     else:
         samples = gdl.get_samples(args)
         gdl.save_samples(samples, args)
 
-def strip_args(args): # remove args we wouldn't want to print or serialize
-    args_copy = argparse.Namespace(**vars(args))
-    args_copy.loaded_pipes = None
-    return args_copy
-    
 def cli_get_samples(prompt=None, **kwargs):
     global TMP_ROOT_PATH
     global INTERACTIVE_CLI_ARGS
@@ -181,29 +180,36 @@ def cli_get_samples(prompt=None, **kwargs):
     if prompt: args.prompt = prompt
     if "repeat" in args: repeat = args.repeat
     else: repeat = False
-    if repeat: print("Repeating sample...")
+    if repeat: print("Repeating sample, press ctrl+c to stop...")
     
     while True:
         if args.debug: importlib.reload(gdl)
         
         samples = gdl.get_samples(args)
         gdl.save_samples(samples, args)
-        INTERACTIVE_CLI_ARGS = args
-        if args.debug: print(strip_args(args))
-            
-        print("")
+        
+        INTERACTIVE_CLI_ARGS = args # preserve args for next call to sample()
+        if args.debug: print(gdl.strip_args(args))
         if not repeat: break
 
     try: # save the last used args in a json temp file for convenience
-        saved_args_file_path = (Path(TMP_ROOT_PATH) / "_debug_last_sample_args.json").as_posix()
-        with open(saved_args_file_path, "w") as file:
-            json.dump(vars(strip_args(args)), file)
-            file.close()
+        gdl.save_debug_json(vars(gdl.strip_args(args)), "last_sample_args")
     except Exception as e:
         if args.debug: print("Error saving sample args - " + str(e))
         
     return
     
+def cli_show_args():
+    global INTERACTIVE_CLI_ARGS
+    print(gdl.strip_args(INTERACTIVE_CLI_ARGS))
+    return
+    
+def cli_load_args():
+    global INTERACTIVE_CLI_ARGS
+    saved_args_dict = gdl.load_debug_json("last_sample_args")
+    INTERACTIVE_CLI_ARGS = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), saved_args_dict))
+    print(gdl.strip_args(INTERACTIVE_CLI_ARGS))
+    return
     
 if __name__ == "__main__":
     main()    

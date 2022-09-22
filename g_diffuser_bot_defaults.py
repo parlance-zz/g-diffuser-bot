@@ -10,7 +10,7 @@ import argparse
 BOT_USE_OPTIMIZED = False 
 
 # default params for commands, these are overriden by any user supplied params
-DEFAULT_CMD_PARAMS = { "-n": "1", "-steps": "30", "-scale": "12"}
+DEFAULT_CMD_PARAMS = { "-n": "1", "-steps": "32", "-scale": "11"}
 AUTO_SEED_RANGE = (1,9999)
 MAX_STEPS_LIMIT = 300
 MAX_REPEAT_LIMIT = 100             # max number of repetitions that can be used with the -x param

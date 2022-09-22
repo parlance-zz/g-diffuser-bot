@@ -34,6 +34,7 @@ import datetime
 import argparse
 import uuid
 import pathlib
+import json
 
 import numpy as np
 import PIL
@@ -60,7 +61,7 @@ def get_image_dims(img_path):
 def merge_dicts(d1, d2): # overwrites the attributes in d1 in merge
     return dict(d1, **d2)
     
-def valid_resolution(width, height, init_image=None): # cap max dimension at max res and ensure size is 
+def valid_resolution(width, height, init_image=None):  # cap max dimension at max res and ensure size is 
                                                        # a correct multiple of granularity while
                                                        # preserving aspect ratio (best we can anyway)
     global DEFAULT_RESOLUTION
@@ -106,11 +107,7 @@ def save_debug_img(np_image, name):
     global TMP_ROOT_PATH
     if not TMP_ROOT_PATH: return
     
-    try: # try to make sure temp folder exists
-        pathlib.Path(TMP_ROOT_PATH).mkdir(exist_ok=True)
-    except:
-        return
-    
+    pathlib.Path(TMP_ROOT_PATH).mkdir(exist_ok=True)
     image_path = TMP_ROOT_PATH + "/_debug_" + name + ".png"
     if type(np_image) == np.ndarray:
         if np_image.ndim == 2:
@@ -123,6 +120,32 @@ def save_debug_img(np_image, name):
         pil_image.save(image_path)
     else:
         np_image.save(image_path)
+    return
+
+def save_debug_json(_dict, name):
+    global TMP_ROOT_PATH
+    if not TMP_ROOT_PATH: return
+    
+    saved_json_file_path = (Path(TMP_ROOT_PATH) / ("_debug_" + name + ".json")).as_posix()
+    with open(saved_json_file_path, "w") as file:
+        json.dump(_dict, file)
+        file.close()
+    return
+    
+def load_debug_json(name):
+    global TMP_ROOT_PATH
+    assert(TMP_ROOT_PATH)
+    
+    saved_json_file_path = (Path(TMP_ROOT_PATH) / ("_debug_" + name + ".json")).as_posix()
+    with open(saved_json_file_path, "r") as file:
+        data = json.load(file)
+        file.close()
+    return data
+    
+def strip_args(args): # remove args we wouldn't want to print or serialize
+    args_stripped = argparse.Namespace(**vars(args))
+    del args_stripped.loaded_pipes
+    return args_stripped
     
 def dummy_checker(images, **kwargs): # replacement func to disable safety_checker in diffusers
     return images, False
@@ -135,7 +158,6 @@ def get_grid_layout(num_samples):
     median_factor = factors[len(factors)//2]
     columns = median_factor
     rows = num_samples // columns
-    
     return (rows, columns)
     
 def get_image_grid(imgs, layout): # make an image grid out of a set of images
@@ -143,11 +165,9 @@ def get_image_grid(imgs, layout): # make an image grid out of a set of images
     w, h = imgs[0].size
     grid = Image.new('RGB', size=(layout[1]*w, layout[0]*h))
     grid_w, grid_h = grid.size
-    
     for i, img in enumerate(imgs):
         grid.paste(img, box=(i%layout[1]*w, i//layout[1]*h))
     return grid
-
 
 # ************* in/out-painting code begins here *************
 
@@ -523,6 +543,7 @@ def load_pipelines(args):
     if not args.model_name: args.model_name = CMD_SERVER_MODEL_NAME
     if not args.hf_token: hf_token = HUGGINGFACE_TOKEN
     
+    print("Using model: " + args.model_name)
     if use_optimized:
         torch_dtype = torch.float16 # use fp16 in optimized mode
         print("Using memory optimizations...")
