@@ -36,6 +36,7 @@ import argparse
 import uuid
 import pathlib
 import json
+import re
 
 import numpy as np
 import PIL
@@ -86,14 +87,22 @@ def valid_resolution(width, height, init_image=None):  # clip dimensions at max 
     width = np.maximum(width, DEFAULT_SAMPLE_SETTINGS.resolution_granularity)
     height = np.maximum(height, DEFAULT_SAMPLE_SETTINGS.resolution_granularity)
 
-    return width, height
+    return int(width), int(height)
     
-def get_random_file_path(base_path, prefix, file_extension):
+def get_random_string():
     uuid_str = str(uuid.uuid4())
-    uuid_str = uuid_str[0:len(uuid_str)//2] # shorten uuid, don't need that many digits
-    rnd_file_path = pathlib.Path(base_path) / (prefix + uuid_str + file_extension)
-    return rnd_file_path.absolute().as_posix()
+    return uuid_str[0:8] # shorten uuid, don't need that many digits
 
+def debug_print_args(args):
+    args_dict = vars(strip_args(args))
+    print(args_dict)
+    for arg in args_dict:
+        print(arg+"="+str(args_dict[arg]) + "("+str(type(args_dict[arg]))+")")
+    return
+    
+def get_filename_from_prompt(prompt):
+    return re.sub(r'[\\/*?:"<>|]',"", prompt).replace(" ","_")
+    
 def save_debug_img(np_image, name):
     global DEFAULT_PATHS
     if not DEFAULT_PATHS.debug: return
@@ -113,16 +122,14 @@ def save_debug_img(np_image, name):
         np_image.save(image_path)
     return image_path
 
-def save_json(_dict, name):
-    global DEFAULT_PATHS
-    if not DEFAULT_PATHS.inputs: return
-    pathlib.Path(DEFAULT_PATHS.inputs).mkdir(exist_ok=True)
-    
-    saved_json_file_path = (pathlib.Path(DEFAULT_PATHS.inputs) / (name + ".json")).as_posix()
-    with open(saved_json_file_path, "w") as file:
+def save_json(_dict, file_path):
+    assert(file_path)
+    (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True)
+
+    with open(file_path, "w") as file:
         json.dump(_dict, file)
         file.close()
-    return saved_json_file_path
+    return file_path
     
 def load_json(name):
     global DEFAULT_PATHS
@@ -496,28 +503,31 @@ def get_samples(args):
 
 def save_samples(samples, args):
     global DEFAULT_PATHS
+    assert(DEFAULT_PATHS.outputs)
+    final_outputs_path = (pathlib.Path(DEFAULT_PATHS.outputs) / args.outputs_path).as_posix()
+    pathlib.Path(final_outputs_path).mkdir(exist_ok=True)
     
     # combine individual samples to create main output
     if len(samples) > 1: output_image = get_image_grid(samples, get_grid_layout(len(samples)))
     else: output_image = samples[0]
 
-    # todo: temporarily break output path specification while we refactor to support target folders instead
-    
-    args.output = get_random_file_path(DEFAULT_PATHS.outputs,"", ".png")
+    output_name = get_filename_from_prompt(args.prompt) + "__" + get_random_string()
+    args.output = final_outputs_path+"/"+output_name+".png"
+    args.args_output = save_json(vars(strip_args(args)), final_outputs_path+"/"+output_name+".json")
     output_image.save(args.output)
     print("Saved " + args.output)
     
     args.output_samples = [] # if n_samples > 1, save individual samples in tmp outputs as well
     if len(samples) > 1:
         for sample in samples:
-            output_path = get_random_file_path(DEFAULT_PATHS.outputs,"", ".png")
+            output_name = get_filename_from_prompt(args.prompt) + "__" + get_random_string()
+            output_path = final_outputs_path+"/"+output_name+".png"
+            args.args_output = save_json(vars(strip_args(args)), final_outputs_path+"/"+output_name+".json")
             sample.save(output_path)
             print("Saved " + output_path)
             args.output_samples.append(output_path)
     else:
         args.output_samples.append(args.output) # just 1 output sample
-    
-    # todo: save json files for each output with args
     
     return args.output_samples
     

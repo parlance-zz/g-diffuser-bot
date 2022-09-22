@@ -37,8 +37,8 @@ import datetime
 import argparse
 import code
 import importlib
-
-VERSION_STRING = "g-diffuser-cli v0.1"
+  
+VERSION_STRING = "g-diffuser-cli v0.2"
 
 def main():
     global VERSION_STRING
@@ -70,10 +70,10 @@ def main():
         help="path to the input image",
     )
     parser.add_argument(
-        "--output",
+        "--outputs_path",
         type=str,
-        help="path to the output image, if none is specified a random name will be used in the outputs folder",
-        default="",
+        help="path to store output samples (relative to root outputs path)",
+        default=".",
     )
     parser.add_argument(
         "--noise_q",
@@ -150,7 +150,8 @@ def main():
         print("show_args() # shows the current input/output arguments")
         print("load_args() # load the last used args (from auto-save file)")
         print("load_args('my_fav_args') # you can load a named arg file")
-        print("save_args('my_fav_args') # you can save a named arg file\n")
+        print("save_args('my_fav_args') # you can save a named arg file")
+        print("cls() # clear the command window if things get cluttered\n")
         print("Current args: " + str(gdl.strip_args(args))+"\n")
         
         INTERACTIVE_CLI_ARGS = args
@@ -160,6 +161,7 @@ def main():
         cli_locals.load_args = cli_load_args
         cli_locals.load_last_args = cli_load_args
         cli_locals.save_args = cli_save_args
+        cli_locals.cls = cli_cls
         code.interact(local=dict(globals(), **vars(cli_locals)))
         exit(0)
     else:
@@ -167,7 +169,7 @@ def main():
         gdl.save_samples(samples, args)
         
         try: # try to save the last used args in a json file for convenience
-            gdl.save_json(vars(gdl.strip_args(args)), "args")
+            gdl.save_json(vars(gdl.strip_args(args)), DEFAULT_PATHS.inputs+"/last_args.json")
         except Exception as e:
             if args.debug: print("Error saving sample args - " + str(e))
             
@@ -183,7 +185,7 @@ def cli_get_samples(prompt=None, **kwargs):
     if repeat: print("Repeating sample, press ctrl+c to stop...")
     
     while True:
-        if args.debug: importlib.reload(gdl)
+        importlib.reload(gdl) # this allows changes in g_diffuser_lib to take effect without restarting the cli
         
         samples = gdl.get_samples(args)
         gdl.save_samples(samples, args)
@@ -191,7 +193,7 @@ def cli_get_samples(prompt=None, **kwargs):
         INTERACTIVE_CLI_ARGS = args # preserve args for next call to sample()
         if args.debug: print(str(gdl.strip_args(args))+"\n")
         try: # try to save the last used args in a json tmp file for convenience
-            gdl.save_json(vars(gdl.strip_args(args)), "args")
+            gdl.save_json(vars(gdl.strip_args(args)), DEFAULT_PATHS.inputs+"/last_args.json")
         except Exception as e:
             if args.debug: print("Error saving sample args - " + str(e))
             
@@ -216,13 +218,17 @@ def cli_load_args(name=""):
     
 def cli_save_args(name):
     global INTERACTIVE_CLI_ARGS
+    global DEFAULT_PATHS
     try:
-        saved_path = gdl.save_json(vars(gdl.strip_args(INTERACTIVE_CLI_ARGS)), name)
+        saved_path = gdl.save_json(vars(gdl.strip_args(INTERACTIVE_CLI_ARGS)), DEFAULT_PATHS.inputs+"/"+name+".json")
         print("Saved " + saved_path)
     except Exception as e:
         if args.debug: print("Error saving args - " + str(e))
     return
-    
+
+def cli_cls():
+    os.system("cls")
+    return   
     
 if __name__ == "__main__":
     main()

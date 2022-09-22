@@ -61,7 +61,8 @@ for path in DEFAULT_PATHS: _default_paths[path] = (root_path / DEFAULT_PATHS[pat
 DEFAULT_PATHS = argparse.Namespace(**_default_paths)
 
 if __name__ == "__main__":
-    print(str(DEFAULT_PATHS)+"\n")
-    print(str(MODEL_DEFAULTS)+"\n")
-    print(str(DISCORD_BOT_SETTINGS)+"\n")
-    print(str(CMD_SERVER_SETTINGS)+"\n")
+    print("")
+    print("default paths: " +str(DEFAULT_PATHS)+"\n")
+    print("model defaults: " +str(MODEL_DEFAULTS)+"\n")
+    print("discord bot settings: "+str(DISCORD_BOT_SETTINGS)+"\n")
+    print("cmd server settings: "+str(CMD_SERVER_SETTINGS)+"\n")
