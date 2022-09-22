@@ -88,10 +88,10 @@ def valid_resolution(width, height, init_image=None):  # clip dimensions at max 
 
     return width, height
     
-def get_random_file_path(base_path, file_extension):
+def get_random_file_path(base_path, prefix, file_extension):
     uuid_str = str(uuid.uuid4())
     uuid_str = uuid_str[0:len(uuid_str)//2] # shorten uuid, don't need that many digits
-    rnd_file_path = pathlib.Path(base_path) / (uuid_str + file_extension)
+    rnd_file_path = pathlib.Path(base_path) / (prefix + uuid_str + file_extension)
     return rnd_file_path.absolute().as_posix()
 
 def save_debug_img(np_image, name):
@@ -503,14 +503,14 @@ def save_samples(samples, args):
 
     # todo: temporarily break output path specification while we refactor to support target folders instead
     
-    args.output = get_random_file_path(DEFAULT_PATHS.outputs, ".png")
+    args.output = get_random_file_path(DEFAULT_PATHS.outputs,"", ".png")
     output_image.save(args.output)
     print("Saved " + args.output)
     
     args.output_samples = [] # if n_samples > 1, save individual samples in tmp outputs as well
     if len(samples) > 1:
         for sample in samples:
-            output_path = get_random_file_path(DEFAULT_PATHS.outputs, ".png")
+            output_path = get_random_file_path(DEFAULT_PATHS.outputs,"", ".png")
             sample.save(output_path)
             print("Saved " + output_path)
             args.output_samples.append(output_path)

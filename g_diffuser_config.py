@@ -18,6 +18,7 @@ DEFAULT_PATHS.debug = "./debug"
 
 #IMPORTANT - Default model settings
 MODEL_DEFAULTS.model_name = "stable-diffusion-v1-4"  # local path to downloaded model relative to DEFAULT_PATHS.models
+#MODEL_DEFAULTS.model_name = "waifu-diffusion"
 MODEL_DEFAULTS.use_optimized = False    # set this to True to lower memory consumption (attention slicing and fp16)
 #MODEL_DEFAULTS.pipe_list = ["txt2img"] # if you'd like to lower memory consumption even further, you can opt to load only a sub-selection of pipes
 #MODEL_DEFAULTS.pipe_list = ["img2img"]
