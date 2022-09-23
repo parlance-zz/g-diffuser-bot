@@ -38,10 +38,23 @@ import argparse
 import code
 import importlib
   
-VERSION_STRING = "g-diffuser-cli v0.5"
-
+VERSION_STRING = "g-diffuser-cli v0.65"
+INTERACTIVE_MODE_BANNER_STRING = """
+Interactive mode: call sample() with keyword arguments and use the up/down arrow-keys to browse command history:
+sample("my prompt", n=3, scale=15) # generate 3 samples with a scale of 15
+sample("greg rutkowski", init_img="my_image.png", repeat=True, debug=True) # repeats until stopped
+sample()    # arguments can be omitted to use your last arguments
+show_args() # shows the complete set of current input/output arguments
+load_args() # use your last arguments (from auto-save json file in inputs path)
+load_args("my_fav_args") # you can load saved args; these are json files in the inputs path
+save_args("my_fav_args") # you can save your args; these are saved as json files in the inputs path
+cls()  # clear the command window if things get cluttered
+help() # display this message
+exit() # exit interactive mode
+"""
+        
 def main():
-    global VERSION_STRING
+    global VERSION_STRING, INTERACTIVE_MODE_BANNER_STRING
     global INTERACTIVE_CLI_ARGS
     INTERACTIVE_CLI_ARGS = argparse.Namespace()
     
@@ -51,8 +64,8 @@ def main():
         parser.print_help()
         exit(1)
 
-    if args.debug: print(VERSION_STRING + ": --debug enabled (verbose output on, writing debug file dumps to tmp...)")
-    else: print(VERSION_STRING + ": use --debug to enable verbose output and writing debug files to tmp...")
+    if args.debug: print(VERSION_STRING + ": --debug enabled (verbose output on, writing debug files...)")
+    else: print(VERSION_STRING + ": use --debug to enable verbose output and writing debug files...")
     if args.load_args != "no_preload":
         print("")
         cli_load_args(args.load_args)
@@ -64,17 +77,6 @@ def main():
     gdl.load_pipelines(args)
     
     if args.interactive:
-        print("\nInteractive mode: call sample() with keyword args and use exit() when done:")
-        print("sample('my prompt', n=3, scale=15)")
-        print("sample('art by greg rutkowski', init_img='my_image_src.png', repeat=True, debug=True)")
-        print("sample()    # sample() can be used without any args to use your last args instead")
-        print("show_args() # shows the current input/output arguments")
-        print("load_args() # load the last used args (from auto-save file)")
-        print("load_args('my_fav_args') # you can load a named arg file")
-        print("save_args('my_fav_args') # you can save a named arg file")
-        print("cls() # clear the command window if things get cluttered\n")
-        print("Current args: " + str(gdl.strip_args(args))+"\n")
-        
         cli_locals = argparse.Namespace()
         cli_locals.sample = cli_get_samples
         cli_locals.show_args = cli_show_args
@@ -82,7 +84,9 @@ def main():
         cli_locals.load_last_args = cli_load_args
         cli_locals.save_args = cli_save_args
         cli_locals.cls = cli_cls
-        code.interact(local=dict(globals(), **vars(cli_locals)))
+        cli_locals.help = cli_help
+        banner_str = INTERACTIVE_MODE_BANNER_STRING + "\nCurrent args: " + str(gdl.strip_args(args))+"\n"
+        code.interact(banner=banner_str, local=dict(globals(), **vars(cli_locals)), exitmsg="")
         exit(0)
     else:
         if args.load_args == "no_preload": print("Sample arguments: " + str(gdl.strip_args(args))+"\n")
@@ -156,6 +160,12 @@ def cli_save_args(name):
 def cli_cls():
     os.system("cls")
     return   
+    
+def cli_help():
+    global VERSION_STRING, INTERACTIVE_MODE_BANNER_STRING
+    global INTERACTIVE_CLI_ARGS
+    help_str = VERSION_STRING + INTERACTIVE_MODE_BANNER_STRING + "\nCurrent args: " + str(gdl.strip_args(INTERACTIVE_CLI_ARGS))+"\n"
+    print(help_str)
     
 if __name__ == "__main__":
     main()
