@@ -84,7 +84,9 @@ Updating:
 
  This code is provided under the MIT license -  Copyright (c) 2022 Christopher Friesen
  To anyone who reads this I am seeking employment in related areas.
- Donations would also be greatly appreciated and will be used to fund further development. (ETH @ 0x8e4BbD53bfF9C0765eE1859C590A5334722F2086)
+ Donations would also be greatly appreciated and will be used to fund further development.
+ * https://buy.stripe.com/fZe8xU2lo0wU3SgfYY
+ * ETH to 0x8e4BbD53bfF9C0765eE1859C590A5334722F2086
  
  Questions or comments can be sent to parlance@fifth-harmonic.com (https://github.com/parlance-zz/)
  
