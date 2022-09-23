@@ -1,4 +1,4 @@
-Sept 11/2022 Update - The BUG-FREE-ish implementation of the in/out-paint system is finally complete. Please try it ASAP! It's awesome!!
+Sept 11/2022 Update - Basic implementation of the in/out-paint system is finally complete. Please try it ASAP! It's awesome!!
 
 With the Sept-11 update please use the following default params: -str 0.6, -scale 10, -blend 10, -color 0.005
 
