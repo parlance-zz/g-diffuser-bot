@@ -24,7 +24,8 @@ SOFTWARE.
 
 
 g_diffuser_server.py - localhost webserver for executing g-diffuser commands
-                       used by discord bot interface, but could also be used to build a webui type front-end ( https://github.com/parlance-zz/g-diffuser-bot/issues/30 )
+                       used by discord bot interface, but could also be used to build a webui type front-end with a clean json-based command format.
+                       existing issue for webui construction: ( https://github.com/parlance-zz/g-diffuser-bot/issues/30 )
 """
 
 import g_diffuser_lib as gdl

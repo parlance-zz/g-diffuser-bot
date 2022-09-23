@@ -471,7 +471,7 @@ class CommandQueue:
             return None
          
 def get_bot_args_parser():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         "--repeat_x",
         type=int,
@@ -642,30 +642,23 @@ def _auto_clean(clean_ratio=0.75):  # delete oldest images and json backups from
     return
     
 def check_server_roles(ctx, role_name_list): # resolve and check the roles of a user against a list of role name strings
-    if ("everyone" in role_name_list):
-        return True
-    
+    if ("everyone" in role_name_list): return True
     role_list = []
     for role_name in role_name_list:
         try:
             role = discord.utils.get(ctx.message.author.guild.roles, name=role_name)
             role_list.append(role)
-        except:
-            continue
-    for role in role_list:
-        if role in ctx.message.author.roles:
-            return True
+        except: continue
+    for role in role_list: if role in ctx.message.author.roles: return True
     return False
     
 def _p_kill(proc_pid):  # kill all child processes recursively as well, its the only way to be sure
-    print("Killing process - " + str(proc_pid))
+    print("Killing process id " + str(proc_pid))
     try:
         process = psutil.Process(proc_pid)
-        for proc in process.children(recursive=True):
-            proc.kill()
+        for proc in process.children(recursive=True): proc.kill()
         process.kill()
-    except Exception as e:
-        print("Error killing process - " + str(proc_pid) + " - " + str(e))
+    except Exception as e: print("Error killing process id " + str(proc_pid) + " - " + str(e))
     return
     
 def run_string(run_string):  # run shell command asynchronously to keep discord message pumps happy and allow cancellation
@@ -678,14 +671,12 @@ def run_string(run_string):  # run shell command asynchronously to keep discord 
     
 async def _top(ctx):    # replies to a message with a sorted list of all users and their run-time
     global CMD_QUEUE
-    msg = "Okay @" + ctx.message.author.name + ", here's the top users... \n"
-    i = 0
+    i = 0 ; msg = "Okay @" + str(ctx.message.author.name) + ", here's the top users... \n"
     for user in sorted(CMD_QUEUE.users_elapsed_time, reverse=True, key=CMD_QUEUE.users_elapsed_time.get):
-        i += 1
-        msg += str(i) + ": @" + user + " <" + str(datetime.timedelta(seconds=CMD_QUEUE.users_elapsed_time[user].seconds)) + "s>\n"
-    if i == 0:
-        msg = "No users yet!"
-    await ctx.send("@" + ctx.message.author.name + " : " + msg)
+        i += 1 ; msg += str(i) + ": @" + user + " <" + str(datetime.timedelta(seconds=CMD_QUEUE.users_elapsed_time[user].seconds)) + "s>\n"
+    if i == 0: msg = "No users yet!"
+    await ctx.send("@" + str(ctx.message.author.name) + " : " + msg)
+    return
     
 async def _select(ctx): # crop an image from the user's last output image grid
     global CMD_QUEUE

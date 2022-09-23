@@ -33,7 +33,7 @@ MODEL_DEFAULTS.use_optimized = False    # set this to True to lower memory consu
 #IMPORTANT - If you want to use the discord bot, use enter your access token below:
 # - Discord developers site: https://discordapp.com/developers/applications/
 # - Discord bot setup guide: https://www.writebots.com/discord-bot-token/
-DISCORD_BOT_SETTINGS.token = "MTAxMTcxNDAzMzMyMzM0Mzk4Mw.GNPwul.qwgxoQHdC_mcfuLV4YMs4r2ETFA3ERzm4hhewY"
+DISCORD_BOT_SETTINGS.token = ""
 DISCORD_BOT_SETTINGS.admin_role = "moderator" #IMPORTANT - use your discord server / guild role names here accordingly, check the bot help text for associated command permissions
 DISCORD_BOT_SETTINGS.users_role = "everyone"  # if you want anyone to be able to use the bot, change this to "everyone"
 DISCORD_BOT_SETTINGS.cmd_prefix = "!"               # all discord bot commands will require this prefix (e.g. !gen)
@@ -62,9 +62,13 @@ DEFAULT_PATHS = vars(DEFAULT_PATHS)
 for path in DEFAULT_PATHS: _default_paths[path] = (root_path / DEFAULT_PATHS[path]).as_posix()
 DEFAULT_PATHS = argparse.Namespace(**_default_paths)
 
-if __name__ == "__main__":
-    print("")
-    print("default paths: " +str(DEFAULT_PATHS)+"\n")
-    print("model defaults: " +str(MODEL_DEFAULTS)+"\n")
-    print("discord bot settings: "+str(DISCORD_BOT_SETTINGS)+"\n")
-    print("cmd server settings: "+str(CMD_SERVER_SETTINGS)+"\n")
+if __name__ == "__main__": # you can execute this file with python to see a summary of your config
+    from g_diffuser_lib import debug_print_namespace
+    print("\ndefault paths: ")
+    debug_print_namespace(DEFAULT_PATHS)
+    print("\nmodel defaults: ")
+    debug_print_namespace(MODEL_DEFAULTS)
+    print("\ndiscord bot settings: ")
+    debug_print_namespace(DISCORD_BOT_SETTINGS)
+    print("\ncmd server settings: ")
+    debug_print_namespace(CMD_SERVER_SETTINGS)

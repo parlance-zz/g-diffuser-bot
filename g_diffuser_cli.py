@@ -23,7 +23,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-g_diffuser_cli.py - command line interface for g-diffuser
+g_diffuser_cli.py - command line interface for g-diffuser-lib with interactive mode
 
 """
 
@@ -38,7 +38,7 @@ import argparse
 import code
 import importlib
   
-VERSION_STRING = "g-diffuser-cli v0.3"
+VERSION_STRING = "g-diffuser-cli v0.4"
 
 def main():
     global VERSION_STRING
@@ -50,7 +50,7 @@ def main():
     if (args.prompt == "") and (args.interactive == False) and (args.load_args == "no_preload"):
         parser.print_help()
         exit(1)
-        
+
     if args.debug: print(VERSION_STRING + ": --debug enabled (verbose output on, writing debug file dumps to tmp...)")
     else: print(VERSION_STRING + ": use --debug to enable verbose output and writing debug files to tmp...")
     if args.load_args != "no_preload":
@@ -87,6 +87,7 @@ def main():
     else:
         if args.load_args == "no_preload": print("Sample arguments: " + str(gdl.strip_args(args))+"\n")
         
+        args.init_time = str(datetime.datetime.now()) # time the command was created / queued
         samples = gdl.get_samples(args)
         gdl.save_samples(samples, args)
         
@@ -109,6 +110,7 @@ def cli_get_samples(prompt=None, **kwargs):
     else: repeat = False
     if repeat: print("Repeating sample, press ctrl+c to stop...")
     
+    args.init_time = str(datetime.datetime.now()) # time the command was created / queued
     while True:
         importlib.reload(gdl) # this allows changes in g_diffuser_lib to take effect without restarting the cli
         

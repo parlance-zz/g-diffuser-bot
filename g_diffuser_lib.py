@@ -23,7 +23,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-g_diffuser_lib.py - shared functions and diffusers operations
+g_diffuser_lib.py - core diffuser operations and lib utilities
 
 """
 
@@ -61,7 +61,7 @@ def get_image_dims(img_path):
     return size
 
 def merge_dicts(d1, d2): # overwrites the attributes in d1 in merge
-    return dict(d1, **d2)
+    return dict(d1.copy(), **d2)
     
 def valid_resolution(width, height, init_image=None):  # clip dimensions at max resolution, while keeping the correct resolution granularity,
                                                        # while roughly preserving aspect ratio. if width or height are None they are taken from the init_image
@@ -95,9 +95,7 @@ def get_random_string():
 
 def debug_print_namespace(namespace):
     namespace_dict = vars(strip_args(namespace))
-    print(namespace_dict)
-    for arg in args_dict:
-        print(arg+"="+str(args_dict[arg]) + "("+str(type(args_dict[arg]))+")")
+    for arg in namespace_dict: print(arg+"='"+str(namespace_dict[arg]) + "' "+str(type(namespace_dict[arg])))
     return
     
 def get_filename_from_prompt(prompt):
@@ -143,7 +141,7 @@ def load_json(name):
     return data
     
 def strip_args(args, level=0): # remove args we wouldn't want to print or serialize, higher levels strip additional irrelevant fields
-    args_stripped = argparse.Namespace(**vars(args))
+    args_stripped = argparse.Namespace(**(vars(args).copy()))
     if "loaded_pipes" in args_stripped: del args_stripped.loaded_pipes
     return args_stripped
     
@@ -411,7 +409,7 @@ def get_matched_noise(np_init, final_blend_mask, args):
 # ************* in/out-painting code ends here *************
 
 def load_image(args):
-    global DEFAULT_PATHS
+    global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
     assert(DEFAULT_PATHS.inputs)
     final_init_img_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_img).as_posix()
     
@@ -444,7 +442,7 @@ def load_image(args):
         if args.debug: print("get_matched_noise time : " + str(datetime.datetime.now() - noised_start_time))
         init_image = PIL.Image.fromarray(np.clip(shaped_noise*255., 0., 255.).astype(np.uint8), mode="RGB")
     else:
-        if args.strength == 0.: args.strength = 0.5 # todo: non-hardcoded default
+        if args.strength == 0.: args.strength = DEFAULT_SAMPLE_SETTINGS.strength
         final_blend_mask = np_img_grey_to_rgb(np.ones((args.w, args.h)) * np.clip(args.strength**(0.075), 0., 1.)) # todo: find strength mapping or do a better job of seeding
         mask_image = PIL.Image.fromarray(np.clip(final_blend_mask*255., 0., 255.).astype(np.uint8), mode="RGB")
     
@@ -518,29 +516,32 @@ def save_samples(samples, args):
     pathlib.Path(final_outputs_path).mkdir(exist_ok=True)
 
     # combine individual samples to create main output
-    args.status = 1 # running
-    if len(samples) > 1: output_image = get_image_grid(samples, get_grid_layout(len(samples)))
+    if len(samples) > 1:
+        grid_layout = get_grid_layout(len(samples))
+        if args.debug: print("Creating grid layout - " + str(grid_layout))
+        output_image = get_image_grid(samples, grid_layout)
     else: output_image = samples[0]
 
     output_name = get_filename_from_prompt(args.prompt) + "__" + get_random_string()
     args.output = final_outputs_path+"/"+output_name+".png"
-    args.args_output = save_json(vars(strip_args(args)), final_outputs_path+"/"+output_name+".json")
+    if not args.no_json: args.args_output = save_json(vars(strip_args(args)), final_outputs_path+"/json/"+output_name+".json")
     output_image.save(args.output)
     print("Saved " + args.output)
     
     args.output_samples = [] # if n_samples > 1, save individual samples in tmp outputs as well
+    assert(len(samples)==1)
     if len(samples) > 1:
+        assert(False)
         for sample in samples:
             output_name = get_filename_from_prompt(args.prompt) + "__" + get_random_string()
             output_path = final_outputs_path+"/"+output_name+".png"
-            args.args_output = save_json(vars(strip_args(args)), final_outputs_path+"/"+output_name+".json")
+            if not args.no_json: args.args_output = save_json(vars(strip_args(args)), final_outputs_path+"/json/"+output_name+".json")
             sample.save(output_path)
             print("Saved " + output_path)
             args.output_samples.append(output_path)
     else:
         args.output_samples.append(args.output) # just 1 output sample
-    
-    args.status = 2 # complete
+        
     return args.output_samples
     
 def load_pipelines(args):
@@ -600,30 +601,37 @@ def load_pipelines(args):
     return args.loaded_pipes
 
 def get_args_parser():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--command",
-        type=str,
-        default="sample",
-        help="diffusers command to execute",
-    )
+    global DEFAULT_SAMPLE_SETTINGS, MODEL_DEFAULTS
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         "--prompt",
         type=str,
         nargs="?",
         default="",
-        help="the prompt to condition sampling on",
+        help="the text to condition sampling on",
     )
+    parser.add_argument(
+        "--command",
+        type=str,
+        default="sample",
+        help="diffusers command to execute",
+    )    
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=int(np.random.randint(DEFAULT_SAMPLE_SETTINGS.auto_seed_range[0], DEFAULT_SAMPLE_SETTINGS.auto_seed_range[1])),
+        help="random seed for sampling (auto-range defined in DEFAULT_SAMPLE_SETTINGS)",
+    )    
     parser.add_argument(
         "--steps",
         type=int,
-        default=32,
+        default=DEFAULT_SAMPLE_SETTINGS.steps,
         help="number of sampling steps (number of times to refine image)",
     )
     parser.add_argument(
         "--scale",
         type=float,
-        default=11,
+        default=DEFAULT_SAMPLE_SETTINGS.scale,
         help="guidance scale (amount of change per step)",
     )
     parser.add_argument(
@@ -641,19 +649,19 @@ def get_args_parser():
     parser.add_argument(
         "--noise_q",
         type=float,
-        default=1.,
+        default=DEFAULT_SAMPLE_SETTINGS.noise_q,
         help="augments falloff of matched noise distribution for in/out-painting (noise_q > 0), lower values mean smaller features and higher means larger features",
     )
     parser.add_argument(
         "--strength",
         type=float,
         default=0.,
-        help="overall amount to change the input image",
+        help="overall amount to change the input image (default value defined in DEFAULT_SAMPLE_SETTINGS)",
     )
     parser.add_argument(
         "--n",
         type=int,
-        default=1,
+        default=DEFAULT_SAMPLE_SETTINGS.n,
         help="number of samples to generate",
     )
     parser.add_argument(
@@ -671,7 +679,7 @@ def get_args_parser():
     parser.add_argument(
         "--model-name",
         type=str,
-        default="",
+        default=MODEL_DEFAULTS.model_name,
         help="path to downloaded diffusers model (relative to default models path), or name of model if using a huggingface token",
     )
     parser.add_argument(
@@ -697,6 +705,12 @@ def get_args_parser():
         type=str,
         default="no_preload",
         help="preload and use a saved set of sample arguments from a json file in your inputs path",
+    )
+    parser.add_argument(
+        "--no-json",
+        action='store_true',
+        default=False,
+        help="disable saving json arg files alongside sample outputs",
     )
     parser.add_argument(
         "--uuid-str",
