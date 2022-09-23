@@ -38,105 +38,14 @@ import argparse
 import code
 import importlib
   
-VERSION_STRING = "g-diffuser-cli v0.2"
+VERSION_STRING = "g-diffuser-cli v0.3"
 
 def main():
     global VERSION_STRING
     global INTERACTIVE_CLI_ARGS
     INTERACTIVE_CLI_ARGS = argparse.Namespace()
     
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--prompt",
-        type=str,
-        nargs="?",
-        default="",
-        help="the prompt to condition sampling on",
-    )
-    parser.add_argument(
-        "--steps",
-        type=int,
-        default=32,
-        help="number of sampling steps (number of times to refine image)",
-    )
-    parser.add_argument(
-        "--scale",
-        type=float,
-        default=11,
-        help="guidance scale (amount of change per step)",
-    )
-    parser.add_argument(
-        "--init-img",
-        type=str,
-        default="",
-        help="path to the input image",
-    )
-    parser.add_argument(
-        "--outputs_path",
-        type=str,
-        help="path to store output samples (relative to root outputs path)",
-        default=".",
-    )
-    parser.add_argument(
-        "--noise_q",
-        type=float,
-        default=1.,
-        help="augments falloff of matched noise distribution for in/out-painting (noise_q > 0), lower values mean smaller features and higher means larger features",
-    )
-    parser.add_argument(
-        "--strength",
-        type=float,
-        default=0.,
-        help="overall amount to change the input image",
-    )
-    parser.add_argument(
-        "--n",
-        type=int,
-        default=1,
-        help="number of samples to generate",
-    )
-    parser.add_argument(
-        "--w",
-        type=int,
-        default=None,
-        help="set output width or override width of input image",
-    )
-    parser.add_argument(
-        "--h",
-        type=int,
-        default=None,
-        help="set output height or override height of input image",
-    )
-    parser.add_argument(
-        "--model-name",
-        type=str,
-        default="",
-        help="path to downloaded diffusers model (relative to default models path), or name of model if using a huggingface token",
-    )
-    parser.add_argument(
-        "--use_optimized",
-        action='store_true',
-        default=False,
-        help="enable memory optimizations that are currently available in diffusers",
-    )
-    parser.add_argument(
-        "--debug",
-        action='store_true',
-        default=False,
-        help="enable verbose CLI output and debug image dumps",
-    )
-    parser.add_argument(
-        "--interactive",
-        action='store_true',
-        default=False,
-        help="enters an interactive command line mode to generate multiple samples",
-    )
-    parser.add_argument(
-        "--load-args",
-        type=str,
-        default="no_preload",
-        help="preload and use a saved set of sample arguments from a json file in your inputs path",
-    )    
+    parser = gdl.get_args_parser()
     args = parser.parse_args()    
     if (args.prompt == "") and (args.interactive == False) and (args.load_args == "no_preload"):
         parser.print_help()
@@ -193,6 +102,9 @@ def cli_get_samples(prompt=None, **kwargs):
     
     args = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), kwargs))
     if prompt: args.prompt = prompt
+    if args.n < 0:
+        args.repeat = True
+        args.n = 1    
     if "repeat" in args: repeat = args.repeat
     else: repeat = False
     if repeat: print("Repeating sample, press ctrl+c to stop...")

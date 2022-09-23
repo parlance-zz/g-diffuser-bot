@@ -31,14 +31,14 @@ MODEL_DEFAULTS.use_optimized = False    # set this to True to lower memory consu
 #IMPORTANT - If you want to use the discord bot, use enter your access token here
 # - Discord developers site: https://discordapp.com/developers/applications/
 # - Discord bot setup guide: https://www.writebots.com/discord-bot-token/
-DISCORD_BOT_SETTINGS.token = "YOUR_DISCORD_BOT_TOKEN_HERE"
+DISCORD_BOT_SETTINGS.token = ""
 DISCORD_BOT_SETTINGS.admin_role = "moderator" #IMPORTANT - use your discord server / guild role names here accordingly, check the bot help text for associated command permissions
 DISCORD_BOT_SETTINGS.users_role = "everyone"  # if you want anyone to be able to use the bot, change this to "everyone"
 DISCORD_BOT_SETTINGS.cmd_prefix = "!"               # all discord bot commands will require this prefix (e.g. !gen)
 DISCORD_BOT_SETTINGS.queue_mode = 0                 # 0 for round-robin, 1 for first come first serve
 DISCORD_BOT_SETTINGS.queue_poll_interval = 0.25     # how often should the queue look for new commands to begin processing (in seconds)
 DISCORD_BOT_SETTINGS.max_queue_length = 1000        # beyond this limit additional commands will be rejected
-DISCORD_BOT_SETTINGS.max_queue_print_items = 4      # max number of items to show for !queue command (up to discord message length limit)
+DISCORD_BOT_SETTINGS.max_queue_print_items = 5      # max number of items to show for !queue command (up to discord message length limit)
 DISCORD_BOT_SETTINGS.max_repeat_limit = 100         # max number of repetitions that can be used with the -x param
 DISCORD_BOT_SETTINGS.max_output_limit = 3           # max number of samples to create with -n param
 DISCORD_BOT_SETTINGS.max_steps_limit = 100          # max number of steps per sample command

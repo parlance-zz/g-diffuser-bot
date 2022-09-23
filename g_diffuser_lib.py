@@ -93,9 +93,9 @@ def get_random_string():
     uuid_str = str(uuid.uuid4())
     return uuid_str[0:8] # shorten uuid, don't need that many digits
 
-def debug_print_args(args):
-    args_dict = vars(strip_args(args))
-    print(args_dict)
+def debug_print_namespace(namespace):
+    namespace_dict = vars(strip_args(namespace))
+    print(namespace_dict)
     for arg in args_dict:
         print(arg+"="+str(args_dict[arg]) + "("+str(type(args_dict[arg]))+")")
     return
@@ -142,7 +142,7 @@ def load_json(name):
         file.close()
     return data
     
-def strip_args(args): # remove args we wouldn't want to print or serialize
+def strip_args(args, level=0): # remove args we wouldn't want to print or serialize, higher levels strip additional irrelevant fields
     args_stripped = argparse.Namespace(**vars(args))
     if "loaded_pipes" in args_stripped: del args_stripped.loaded_pipes
     return args_stripped
@@ -457,6 +457,7 @@ def get_samples(args):
     global DEFAULT_SAMPLE_SETTINGS
     global MODEL_DEFAULTS
     
+    args.status = 1 # running
     if args.init_img != "":
         pipe_name = "img2img"
         strength = 0.9999 # the real "strength" will be applied to the mask by load_image
@@ -469,18 +470,18 @@ def get_samples(args):
         if not args.w: args.w = DEFAULT_SAMPLE_SETTINGS.resolution[0]
         if not args.h: args.h = DEFAULT_SAMPLE_SETTINGS.resolution[1]
         
-    if args.debug:
-        sampling_start_time = datetime.datetime.now()
-        print("Using " + pipe_name + " pipeline...")
-    
+    start_time = datetime.datetime.now()
+    args.start_time = str(start_time)
     args.model_name = MODEL_DEFAULTS.model_name
     args.used_pipe = pipe_name
     samples = []
     with autocast("cuda"):
+        if args.debug: print("Using " + pipe_name + " pipeline...")
         pipe = args.loaded_pipes[pipe_name]
         assert(pipe)
         
         for n in range(args.n): # batched mode doesn't seem to accomplish much besides using more memory
+            if args.status == 3: return # if command is cancelled just bail out asap
             if pipe_name == "txt2img":
                 sample = pipe(
                     prompt=args.prompt,
@@ -499,17 +500,25 @@ def get_samples(args):
                     num_inference_steps=args.steps,
                 )
             samples.append(sample["sample"][0])
-
-    if args.debug: print("total sampling time : " + str(datetime.datetime.now() - sampling_start_time))
+    
+    args.status = 2 # complete
+    end_time = datetime.datetime.now()
+    args.end_time = str(end_time)
+    args.elapsed_time = str(end_time-start_time)
+    if args.debug: print("total sampling time : " + args.elapsed_time)
     return samples
 
 def save_samples(samples, args):
     global DEFAULT_PATHS
     assert(DEFAULT_PATHS.outputs)
-    final_outputs_path = (pathlib.Path(DEFAULT_PATHS.outputs) / args.outputs_path).as_posix()
+    if not args.outputs_path: # if no outputs_path was explicitly specified use one based on the prompt
+        final_outputs_path = (pathlib.Path(DEFAULT_PATHS.outputs) / get_filename_from_prompt(args.prompt)).as_posix()
+    else: # otherwise use the specified outputs_path
+        final_outputs_path = (pathlib.Path(DEFAULT_PATHS.outputs) / args.outputs_path).as_posix()
     pathlib.Path(final_outputs_path).mkdir(exist_ok=True)
-    
+
     # combine individual samples to create main output
+    args.status = 1 # running
     if len(samples) > 1: output_image = get_image_grid(samples, get_grid_layout(len(samples)))
     else: output_image = samples[0]
 
@@ -531,6 +540,7 @@ def save_samples(samples, args):
     else:
         args.output_samples.append(args.output) # just 1 output sample
     
+    args.status = 2 # complete
     return args.output_samples
     
 def load_pipelines(args):
@@ -588,3 +598,104 @@ def load_pipelines(args):
     args.model_name = model_name
     args.hf_token = hf_token
     return args.loaded_pipes
+
+def get_args_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--command",
+        type=str,
+        default="sample",
+        help="diffusers command to execute",
+    )
+    parser.add_argument(
+        "--prompt",
+        type=str,
+        nargs="?",
+        default="",
+        help="the prompt to condition sampling on",
+    )
+    parser.add_argument(
+        "--steps",
+        type=int,
+        default=32,
+        help="number of sampling steps (number of times to refine image)",
+    )
+    parser.add_argument(
+        "--scale",
+        type=float,
+        default=11,
+        help="guidance scale (amount of change per step)",
+    )
+    parser.add_argument(
+        "--init-img",
+        type=str,
+        default="",
+        help="path to the input image",
+    )
+    parser.add_argument(
+        "--outputs_path",
+        type=str,
+        help="path to store output samples (relative to root outputs path)",
+        default="",
+    )
+    parser.add_argument(
+        "--noise_q",
+        type=float,
+        default=1.,
+        help="augments falloff of matched noise distribution for in/out-painting (noise_q > 0), lower values mean smaller features and higher means larger features",
+    )
+    parser.add_argument(
+        "--strength",
+        type=float,
+        default=0.,
+        help="overall amount to change the input image",
+    )
+    parser.add_argument(
+        "--n",
+        type=int,
+        default=1,
+        help="number of samples to generate",
+    )
+    parser.add_argument(
+        "--w",
+        type=int,
+        default=None,
+        help="set output width or override width of input image",
+    )
+    parser.add_argument(
+        "--h",
+        type=int,
+        default=None,
+        help="set output height or override height of input image",
+    )
+    parser.add_argument(
+        "--model-name",
+        type=str,
+        default="",
+        help="path to downloaded diffusers model (relative to default models path), or name of model if using a huggingface token",
+    )
+    parser.add_argument(
+        "--use_optimized",
+        action='store_true',
+        default=False,
+        help="enable memory optimizations that are currently available in diffusers",
+    )
+    parser.add_argument(
+        "--debug",
+        action='store_true',
+        default=False,
+        help="enable verbose CLI output and debug image dumps",
+    )
+    parser.add_argument(
+        "--interactive",
+        action='store_true',
+        default=False,
+        help="enters an interactive command line mode to generate multiple samples",
+    )
+    parser.add_argument(
+        "--load-args",
+        type=str,
+        default="no_preload",
+        help="preload and use a saved set of sample arguments from a json file in your inputs path",
+    )
+    return parser
