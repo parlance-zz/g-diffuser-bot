@@ -38,7 +38,7 @@ import argparse
 import code
 import importlib
   
-VERSION_STRING = "g-diffuser-cli v0.4"
+VERSION_STRING = "g-diffuser-cli v0.5"
 
 def main():
     global VERSION_STRING

@@ -89,9 +89,9 @@ def valid_resolution(width, height, init_image=None):  # clip dimensions at max 
 
     return int(width), int(height)
     
-def get_random_string():
+def get_random_string(digits=8):
     uuid_str = str(uuid.uuid4())
-    return uuid_str[0:8] # shorten uuid, don't need that many digits
+    return uuid_str[0:digits] # shorten uuid, don't need that many digits
 
 def debug_print_namespace(namespace):
     namespace_dict = vars(strip_args(namespace))
@@ -335,11 +335,11 @@ def get_matched_noise(np_init, final_blend_mask, args):
     num_channels = np_init.shape[2]
     
     # todo: experiment with transforming everything to HSV space FIRST
-    windowed_image = np_init * (1.-final_blend_mask)
+    windowed_image = np_init * (1.-final_blend_mask) / np.max(1.-final_blend_mask)
     if args.debug: save_debug_img(windowed_image, "windowed_src_img")
     
     assert(args.noise_q > 0.)
-    noise_rgb = np.exp(-1j*2*np.pi * np.random.random_sample((width, height))) * 25. # todo: instead of 25 match with stats
+    noise_rgb = np.exp(-1j*2*np.pi * np.random.random_sample((width, height))) * 15. # todo: instead of 25 match with stats
     noise_rgb *= np.random.random_sample((width, height)) ** (50. * args.noise_q) # todo: instead of 50 match with stats
     noise_rgb = np.real(noise_rgb)
     colorfulness = 0. # todo: we also VERY BADLY need to control contrast and BRIGHTNESS
@@ -349,7 +349,7 @@ def get_matched_noise(np_init, final_blend_mask, args):
     shaped_noise_rgb = np.absolute(convolve(schrodinger_kernel, windowed_image))
     if args.debug: save_debug_img(shaped_noise_rgb, "shaped_noise_rgb")
     
-    offset =  1e-10#0.005 # 0.0125 # todo: create mask offset function that can set a lower offset
+    offset = 0.01 #0.005 # 0.0125 # todo: create mask offset function that can set a lower offset
     hsv_blend_mask = (1. - final_blend_mask) * np.clip(final_blend_mask-1e-20, 0., 1.)**offset
     hsv_blend_mask = normalize_image(hsv_blend_mask)
     
@@ -363,6 +363,7 @@ def get_matched_noise(np_init, final_blend_mask, args):
     #hsv_blend_mask[:,:,1] *= 0.05
     #hsv_blend_mask[:,:,2] *= 0.618
     #hsv_blend_mask *= 0.95
+    #hsv_blend_mask = np.ones((width, height, 3))
     if args.debug: save_debug_img(hsv_blend_mask, "hsv_blend_mask")
     
     shaped_noise_rgb = hsv_blend_image(shaped_noise_rgb, np_init, hsv_blend_mask)
@@ -529,7 +530,6 @@ def save_samples(samples, args):
     print("Saved " + args.output)
     
     args.output_samples = [] # if n_samples > 1, save individual samples in tmp outputs as well
-    assert(len(samples)==1)
     if len(samples) > 1:
         assert(False)
         for sample in samples:
