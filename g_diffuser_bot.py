@@ -34,7 +34,7 @@ import os, sys
 os.chdir(DEFAULT_PATHS.root)
 
 import psutil
-import pytimeparse
+#import pytimeparse
 import pathlib
 import urllib
 import json
@@ -42,18 +42,15 @@ import subprocess
 import glob
 import asyncio
 import aiohttp
-import uuid
 import shutil
-import time
+#import time
 import datetime
 
 import discord
 from discord.ext import commands
 from discord.ext import tasks
 
-import numpy as np
-from PIL import Image
-
+# the bot will not attempt to process any command that does not explicitly match one in this last
 BOT_COMMAND_LIST = ["help", "about", "examples", "gen", "queue", "cancel", "top", "select", "show_input", "shutdown", "clean", "restart", "clear", "list_servers", "leave_server"]
 
 # help and about strings, these must be 2000 characters or less
@@ -117,12 +114,25 @@ Example commands:
 """
 EXAMPLES_TXT = EXAMPLES_TXT.replace("!", DISCORD_BOT_SETTINGS.cmd_prefix)
 
-
 """
 Input images:
   Commands that require an input image will use the image you attach to your message. If you do not attach an image it will attempt to use the last image you attached.
   The select command can be used to turn your last command's output image into your next input image, please see !select above.
 """
+
+if __name__ == "__main__": # if we don't have a valid discord bot token let's not go any further
+    if (not DISCORD_BOT_SETTINGS.token) or (DISCORD_BOT_SETTINGS.token == "YOUR_DISCORD_BOT_TOKEN_HERE"):
+        print("Fatal error: Cannot start discord bot with token '" + DISCORD_BOT_SETTINGS.token + "'")
+        print("Please update DISCORD_BOT_SETTINGS.token in g_diffuser_config.py and try again.")
+        exit(1)
+
+# this short section needs to be global because otherwise the decorators for discord client functions are invalid
+intents = discord.Intents().default() # this bot requires both message and message content intents (message content is a privileged intent)
+intents.messages = True
+intents.dm_messages = True
+intents.message_content = True
+client = commands.Bot(command_prefix=DISCORD_BOT_SETTINGS.cmd_prefix, intents=intents)
+client.remove_command('help') # required to make the custom help command work
 
 
 class Command:
@@ -131,15 +141,12 @@ class Command:
     
         self.ctx = ctx  # originating discord context is attached to command to reply appropriately
         self.args = (gdl.get_args_parser()).parse_args()   # start with default args
-        self.args.interactive = True                       # commands run in a continuous session should use interactive = True
-        self.args.uuid_str = gdl.get_random_string()       # attach a uuid for debugging purposes
-        self.args.init_time = str(datetime.datetime.now()) # time the command was created / queued
-        self.args.status = 0                               # 0 for waiting in queue, 1 for running, 2 for run successfully, 3 for cancelling, -1 for error
+         
         
         if ctx:
             self.args.init_user = str(ctx.message.author.name)     # username that initiated the command
             self.args.message = str(ctx.message.content)           # the complete message string
-            self.args.command, message_args = bot_parse_args(str(ctx.message.content))
+            self.args.command, message_args = bot_parse_args(ctx.message)
             # todo: merge message_args into self.args
         else:
             self.args.init_user = ""
@@ -223,7 +230,7 @@ class CommandQueue:
         
         cmd_list_copy = [] # only save completed commands (because we can't save contexts for waiting commands)
         for cmd in self.cmd_list:
-            if cmd.args.status == 2: # completed
+            if cmd.args.bot_args.status == 2: # completed
                 cmd_list_copy.append(cmd.__getstate__())
         attributes["cmd_list"] = cmd_list_copy
         
@@ -244,7 +251,7 @@ class CommandQueue:
     def clear(self, status_list = [0,1,3,-1]): # clears all but completed commands by default
         new_cmd_list = []
         for cmd in self.cmd_list:
-            if not cmd.args.status in status_list:
+            if not cmd.args.bot_args.status in status_list:
                 new_cmd_list.append(cmd)
         self.cmd_list = new_cmd_list
         return
@@ -255,13 +262,13 @@ class CommandQueue:
         if self.settings.queue_mode == 0: # round-robin
             user_recent_started_time = {} # find oldest queued commands per user
             for cmd in self.cmd_list:
-                if cmd.args.status == 0: # queued
+                if cmd.args.bot_args.status == 0: # queued
                     if not (cmd.args.init_user in user_recent_started_time.keys()):
                         if (user == "") or (user == cmd.args.init_user):
                             user_recent_started_time[cmd.args.init_user] = cmd.args.init_time
                         
             for cmd in self.cmd_list: # if a user has a queued command, their sort time is replaced with the most recent completed or running command start time
-                if cmd.args.status in [1, 2]: # running or completed
+                if cmd.args.bot_args.status in [1, 2]: # running or completed
                     if cmd.args.init_user in user_recent_started_time.keys():
                         if (user == "") or (user == cmd.args.init_user):
                             user_recent_started_time[cmd.args.init_user] = cmd.args.start_time
@@ -284,7 +291,7 @@ class CommandQueue:
                         
         else: # first-come first-serve
             for cmd in self.cmd_list:
-                if cmd.args.status == 0: # queued
+                if cmd.args.bot_args.status == 0: # queued
                     if (user == "") or (user == cmd.args.init_user):
                         pending_list.append(cmd)
                         if len(pending_list) >= num_to_return:
@@ -300,7 +307,7 @@ class CommandQueue:
         
     def get_running(self, user=""):
         for cmd in self.cmd_list:
-            if cmd.args.status == 1:
+            if cmd.args.bot_args.status == 1:
                 if (user == "") or (user == cmd.args.init_user):
                     return cmd # running
         return None
@@ -315,7 +322,7 @@ class CommandQueue:
         for i in range(start_index, len(self.cmd_list)):
             cmd = search_list[i]
             if (cmd.args.init_user == user) or (user == None):
-                if cmd.args.status in status_list:
+                if cmd.args.bot_args.status in status_list:
                     return cmd
         return None
         
@@ -333,7 +340,7 @@ class CommandQueue:
             user = user.strip().lower()
         for cmd in _reversed:
             if (cmd.args.init_user.strip().lower() == user) or (user == None):
-                if (cmd.args.status == 2) and (len(cmd.args.output_samples) > 0):  # completed successfully 
+                if (cmd.args.bot_args.status == 2) and (len(cmd.args.output_samples) > 0):  # completed successfully 
                         return cmd.args.output_samples
         return [] # none found
         
@@ -432,7 +439,7 @@ class CommandQueue:
     def get_queue_length(self): # returns the number of commands running or waiting in queue
         length = 0
         for cmd in self.cmd_list:
-            if cmd.args.status in [0, 1]:
+            if cmd.args.bot_args.status in [0, 1]:
                 length += 1
         return length
 
@@ -463,156 +470,113 @@ class CommandQueue:
             print("Error getting command server status - " + str(e))
             return None
          
-def get_bot_args_parser(parser=None):
-    if not parser: parser = argparse.ArgumentParser()
-
+def get_bot_args_parser():
+    parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--prompt",
-        type=str,
-        nargs="?",
-        default="",
-        help="the prompt to condition sampling on",
-    )
-    parser.add_argument(
-        "--steps",
-        type=int,
-        default=32,
-        help="number of sampling steps (number of times to refine image)",
-    )
-    parser.add_argument(
-        "--scale",
-        type=float,
-        default=11,
-        help="guidance scale (amount of change per step)",
-    )
-    parser.add_argument(
-        "--init-img",
-        type=str,
-        default="",
-        help="path to the input image",
-    )
-    parser.add_argument(
-        "--outputs_path",
-        type=str,
-        help="path to store output samples (relative to root outputs path)",
-        default="",
-    )
-    parser.add_argument(
-        "--noise_q",
-        type=float,
-        default=1.,
-        help="augments falloff of matched noise distribution for in/out-painting (noise_q > 0), lower values mean smaller features and higher means larger features",
-    )
-    parser.add_argument(
-        "--strength",
-        type=float,
-        default=0.,
-        help="overall amount to change the input image",
-    )
-    parser.add_argument(
-        "--n",
+        "--repeat_x",
         type=int,
         default=1,
-        help="number of samples to generate",
+        help="number of times to repeat command",
     )
     parser.add_argument(
-        "--w",
+        "--num",
         type=int,
-        default=None,
-        help="set output width or override width of input image",
+        default=1,
+        help="target specified number",
     )
     parser.add_argument(
-        "--h",
-        type=int,
-        default=None,
-        help="set output height or override height of input image",
-    )
-    parser.add_argument(
-        "--model-name",
+        "--user",
         type=str,
         default="",
-        help="path to downloaded diffusers model (relative to default models path), or name of model if using a huggingface token",
+        help="target specified discord user",
     )
     parser.add_argument(
-        "--use_optimized",
+        "--mine",
         action='store_true',
         default=False,
-        help="enable memory optimizations that are currently available in diffusers",
+        help="target the requesting discord user",
     )
     parser.add_argument(
-        "--debug",
+        "--all",
         action='store_true',
         default=False,
-        help="enable verbose CLI output and debug image dumps",
+        help="target all",
     )
     parser.add_argument(
-        "--interactive",
+        "--none",
         action='store_true',
         default=False,
-        help="enters an interactive command line mode to generate multiple samples",
+        help="target none",
     )
     parser.add_argument(
-        "--load-args",
+        "--force",
+        action='store_true',
+        default=False,
+        help="serious business mode",
+    )    
+    parser.add_argument(
+        "--server",
         type=str,
-        default="no_preload",
-        help="preload and use a saved set of sample arguments from a json file in your inputs path",
+        default="",
+        help="target specified discord server / guild",
     )
     return parser
     
-def bot_parse_args(msg):
-
-    standard_args = gdl.get_args_parser()
-    standard_arg_list = []
-    for action in standard_args._actions:
-        for option in action.option_strings:
-            if option[:2] == "--": standard_arg_list.append(option[2:]) # build a list of standard args minus the -- prefix
+def bot_parse_args(ctx_msg): # takes a discord ctx.message
     
+    msg = str(ctx_msg.content)
     msg_tokens = msg.replace("\t"," ").strip().split(" ") # start by tokenizing the discord msg
-    command = msg_tokens[0].lower()
-    arg_translation_map = { "str": "strength", "model": "model-name", "args": "load-args", "x": "repeat_x" } # translate short-hand bot args to standard args
+    try: command = (msg_tokens[0].lower())[len(DISCORD_BOT_SETTINGS.cmd_prefix):] # separate the command name as the first token minus cmd prefix
+    except: return "", argparse.Namespace() # this should be impossible
+    
+     # this map defines which args should be interpreted as discord bot args and which as standard args, as well as any name remapping to standard args
+    arg_map = { "str": "strength",
+                "scale": "scale",
+                "seed": "seed",
+                "steps": "steps",
+                "w": "w",
+                "h": "h",
+                "n": "n_samples",
+                "noise_q" : "noise_q",
+                "model": "model_name",
+                "args": "load_args",
+    }
+    
+    discord_arg_tokens = []
+    standard_arg_tokens = []
+    last_arg_tokens = standard_arg_tokens # any non-argument tokens at the beginning of the msg string will be dumped into standard args to be used as the prompt
+    
     for i in range(1,len(msg_tokens)):
         msg_tokens[i] = msg_tokens[i].strip()
-        if msg_tokens[i][:1] == "-": # only translate tokens from the discord msg that begin with a dash
-            stripped_token = (msg_tokens[i].lower())[1:]        
-            if stripped_token in arg_translation_map: # check the short-hand map first
-                msg_tokens[i] = "--" + arg_translation_map[stripped_token]
-            elif stripped_token in standard_arg_list: # but non-short-hand for standard arg names are still valid
-                msg_tokens[i] = "--" + stripped_token
-    msg_tokens_joined = "--prompt" + " ".join(msg_tokens[1:])
-    
-    PARAM_LIST = ["-str", "-scale", "-seed", "-steps", "-x", "-mine", "-all", "-num", "-force", "-user", "-w", "-h", "-n", "-none", "-color", "-noise_q", "-blend", "-server"]
-    
-
-
-    tokens = _shlex_split(msg)
-    args = {}
-    extra_args = []
-
-    last_key = None
-    for i in range(1, len(tokens)):
-        if (tokens[i].lower() in param_list):
-            tokens[i] = tokens[i].lower()
-            args[tokens[i]] = True
-            last_key = tokens[i]
-        else:
-            if last_key:
-                args[last_key] = tokens[i]
-                last_key = None
+        
+        if msg_tokens[i][:1] == "-": # if this token was intended to be an argument
+            stripped_token = (msg_tokens[i].lower())[1:]
+            if stripped_token in arg_map: # if the token is in the arg_map, it goes into standard args after name remapping
+                standard_arg_tokens.append("--" + arg_map[stripped_token])
+                last_arg_tokens = standard_arg_tokens
             else:
-                extra_args.append(tokens[i])
+                discord_arg_tokens.append("--" + stripped_token)
+                last_arg_tokens = discord_arg_tokens
+                
+        else: # if this token wasn't an argument, put it in the token list that we added the argument name to
+            last_arg_tokens.append(msg_tokens[i])
+
+    standard_args_string = "--prompt" + " ".join(standard_arg_tokens)
+    standard_args_parser = gdl.get_args_parser()
+    args = standard_args_parser.parse_args([standard_args_string])
+    args.interactive = True # commands run in a continuous session should use interactive = True
+    args.init_time = str(datetime.datetime.now()) # time the command was created / queued
     
-    if len(extra_args) > 0:
-        default_str = " ".join(extra_args)
-        args["default_str"] = default_str
-        args["prompt"] = default_str
+    bot_args_string = " ".join(discord_arg_tokens)
+    bot_args_parser = get_bot_args_parser()
+    bot_args = bot_args_parser.parse_args([bot_args_string])
+    bot_args.status = 0  # 0 for waiting in queue, 1 for running, 2 for run successfully, 3 for cancelling, -1 for error
+    bot_args.init_user = str(ctx.message.author.name) # discord username that initiated the command
+    bot_args.message = msg      # the complete message string
+    bot_args.command = command  # first part of the message string minus cmd prefix
     
-        try:
-            default_int = int(default_str)
-            args["default_int"] = default_int
-        except:
-            default_int = 0
-            
-    return tokens[0].lower(), args
+    args.bot_args = bot_args
+    return command, args
 
     
 def get_file_extension_from_url(url):
@@ -677,7 +641,7 @@ def _auto_clean(clean_ratio=0.75):  # delete oldest images and json backups from
             print("Error cleaning - " + path + " - " + str(e))  
     return
     
-def _check_server_roles(ctx, role_name_list): # resolve and check the roles of a user against a list of role name strings
+def check_server_roles(ctx, role_name_list): # resolve and check the roles of a user against a list of role name strings
     if ("everyone" in role_name_list):
         return True
     
@@ -704,16 +668,12 @@ def _p_kill(proc_pid):  # kill all child processes recursively as well, its the 
         print("Error killing process - " + str(proc_pid) + " - " + str(e))
     return
     
-def run_string(run_string):   # run shell command asynchronously to keep discord message pumps happy and allow cancellation
+def run_string(run_string):  # run shell command asynchronously to keep discord message pumps happy and allow cancellation
     print("Running external command: " + run_string)
-    try:
-        process = subprocess.Popen(run_string, shell=True)
-        e = ""
-    except Exception as e:
-        process = None
-        
-    if not process:
-        print("Error running string '" + run_string + "' - " + str(e) + "...")
+    try: process = subprocess.Popen(run_string, shell=True)
+    except Exception as e: process = None
+    
+    if not process: print("Error running string '" + run_string + "' - " + str(e) + "...")
     return process
     
 async def _top(ctx):    # replies to a message with a sorted list of all users and their run-time
@@ -729,19 +689,15 @@ async def _top(ctx):    # replies to a message with a sorted list of all users a
     
 async def _select(ctx): # crop an image from the user's last output image grid
     global CMD_QUEUE
-    command, cmd_args = bot_parse_args(ctx.message.content)
+    command, cmd_args = bot_parse_args(ctx.message)
     
     output_attachments = []
     try:
-        user = ctx.message.author.name
-        author = user
+        author = str(ctx.message.author.name)
+        if cmd_args.bot_args.user: user = cmd_args.bot_args.user
+        else: user = author
         
-        if "-user" in cmd_args:
-            user = cmd_args["-user"]
-        
-        select_num = _get_int_arg("-num", cmd_args)
-        if select_num == None: select_num = 1
-            
+        select_num = cmd_args.bot_args.num
         output_attachments = CMD_QUEUE.get_last_outputs(user=user)
         if len(output_attachments) == 0:
             raise Exception("No output images to select")
@@ -750,37 +706,21 @@ async def _select(ctx): # crop an image from the user's last output image grid
             
         _reversed = reversed(CMD_QUEUE.cmd_list) # look for the most recently completed command by the requesting user with an attached image and replace it with the selected one
         for cmd in _reversed:
-            if cmd.args.init_user == author:
-                if cmd.args.status == 2: # completed successfully
-                    cmd.in_attachments = output_attachments
+            if cmd.args.bot_args.init_user == author:
+                if cmd.args.bot_args.status == 2: # completed successfully
+                    cmd.args.bot_args.in_attachments = output_attachments
                     break
         
     except Exception as e:
-        await ctx.send("Sorry @" + ctx.message.author.name + ", " + str(e))
-    
+        await ctx.send("Sorry @" + str(ctx.message.author.name) + ", " + str(e))
+        
     return output_attachments
 
-if __name__ == "__main__":
-
-    # if we don't actually have a discord bot token let's not go any further
-    if (not DISCORD_BOT_SETTINGS.token) or (DISCORD_BOT_SETTINGS.token == "YOUR_DISCORD_BOT_TOKEN_HERE"):
-        print("Fatal error: Cannot start discord bot with token '" + DISCORD_BOT_SETTINGS.token + "'")
-        print("Please update DISCORD_BOT_SETTINGS.token in g_diffuser_config.py and run this again.")
-        exit(1)
-        
-    intents = discord.Intents().default() # this bot requires both message and message content intents (message content is a privileged intent)
-    intents.messages = True
-    intents.dm_messages = True
-    intents.message_content = True
-
-    client = commands.Bot(command_prefix=DISCORD_BOT_SETTINGS.cmd_prefix, intents=intents)
-    client.remove_command('help') # required to make the custom help command work
-    
 @client.event
 async def on_ready():
     global DISCORD_BOT_SETTINGS
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=DISCORD_BOT_SETTINGS.activity))
-    _process_commands_loop.start()
+    _process_commands_loop.start() # start the main command processing loop task
     return
  
 @client.command()
@@ -789,243 +729,192 @@ async def shutdown(ctx): # shutdown the bot (only used by the bot owner)
     global CMD_QUEUE
     CMD_QUEUE.shutdown_command_server()
     await ctx.send("Bye")
-    exit()
+    exit(0)
     
 @client.command()
 async def restart(ctx): # restart the bot when the queue is empty (available to admins)
                         # to restart immediately an admin can follow-up with !clear
-    global CMD_QUEUE
-    command, cmd_args = bot_parse_args(ctx.message.content)
+    global CMD_QUEUE, DISCORD_BOT_SETTINGS
+    if not check_server_roles(ctx, [DISCORD_BOT_SETTINGS.admin_role_name]): return
+    command, cmd_args = bot_parse_args(ctx.message)
+
+    CMD_QUEUE.restart_now = ctx # this sets the restart in motion to be handled by the command loop task
     
-    global BOT_ADMIN_ROLE_NAME
-    if not _check_server_roles(ctx, [BOT_ADMIN_ROLE_NAME]): return
-        
-    CMD_QUEUE.restart_now = ctx
-    
-    if "-force" in cmd_args:
+    if cmd_args.bot_args.force:
         for cmd in CMD_QUEUE.cmd_list: 
-            if cmd.args.status in [0, 1]: # cancel everything running or waiting
-                cmd.args.status = 3 # cancelled
+            if cmd.args.bot_args.status in [0, 1]: # cancel everything running or waiting
+                cmd.args.bot_args.status = 3 # cancelled
         
-        try:
-            await ctx.send("Okay @" + ctx.message.author.name + ", clearing queue and restarting now... ")
-        except Exception as e:
-            print("Error sending restart acknowledgement - " + str(e))
+        try: await ctx.send("Okay @" + ctx.message.author.name + ", clearing queue and restarting now... ")
+        except Exception as e: print("Error sending restart acknowledgement - " + str(e))
     else:
-        try:
-            await ctx.send("Okay @" + ctx.message.author.name + ", restarting when queue is empty... ")
-        except Exception as e:
-            print("Error sending restart acknowledgement - " + str(e))
-        
+        try: await ctx.send("Okay @" + ctx.message.author.name + ", restarting when queue is empty... ")
+        except Exception as e: print("Error sending restart acknowledgement - " + str(e))
     return
 
 @client.command()
 @commands.is_owner()
-async def leave_server(ctx):        # leave a server / guild that the bot is joined to (owner only)
-    command, cmd_args = bot_parse_args(ctx.message.content)
+async def leave_server(ctx):    # leave a server / guild that this bot is joined to (owner only)
+    command, cmd_args = bot_parse_args(ctx.message)
+    server = None
     if "-server" in cmd_args:
         server_name = str(cmd_args["-server"])
-        if "default_str" in cmd_args:
-            server_name += " " + "".join(cmd_args["default_str"])
-        try:
-            server = None
-            server = discord.utils.get(client.guilds, name=server_name) # Get the server / guild by name
-        except:
-            print("Error retrieving server object in !leave_server")
+        if "default_str" in cmd_args: server_name += " " + "".join(cmd_args["default_str"])
+        try: server = discord.utils.get(client.guilds, name=server_name) # get the server / guild by name
+        except: print("Error retrieving server object in !leave_server")
             
         if server is None:
-            try:
-                await ctx.send("Sorry @" + ctx.message.author.name + ", I'm not on '" + server_name + "'... ")
-            except Exception as e:
-                print("Error sending leave_server acknowledgement - " + str(e))
+            try: await ctx.send("Sorry @" + ctx.message.author.name + ", I'm not on '" + server_name + "'... ")
+            except Exception as e: print("Error sending leave_server acknowledgement - " + str(e))
             return
     else:
-        try:
-            await ctx.send("Sorry @" + ctx.message.author.name + ", try !leave_server -server [server_name]... ")
-        except Exception as e:
-            print("Error sending leave_server acknowledgement - " + str(e))
+        try: await ctx.send("Sorry @" + ctx.message.author.name + ", try !leave_server -server [server_name]... ")
+        except Exception as e: print("Error sending leave_server acknowledgement - " + str(e))
         return
-            
-    try:
-        await ctx.send("Okay @" + ctx.message.author.name + ", leaving '" + server_name + "'... ")
-    except Exception as e:
-        print("Error sending leave_server acknowledgement - " + str(e))
 
-    try:
-        await server.leave()
-    except Exception as e:
-        print("Error leaving server '" + server_name + "' - " + str(e))
-        
+    try: await ctx.send("Okay @" + ctx.message.author.name + ", leaving '" + server_name + "'... ")
+    except Exception as e: print("Error sending leave_server acknowledgement - " + str(e))
+    try: await server.leave()
+    except Exception as e: print("Error leaving server '" + server_name + "' - " + str(e))
+    
+    return
+    
 @client.command()
 @commands.is_owner()
-async def list_servers(ctx):        # list servers / guilds bot is a member of (owner only)
-    
+async def list_servers(ctx):    # list servers / guilds this bot is a member of (owner only)
     msg = "Okay @" + ctx.message.author.name + ", here's the servers I'm on... \n"
     for server in client.guilds:
         msg += server.name + "\n"
         
-    try:
-        await ctx.send(msg)
-    except Exception as e:
-        print("Error sending list_servers - " + str(e))
-    
+    try: await ctx.send(msg)
+    except Exception as e: print("Error sending list_servers - " + str(e))
     return
     
 @client.command()
 async def clear(ctx): # clear the command queue completely (available to admins)
-    
-    global CMD_QUEUE
-    
-    global BOT_ADMIN_ROLE_NAME
-    if not _check_server_roles(ctx, [BOT_ADMIN_ROLE_NAME]): return
-    command, cmd_args = bot_parse_args(ctx.message.content)
+    global CMD_QUEUE, DISCORD_BOT_SETTINGS
+    if not check_server_roles(ctx, [DISCORD_BOT_SETTINGS.admin_role_name]): return
+    command, cmd_args = bot_parse_args(ctx.message)
     
     user = ""
     if "-all" in cmd_args: # clear the whole queue
         try:
             user = "*"
             await ctx.send("Okay @" + ctx.message.author.name + ", clearing the queue... ")
-        except:
-            print("Error sending acknowledgement")
+        except: print("Error sending acknowledgement")
     elif "-user" in cmd_args: # clear the requested user's queue
         try:
             user = cmd_args["-user"]
             await ctx.send("Okay @" + ctx.message.author.name + ", clearing @" + user + " from the queue... ")
-        except:
-            print("Error sending acknowledgement")
+        except: print("Error sending acknowledgement")
 
     if user == "":
-        try:
-            await ctx.send("Sorry @" + ctx.message.author.name + ", please use !clear -all or !clear -user [user]... ")
-        except:
-            print("Error sending acknowledgement")
+        try: await ctx.send("Sorry @" + ctx.message.author.name + ", please use !clear -all or !clear -user [user]... ")
+        except: print("Error sending acknowledgement")
         return
         
     for cmd in CMD_QUEUE.cmd_list: # do the cancelling
-        if cmd.args.status in [0, 1]:
+        if cmd.args.bot_args.status in [0, 1]:
             if user == "*":
-                cmd.args.status = 3 # cancelled
+                cmd.args.bot_args.status = 3 # cancelled
             else:
                 if cmd.args.init_user.strip().lower() == user.strip().lower():
-                    cmd.args.status = 3 # cancelled
-        
+                    cmd.args.bot_args.status = 3 # cancelled
     return
 
 @client.command()
 @commands.is_owner()
 async def clean(ctx): # clean all temp folders (only used by the bot owner)
-    command, cmd_args = bot_parse_args(ctx.message.content)
-    
+    command, cmd_args = bot_parse_args(ctx.message)
     if "-force" in cmd_args:
         _auto_clean(clean_ratio=1.0)
         await ctx.send("Okay @" + ctx.message.author.name + ", cleaning ALL temp files... ")
     else:
         _auto_clean()
         await ctx.send("Okay @" + ctx.message.author.name + ", cleaning temp files... ")
-
     return
     
 @client.command()
 async def cancel(ctx): # stops the requesting user's last queued command, or all of them
-    global CMD_QUEUE
-    command, cmd_args = bot_parse_args(ctx.message.content)
-    global BOT_ADMIN_ROLE_NAME, BOT_USERS_ROLE_NAME
-    if not _check_server_roles(ctx, [BOT_ADMIN_ROLE_NAME, BOT_USERS_ROLE_NAME]): return    
+    global CMD_QUEUE, DISCORD_BOT_SETTINGS
+    if not check_server_roles(ctx, [DISCORD_BOT_SETTINGS.admin_role_name, DISCORD_BOT_SETTINGS.users_role_name]): return
+    command, cmd_args = bot_parse_args(ctx.message)
     
-    if "-all" in cmd_args:
+    if cmd_args.bot_args.all:
         for cmd in CMD_QUEUE.cmd_list:
             if cmd.args.init_user == ctx.message.author.name:
-                if cmd.args.status in [0, 1]: # queued or in-progress
-                    cmd.args.status = 3 # cancelled
+                if cmd.args.bot_args.status in [0, 1]: # queued or in-progress
+                    cmd.args.bot_args.status = 3 # cancelled
 
         await ctx.send("Okay @" + ctx.message.author.name + ", cancelling all your queued commands...")
         return
-        
     else:
-    
         num_to_cancel = _get_int_arg("-x", cmd_args)
         if num_to_cancel == None: num_to_cancel = 1
         
         num_cancelled = 0
         for i in range(num_to_cancel):
-
             cmd = CMD_QUEUE.get_last_command(user=ctx.message.author.name, status_list=[0,1])   # queued or in-progress
             if cmd:
-                cmd.args.status = 3 # cancelled
+                cmd.args.bot_args.status = 3 # cancelled
                 num_cancelled += 1
-            else:
-                break
+            else: break
         
-        if num_cancelled > 0: 
-            await ctx.send("Okay @" + ctx.message.author.name + ", cancelling your last " + str(num_cancelled) + " command(s)")
-        else:
-            await ctx.send("Sorry @" + ctx.message.author.name + ", no running or waiting commands to cancel...")
+        if num_cancelled > 0:  await ctx.send("Okay @" + ctx.message.author.name + ", cancelling your last " + str(num_cancelled) + " command(s)")
+        else: await ctx.send("Sorry @" + ctx.message.author.name + ", no running or waiting commands to cancel...")
     
 @client.command()
 async def show_input(ctx, attachments=None): # attaches the requesting user's input image in response, or the images in attachments if not None
-
-    global CMD_QUEUE
+    global CMD_QUEUE, DISCORD_BOT_SETTINGS
+    if not check_server_roles(ctx, [DISCORD_BOT_SETTINGS.admin_role_name, DISCORD_BOT_SETTINGS.users_role_name]): return
     
-    global BOT_ADMIN_ROLE_NAME, BOT_USERS_ROLE_NAME
-    if not _check_server_roles(ctx, [BOT_ADMIN_ROLE_NAME, BOT_USERS_ROLE_NAME]): return    
-    
-    if attachments:
-        input_paths = attachments
-    else:
-        input_paths = CMD_QUEUE.get_last_attached(user=ctx.message.author.name)
-        
+    if attachments: input_paths = attachments
+    else: input_paths = CMD_QUEUE.get_last_attached(user=str(ctx.message.author.name))
     if len(input_paths) > 0:
         try:
             files = []
             for input_path in input_paths:
                 file = discord.File(input_path)
                 files.append(file)
-            msg = "@" + ctx.message.author.name + ":"
+            msg = "@" + str(ctx.message.author.name) + ":"
             await ctx.send(files=files, content=msg)
         except Exception as e:
             print("Error sending show user input image - " + str(e))
-            try:
-                await ctx.send("Sorry @" + ctx.message.author.name + ", I can't find that image...")
-            except:
-                print("")
-        
+            try: await ctx.send("Sorry @" + str(ctx.message.author.name) + ", I can't find that image...")
+            except: print("")
     else:
-        try:
-            await ctx.send("Sorry @" + ctx.message.author.name + ", no attachments to show")
-        except Exception as e:
-            print("Error sending show user input rejection - " + str(e))
+        try: await ctx.send("Sorry @" + str(ctx.message.author.name) + ", no attachments to show")
+        except Exception as e: print("Error sending show user input rejection - " + str(e))
     return
     
-@client.command()
+@client.command() # behold; the oldest surviving lines of code in the project
 async def hello(ctx):
     await ctx.send("Hi")
     
 @client.command() # show the next part of the pending command list
 async def queue(ctx):
     global CMD_QUEUE
-    command, cmd_args = bot_parse_args(ctx.message.content)
-    
-    if "-mine" in cmd_args:
-        msg = "Okay @" + ctx.message.author.name + ", here's your queue... \n"
-        msg += CMD_QUEUE.get_queue_str(user=ctx.message.author.name)
+    command, cmd_args = bot_parse_args(ctx.message)
+    if cmd_args.bot_args.mine:
+        msg = "Okay @" + str(ctx.message.author.name) + ", here's your queue... \n"
+        msg += CMD_QUEUE.get_queue_str(user=str(ctx.message.author.name))
     else:
-        msg = "Okay @" + ctx.message.author.name + ", here's the queue... \n"
+        msg = "Okay @" + str(ctx.message.author.name) + ", here's the queue... \n"
         msg += CMD_QUEUE.get_queue_str()
-            
     await ctx.send(msg)
-
+    return
+    
 @client.command()
 async def top(ctx):
     await _top(ctx)
-
 @client.command()
 async def scoreboard(ctx):
     await _top(ctx)
 
 @client.command()
 async def select(ctx):
-    global BOT_ADMIN_ROLE_NAME, BOT_USERS_ROLE_NAME
-    if not _check_server_roles(ctx, [BOT_ADMIN_ROLE_NAME, BOT_USERS_ROLE_NAME]): return
+    global DISCORD_BOT_SETTINGS
+    if not check_server_roles(ctx, [DISCORD_BOT_SETTINGS.admin_role_name, DISCORD_BOT_SETTINGS.users_role_name]): return
     attachments = await _select(ctx)
     await show_input(ctx, attachments=attachments)
     return
@@ -1058,7 +947,7 @@ async def _process_commands_loop():
                 
         return # nothing to do
     
-    cmd.args.status = 1 # running
+    cmd.args.bot_args.status = 1 # running
     
     # don't think I'll actually this, it reduces performance so disabling for now
     #command_server_status = await CMD_QUEUE.get_command_server_status()
@@ -1077,10 +966,10 @@ async def _process_commands_loop():
 
     except Exception as e:
         json_data = None
-        cmd.args.status = -1 # error status
+        cmd.args.bot_args.status = -1 # error status
         cmd.error_txt = "Error sending command to command server - " + str(e)
         
-    if cmd.args.status == 3: # cancelled status
+    if cmd.args.bot_args.status == 3: # cancelled status
         return          # silently return
         
     if json_data: # copy result attributes back from the command server if the command wasn't cancelled while running
@@ -1096,12 +985,12 @@ async def _process_commands_loop():
             _set_attribs_from_json(cmd, attribs, json_data)
 
         except Exception as e:
-            cmd.args.status = -1 # error status
+            cmd.args.bot_args.status = -1 # error status
             cmd.error_txt = "Error parsing results from command server - "  + str(e)
         
     next_cmd = CMD_QUEUE.get_next_pending()
     
-    if cmd.args.status == 2: # completed successfully
+    if cmd.args.bot_args.status == 2: # completed successfully
     
         # update the per user total run-time cache
         if cmd.args.init_user in CMD_QUEUE.users_elapsed_time.keys():
@@ -1124,10 +1013,10 @@ async def _process_commands_loop():
             
             await cmd.ctx.send(files=files, content=msg)
         except Exception as e:
-            cmd.args.status = -1 # error
+            cmd.args.bot_args.status = -1 # error
             cmd.error_txt = "Error sending output image - " + str(e)
             
-    if cmd.args.status == -1: # error
+    if cmd.args.bot_args.status == -1: # error
         
         try:
             print("Error processing command - " + cmd.error_txt)
@@ -1145,52 +1034,50 @@ async def _process_commands_loop():
 
 @client.command()
 async def gen(ctx):
-    global CMD_QUEUE
-    global BOT_ADMIN_ROLE_NAME, BOT_USERS_ROLE_NAME
-    if not _check_server_roles(ctx, [BOT_ADMIN_ROLE_NAME, BOT_USERS_ROLE_NAME]): return    
+    global CMD_QUEUE, DISCORD_BOT_SETTINGS
+    if not check_server_roles(ctx, [DISCORD_BOT_SETTINGS.admin_role_name, DISCORD_BOT_SETTINGS.users_role_name]): return
     await CMD_QUEUE.add_new(ctx)
     
 @client.command()
 async def enhance(ctx):
-    global CMD_QUEUE
-    global BOT_ADMIN_ROLE_NAME, BOT_USERS_ROLE_NAME
-    if not _check_server_roles(ctx, [BOT_ADMIN_ROLE_NAME, BOT_USERS_ROLE_NAME]): return
-    await CMD_QUEUE.add_new(ctx)
-
+    global CMD_QUEUE, DISCORD_BOT_SETTINGS
+    if not check_server_roles(ctx, [DISCORD_BOT_SETTINGS.admin_role_name, DISCORD_BOT_SETTINGS.users_role_name]): return
+    await ctx.send("Sorry @" + str(ctx.message.author.name) + ", enhance is not implemented yet")
+    #await CMD_QUEUE.add_new(ctx)
+    return 
+    
 @client.command()
 async def about(ctx):
     global ABOUT_TXT
-    await ctx.send("@" + ctx.message.author.name + " : " + ABOUT_TXT)
+    await ctx.send("@" + str(ctx.message.author.name) + " : " + ABOUT_TXT)
     
 @client.command()
 async def help(ctx):
     global HELP_TXT1, HELP_TXT2
-    await ctx.send("@" + ctx.message.author.name + " : " + HELP_TXT1)
-    await ctx.send("@" + ctx.message.author.name + " : " + HELP_TXT2)
+    await ctx.send("@" + str(ctx.message.author.name) + " : " + HELP_TXT1)
+    await ctx.send("@" + str(ctx.message.author.name) + " : " + HELP_TXT2)
     
 @client.command()
 async def examples(ctx):
     global EXAMPLES_TXT
-    await ctx.send("@" + ctx.message.author.name + " : " + EXAMPLES_TXT)
+    await ctx.send("@" + str(ctx.message.author.name) + " : " + EXAMPLES_TXT)
     
 @client.event
 async def on_message(message):
-    global DISCORD_BOT_SETTINGS
-    global BOT_COMMAND_LIST
-    
+    global BOT_COMMAND_LIST, DISCORD_BOT_SETTINGS
     if message.author.bot: return
     if message.content.startswith(DISCORD_BOT_SETTINGS.cmd_prefix) != True: return
+    command, cmd_args = bot_parse_args(message)
+    if command not in BOT_COMMAND_LIST: return
     
-    command, cmd_args = bot_parse_args(message.content)
-    if command.lower().replace(cmd_prefix, "") not in BOT_COMMAND_LIST: return
-    
-    await client.process_commands(message)
+    try: await client.process_commands(message)
+    except Exception as e: print("Error in client.process_commands - " + str(e))
+    return
 
 @client.event
 async def on_disconnect():
     await asyncio.sleep(10)
 
 if __name__ == "__main__":
-        
     CMD_QUEUE = CommandQueue()
     client.run(DISCORD_BOT_SETTINGS.token, reconnect=True)

@@ -100,16 +100,13 @@ if __name__ == "__main__":
 
     if args.start_server:
         del args.start_server
-        
         gdl.load_pipelines(args)
         
-        print("Starting command server...")
         web_server = HTTPServer((CMD_SERVER_SETTINGS.http_host, CMD_SERVER_SETTINGS.http_port), CommandServer)
-        print("CommandServer started successfully at http://" + CMD_SERVER_SETTINGS.http_host + ":" + str(CMD_SERVER_SETTINGS.http_port))
-        try:
-            web_server.serve_forever()
-        except KeyboardInterrupt:
-            pass
+        print("Command server started successfully at http://" + CMD_SERVER_SETTINGS.http_host + ":" + str(CMD_SERVER_SETTINGS.http_port))
+        
+        try: web_server.serve_forever()
+        except KeyboardInterrupt: pass
         web_server.server_close()
         
     else:

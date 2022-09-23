@@ -698,4 +698,10 @@ def get_args_parser():
         default="no_preload",
         help="preload and use a saved set of sample arguments from a json file in your inputs path",
     )
+    parser.add_argument(
+        "--uuid-str",
+        type=str,
+        default=get_random_string(),
+        help="attach an id (default random) that can be used for identification or searching purposes later",
+    )
     return parser
