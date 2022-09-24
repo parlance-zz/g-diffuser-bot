@@ -41,7 +41,7 @@ import argparse
 import code
 import importlib
 
-VERSION_STRING = "g-diffuser-cli v0.82b"
+VERSION_STRING = "g-diffuser-cli v0.83b"
 INTERACTIVE_MODE_BANNER_STRING = """
 Interactive mode:
     call sample() with keyword arguments and use the up/down arrow-keys to browse command history:

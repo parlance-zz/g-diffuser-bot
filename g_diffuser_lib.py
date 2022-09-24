@@ -512,7 +512,8 @@ def get_samples(args):
         assert(pipe)
         for n in range(args.n): # batched mode doesn't seem to accomplish much besides using more memory
             if args.status == 3: return # if command is cancelled just bail out asap
-            try:
+            #try:
+            if True:
                 if pipe_name == "txt2img":
                     sample = pipe(
                         prompt=args.prompt,
@@ -530,9 +531,9 @@ def get_samples(args):
                         mask_image=mask_image,
                         num_inference_steps=args.steps,
                     )
-            except Exception as e:
-                print("Error running pipeline " + pipe_name)
-                sample = None
+            #except Exception as e:
+            #    print("Error running pipeline " + pipe_name)
+            #    sample = None
                 
             if sample: samples.append(sample["sample"][0])
     
