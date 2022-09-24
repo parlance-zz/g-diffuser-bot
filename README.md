@@ -36,10 +36,11 @@ Installation:
  - open a conda prompt, then navigate to the g-diffuser folder
  - conda activate g_diffuser
  - optional: on Windows you can open prompt.bat to do the above automatically
- - run the discord bot with python g_diffuser_bot.py
- - alternatively, run the CLI interface with python g_diffuser_cli.py
- - You can use the CLI interface interactively with python g_diffuser_cli.py --interactive
+ - run the discord bot with: python g_diffuser_bot.py
+ - alternatively, run the CLI interface with: python g_diffuser_cli.py
+ - You can use the CLI interface interactively with: python g_diffuser_cli.py --interactive
  - If you see an out of memory error use --use_optimized or change the default setting in g_diffuser_config.py
+ - Verify your configuration by running: python g_diffuser_config.py or: pythong g_diffuser_defaults.py
 
 Updating:
  - Simply download and replace your files with those from this repository. You probably won't need to replace your config and default settings files, but you may need to merge changes.
