@@ -33,7 +33,7 @@ Installation:
  5)  place any pre-downloaded models into the models folder, if you want to use a hugging-face token instead, enter it in g_diffuser_config.py
  6)  If you are running Windows 10 you may need to turn on "developer mode". Look for "developer settings" in the start menu.
      
-     Optional: edit g_diffuser_config.py and g_diffuser_defaults.py and change settings as appropriate, save your changes
+Optional: edit g_diffuser_config.py and g_diffuser_defaults.py and change settings as appropriate, save your changes
  
  Running:
  - open a conda prompt (click on the start menu and look for "anaconda prompt"), then navigate to the g-diffuser folder
