@@ -96,8 +96,8 @@ def get_random_string(digits=8):
     uuid_str = str(uuid.uuid4())
     return uuid_str[0:digits] # shorten uuid, don't need that many digits
 
-def print_namespace(namespace, debug=False, indent=4):
-    namespace_dict = vars(strip_args(namespace))
+def print_namespace(namespace, debug=False, verbosity_level=0, indent=4):
+    namespace_dict = vars(strip_args(namespace, level=verbosity_level))
     if debug:
         for arg in namespace_dict: print(arg+"='"+str(namespace_dict[arg]) + "' "+str(type(namespace_dict[arg])))
     else:
@@ -146,6 +146,36 @@ def load_json(file_path):
 def strip_args(args, level=0): # remove args we wouldn't want to print or serialize, higher levels strip additional irrelevant fields
     args_stripped = argparse.Namespace(**(vars(args).copy()))
     if "loaded_pipes" in args_stripped: del args_stripped.loaded_pipes
+    
+    if level >=1: # keep just the basics for most printing
+        if "command" in args_stripped: del args_stripped.command
+        if "seed" in args_stripped: del args_stripped.seed
+        if "use_optimized" in args_stripped: del args_stripped.use_optimized
+        if "debug" in args_stripped: del args_stripped.debug
+        if "interactive" in args_stripped: del args_stripped.interactive
+        if "load_args" in args_stripped: del args_stripped.load_args
+        if "no_json" in args_stripped: del args_stripped.no_json
+        if "pipe_list" in args_stripped: del args_stripped.pipe_list
+        if "hf_token" in args_stripped: del args_stripped.hf_token
+        if "init_time" in args_stripped: del args_stripped.init_time
+        if "start_time" in args_stripped: del args_stripped.start_time
+        if "end_time" in args_stripped: del args_stripped.end_time
+        if "elapsed_time" in args_stripped: del args_stripped.elapsed_time
+        if "output" in args_stripped: del args_stripped.output
+        if "args_output" in args_stripped: del args_stripped.args_output
+        if "output_samples" in args_stripped: del args_stripped.output_samples
+        if "uuid_str" in args_stripped: del args_stripped.uuid_str
+        if "status" in args_stripped: del args_stripped.status
+        if "used_pipe" in args_stripped: del args_stripped.used_pipe
+        if "outputs_path" in args_stripped: del args_stripped.outputs_path
+        if "n" in args_stripped: del args_stripped.n
+        
+        if "init_img" in args_stripped:
+            if args_stripped.init_img == "": # if there was no input image these fields are also irrelevant
+                if "init_img" in args_stripped: del args_stripped.init_img
+                if "noise_q" in args_stripped: del args_stripped.noise_q
+                if "strength" in args_stripped: del args_stripped.strength
+                
     return args_stripped
     
 def dummy_checker(images, **kwargs): # replacement func to disable safety_checker in diffusers

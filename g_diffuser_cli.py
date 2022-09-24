@@ -41,14 +41,15 @@ import argparse
 import code
 import importlib
 
-VERSION_STRING = "g-diffuser-cli v0.72b"
+VERSION_STRING = "g-diffuser-cli v0.81b"
 INTERACTIVE_MODE_BANNER_STRING = """
 Interactive mode: call sample() with keyword arguments and use the up/down arrow-keys to browse command history:
 sample("my prompt", n=3, scale=15) # generate 3 samples with a scale of 15
 sample("greg rutkowski", init_img="my_image.png", repeat=True, debug=True) # repeats until stopped
-sample()    # arguments can be omitted to use your last arguments
-show_args() # shows the complete set of current input/output arguments
-load_args() # use your last arguments (from auto-saved json file in inputs path)
+sample()     # arguments can be omitted to use your last arguments
+show_args()  # shows your current basic input arguments
+show_args(0) # shows *all* your input arguments
+load_args()  # use your last arguments (from auto-saved json file in inputs/json)
 load_args("my_fav_args") # you can load saved args; these are json files in the inputs path
 save_args("my_fav_args") # you can save your args; these are saved as json files in the inputs path
 cls()  # clear the command window if things get cluttered
@@ -93,7 +94,7 @@ def main():
         code.interact(banner=INTERACTIVE_MODE_BANNER_STRING, local=dict(globals(), **vars(cli_locals)), exitmsg="")
         exit(0)
     else:
-        if args.load_args == "no_preload": print("Sample arguments: " + str(gdl.strip_args(args))+"\n")
+        if args.load_args == "no_preload": gdl.print_namespace(args, debug=args.debug, verbosity_level = 1-int(args.debug))
         
         args.init_time = str(datetime.datetime.now()) # time the command was created / queued
         samples = gdl.get_samples(args)
@@ -141,9 +142,11 @@ def cli_get_samples(prompt=None, **kwargs):
         if not repeat: break
     return
     
-def cli_show_args():
+def cli_show_args(level=None):
     global INTERACTIVE_CLI_ARGS
-    gdl.print_namespace(INTERACTIVE_CLI_ARGS)
+    if level != None: verbosity_level = level
+    else: verbosity_level = 1-int(INTERACTIVE_CLI_ARGS.debug)
+    gdl.print_namespace(INTERACTIVE_CLI_ARGS, debug=INTERACTIVE_CLI_ARGS.debug, verbosity_level=verbosity_level)
     return
     
 def cli_load_args(name=""):
@@ -154,7 +157,7 @@ def cli_load_args(name=""):
         else: json_path = DEFAULT_PATHS.inputs+"/"+name+".json"
         saved_args_dict = gdl.load_json(json_path)
         INTERACTIVE_CLI_ARGS = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), saved_args_dict))
-        gdl.print_namespace(INTERACTIVE_CLI_ARGS)
+        gdl.print_namespace(INTERACTIVE_CLI_ARGS, debug=INTERACTIVE_CLI_ARGS.debug, verbosity_level = 1-int(INTERACTIVE_CLI_ARGS.debug))
     except Exception as e:
         print("Error loading last args from file - " + str(e))
     return
@@ -163,7 +166,8 @@ def cli_save_args(name):
     global INTERACTIVE_CLI_ARGS
     global DEFAULT_PATHS
     try:
-        saved_path = gdl.save_json(vars(gdl.strip_args(INTERACTIVE_CLI_ARGS)), DEFAULT_PATHS.inputs+"/"+name+".json")
+        json_path = DEFAULT_PATHS.inputs+"/json/"+name+".json"
+        saved_path = gdl.save_json(vars(gdl.strip_args(INTERACTIVE_CLI_ARGS)), json_path)
         print("Saved " + saved_path)
     except Exception as e:
         if args.debug: print("Error saving args - " + str(e))

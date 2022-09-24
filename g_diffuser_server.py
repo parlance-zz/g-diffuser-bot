@@ -25,7 +25,16 @@ SOFTWARE.
 
 g_diffuser_server.py - localhost webserver for executing g-diffuser commands
                        used by discord bot interface, but could also be used to build a webui type front-end with a clean json-based command format.
-                       existing issue for webui construction: ( https://github.com/parlance-zz/g-diffuser-bot/issues/30 )
+                       existing issue for webui construction: https://github.com/parlance-zz/g-diffuser-bot/issues/30
+                       
+                     - existing issue for web gallery browser construction: https://github.com/parlance-zz/g-diffuser-lib/issues/36
+                       (this may be merged into the custom webui above)
+                     
+                     - this is also probably the best way to build on top of g-diffuser-lib if you are building a custom
+                       application. the command server will always use the same universal json argument format going
+                       forward, the same format used by the cli and discord bot. when the upgrade that allows transparent
+                       clustering of command servers is finished this also means your application will benefit from
+                       super-charged performance.
 """
 
 import g_diffuser_lib as gdl
