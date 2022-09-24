@@ -25,12 +25,12 @@ Sept 22/2022 Update - This is a temporary repository for breaking changes until 
 
 
 Installation:
- - clone this repository to a folder of your choice (or click the green "code" button up top and click "download zip")
- - download / install miniconda (https://docs.conda.io/en/latest/miniconda.html)
- - open a conda prompt, then navigate to the folder where you cloned / downloaded this repository
- - conda env create -f environment.yaml
- - optional: edit g_diffuser_config.py and g_diffuser_defaults.py as appropriate, make sure to save!
- - place any pre-downloaded models into the models folder, if you want to use a hugging-face token instead, enter it in g_diffuser_config.py
+ 1) clone this repository to a folder of your choice (or click the green "code" button up top and click "download zip")
+ 2) download / install miniconda (https://docs.conda.io/en/latest/miniconda.html)
+ 3) open a conda prompt, then navigate to the folder where you cloned / downloaded this repository
+ 4) conda env create -f environment.yaml
+ 5) optional: edit g_diffuser_config.py and g_diffuser_defaults.py as appropriate, make sure to save!
+ 6) place any pre-downloaded models into the models folder, if you want to use a hugging-face token instead, enter it in g_diffuser_config.py
  
  Running:
  - open a conda prompt (click on the start menu and look for "anaconda prompot"), then navigate to the g-diffuser folder
