@@ -40,7 +40,7 @@ Installation:
  - alternatively, run the CLI interface with: python g_diffuser_cli.py
  - You can use the CLI interface interactively with: python g_diffuser_cli.py --interactive
  - If you see an out of memory error use --use_optimized or change the default setting in g_diffuser_config.py
- - Verify your configuration by running: python g_diffuser_config.py or: pythong g_diffuser_defaults.py
+ - Verify your configuration by running: python g_diffuser_config.py or: python g_diffuser_defaults.py
 
 Updating:
  - Simply download and replace your files with those from this repository. You probably won't need to replace your config and default settings files, but you may need to merge changes.
