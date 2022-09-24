@@ -45,7 +45,7 @@ sample("my prompt", n=3, scale=15) # generate 3 samples with a scale of 15
 sample("greg rutkowski", init_img="my_image.png", repeat=True, debug=True) # repeats until stopped
 sample()    # arguments can be omitted to use your last arguments
 show_args() # shows the complete set of current input/output arguments
-load_args() # use your last arguments (from auto-save json file in inputs path)
+load_args() # use your last arguments (from auto-saved json file in inputs path)
 load_args("my_fav_args") # you can load saved args; these are json files in the inputs path
 save_args("my_fav_args") # you can save your args; these are saved as json files in the inputs path
 cls()  # clear the command window if things get cluttered
@@ -104,7 +104,6 @@ def main():
     
 def cli_get_samples(prompt=None, **kwargs):
     global INTERACTIVE_CLI_ARGS
-    
     args = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), kwargs))
     if prompt: args.prompt = prompt
     if args.n < 0:

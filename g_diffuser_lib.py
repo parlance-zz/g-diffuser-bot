@@ -48,6 +48,11 @@ from skimage.exposure import match_histograms
 from skimage import color
 from skimage import transform
 
+# Fix long path access:
+import ntpath
+ntpath.realpath = ntpath.abspath
+# Fix long path access.
+
 import torch
 from torch import autocast
 from diffusers import StableDiffusionPipeline
@@ -98,8 +103,10 @@ def debug_print_namespace(namespace):
     for arg in namespace_dict: print(arg+"='"+str(namespace_dict[arg]) + "' "+str(type(namespace_dict[arg])))
     return
     
-def get_filename_from_prompt(prompt):
-    return re.sub(r'[\\/*?:"<>|]',"", prompt).replace(" ","_")
+def get_filename_from_prompt(prompt, truncate_length=0):
+    file_str = re.sub(r'[\\/*?:"<>|]',"", prompt).replace("\t"," ").replace(" ","_").strip()
+    if (truncate_length > len(file_str)) or (truncate_length==0): truncate_length = len(file_str)
+    return file_str[0:truncate_length]
     
 def save_debug_img(np_image, name):
     global DEFAULT_PATHS
@@ -704,13 +711,13 @@ def get_args_parser():
         "--load-args",
         type=str,
         default="no_preload",
-        help="preload and use a saved set of sample arguments from a json file in your inputs path",
+        help="preload and use a saved set of arguments from a json file in your inputs path",
     )
     parser.add_argument(
         "--no-json",
         action='store_true',
         default=False,
-        help="disable saving json arg files alongside sample outputs",
+        help="disable saving arg files for each sample output in output path/json",
     )
     parser.add_argument(
         "--uuid-str",

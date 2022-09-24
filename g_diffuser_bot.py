@@ -45,6 +45,7 @@ import aiohttp
 import shutil
 #import time
 import datetime
+import argparse
 
 import discord
 from discord.ext import commands
@@ -203,7 +204,7 @@ class CommandQueue:
         self.cmd_list = []
         self.users_total_elapsed_time = {}
         self.restart_now = None
-        
+        self.shutdown_now = None
         if DISCORD_BOT_SETTINGS.state_file_path: # load existing data if we have state file path
             self.data_file_path = DISCORD_BOT_SETTINGS.state_file_path
             try:
@@ -539,7 +540,7 @@ def bot_parse_args(ctx_msg): # takes a discord ctx.message
                 "n": "n_samples",
                 "noise_q" : "noise_q",
                 "model": "model_name",
-                "args": "load_args",
+                "args": ["load_args", "save_args"],
     }
     
     discord_arg_tokens = []
@@ -552,13 +553,16 @@ def bot_parse_args(ctx_msg): # takes a discord ctx.message
         if msg_tokens[i][:1] == "-": # if this token was intended to be an argument
             stripped_token = (msg_tokens[i].lower())[1:]
             if stripped_token in arg_map: # if the token is in the arg_map, it goes into standard args after name remapping
-                standard_arg_tokens.append("--" + arg_map[stripped_token])
+                mapped_values = arg_map[stripped_token]
+                if type(mapped_values) == list:
+                    for value in mapped_values: standard_arg_tokens.append("--" + value) # support expanding to multiple arg names with same value
+                else: standard_arg_tokens.append("--" + mapped_values) # just a 1:1 map
                 last_arg_tokens = standard_arg_tokens
             else:
                 discord_arg_tokens.append("--" + stripped_token)
                 last_arg_tokens = discord_arg_tokens
                 
-        else: # if this token wasn't an argument, put it in the token list that we added the argument name to
+        else: # if this token wasn't an argument, put it in the token list that we last added an argument name to
             last_arg_tokens.append(msg_tokens[i])
 
     standard_args_string = "--prompt" + " ".join(standard_arg_tokens)
@@ -648,8 +652,10 @@ def check_server_roles(ctx, role_name_list): # resolve and check the roles of a 
         try:
             role = discord.utils.get(ctx.message.author.guild.roles, name=role_name)
             role_list.append(role)
-        except: continue
-    for role in role_list: if role in ctx.message.author.roles: return True
+        except:
+            continue
+    for role in role_list:
+        if role in ctx.message.author.roles: return True
     return False
     
 def _p_kill(proc_pid):  # kill all child processes recursively as well, its the only way to be sure
@@ -675,7 +681,8 @@ async def _top(ctx):    # replies to a message with a sorted list of all users a
     for user in sorted(CMD_QUEUE.users_elapsed_time, reverse=True, key=CMD_QUEUE.users_elapsed_time.get):
         i += 1 ; msg += str(i) + ": @" + user + " <" + str(datetime.timedelta(seconds=CMD_QUEUE.users_elapsed_time[user].seconds)) + "s>\n"
     if i == 0: msg = "No users yet!"
-    await ctx.send("@" + str(ctx.message.author.name) + " : " + msg)
+    try: await ctx.send("@" + str(ctx.message.author.name) + " : " + msg)
+    except Exception as e: print("Error sending !top acknowledgement - " + str(e))
     return
     
 async def _select(ctx): # crop an image from the user's last output image grid
@@ -703,10 +710,11 @@ async def _select(ctx): # crop an image from the user's last output image grid
                     break
         
     except Exception as e:
-        await ctx.send("Sorry @" + str(ctx.message.author.name) + ", " + str(e))
+        try: await ctx.send("Sorry @" + str(ctx.message.author.name) + ", " + str(e))
+        except Exception as e: print("Error sending !select acknowledgement - " + str(e))
         
     return output_attachments
-
+    
 @client.event
 async def on_ready():
     global DISCORD_BOT_SETTINGS
@@ -718,9 +726,8 @@ async def on_ready():
 @commands.is_owner()
 async def shutdown(ctx): # shutdown the bot (only used by the bot owner)
     global CMD_QUEUE
-    CMD_QUEUE.shutdown_command_server()
-    await ctx.send("Bye")
-    exit(0)
+    CMD_QUEUE.shutdown_now = ctx
+    return
     
 @client.command()
 async def restart(ctx): # restart the bot when the queue is empty (available to admins)
@@ -792,16 +799,16 @@ async def clear(ctx): # clear the command queue completely (available to admins)
         try:
             user = "*"
             await ctx.send("Okay @" + ctx.message.author.name + ", clearing the queue... ")
-        except: print("Error sending acknowledgement")
+        except Exception as e: print("Error sending acknowledgement in !clear - " + str(e))
     elif "-user" in cmd_args: # clear the requested user's queue
         try:
             user = cmd_args["-user"]
             await ctx.send("Okay @" + ctx.message.author.name + ", clearing @" + user + " from the queue... ")
-        except: print("Error sending acknowledgement")
+        except: print("Error sending acknowledgement in !clear - " + str(e))
 
     if user == "":
         try: await ctx.send("Sorry @" + ctx.message.author.name + ", please use !clear -all or !clear -user [user]... ")
-        except: print("Error sending acknowledgement")
+        except Exception as e: print("Error sending acknowledgement in !clear - " + str(e))
         return
         
     for cmd in CMD_QUEUE.cmd_list: # do the cancelling
@@ -819,10 +826,12 @@ async def clean(ctx): # clean all temp folders (only used by the bot owner)
     command, cmd_args = bot_parse_args(ctx.message)
     if "-force" in cmd_args:
         _auto_clean(clean_ratio=1.0)
-        await ctx.send("Okay @" + ctx.message.author.name + ", cleaning ALL temp files... ")
+        try: await ctx.send("Okay @" + str(ctx.message.author.name) + ", cleaning ALL temp files... ")
+        except Exception as e: print("Error sending acknowledgement in !clean - " + str(e))
     else:
         _auto_clean()
-        await ctx.send("Okay @" + ctx.message.author.name + ", cleaning temp files... ")
+        try: await ctx.send("Okay @" + str(ctx.message.author.name) + ", cleaning temp files... ")
+        except Exception as e: print("Error sending acknowledgement in !clean - " + str(e))
     return
     
 @client.command()
@@ -837,7 +846,8 @@ async def cancel(ctx): # stops the requesting user's last queued command, or all
                 if cmd.args.bot_args.status in [0, 1]: # queued or in-progress
                     cmd.args.bot_args.status = 3 # cancelled
 
-        await ctx.send("Okay @" + ctx.message.author.name + ", cancelling all your queued commands...")
+        try: await ctx.send("Okay @" + str(ctx.message.author.name) + ", cancelling all your queued commands...")
+        except Exception as e: print("Error sending acknowledgement in !cancel - " + str(e))
         return
     else:
         num_to_cancel = _get_int_arg("-x", cmd_args)
@@ -851,8 +861,12 @@ async def cancel(ctx): # stops the requesting user's last queued command, or all
                 num_cancelled += 1
             else: break
         
-        if num_cancelled > 0:  await ctx.send("Okay @" + ctx.message.author.name + ", cancelling your last " + str(num_cancelled) + " command(s)")
-        else: await ctx.send("Sorry @" + ctx.message.author.name + ", no running or waiting commands to cancel...")
+        if num_cancelled > 0: 
+            try: await ctx.send("Okay @" + str(ctx.message.author.name) + ", cancelling your last " + str(num_cancelled) + " command(s)")
+            except Exception as e: print("Error sending acknowledgement in !cancel - " + str(e))
+        else:
+            try: await ctx.send("Sorry @" + str(ctx.message.author.name) + ", no running or waiting commands to cancel...")
+            except Exception as e: print("Error sending acknowledgement in !cancel - " + str(e))
     
 @client.command()
 async def show_input(ctx, attachments=None): # attaches the requesting user's input image in response, or the images in attachments if not None
@@ -872,7 +886,7 @@ async def show_input(ctx, attachments=None): # attaches the requesting user's in
         except Exception as e:
             print("Error sending show user input image - " + str(e))
             try: await ctx.send("Sorry @" + str(ctx.message.author.name) + ", I can't find that image...")
-            except: print("")
+            except Exception as e: print("Error sending acknowledgement in !show_input - " + str(e))
     else:
         try: await ctx.send("Sorry @" + str(ctx.message.author.name) + ", no attachments to show")
         except Exception as e: print("Error sending show user input rejection - " + str(e))
@@ -880,7 +894,9 @@ async def show_input(ctx, attachments=None): # attaches the requesting user's in
     
 @client.command() # behold; the oldest surviving lines of code in the project
 async def hello(ctx):
-    await ctx.send("Hi")
+    try: await ctx.send("Hi")
+    except Exception as e: print("Error sending acknowledgement in !hello - " + str(e))
+    return
     
 @client.command() # show the next part of the pending command list
 async def queue(ctx):
@@ -892,7 +908,8 @@ async def queue(ctx):
     else:
         msg = "Okay @" + str(ctx.message.author.name) + ", here's the queue... \n"
         msg += CMD_QUEUE.get_queue_str()
-    await ctx.send(msg)
+    try: await ctx.send(msg)
+    except Exception as e: print("Error sending acknowledgement in !queue - " + str(e))
     return
     
 @client.command()
@@ -926,10 +943,8 @@ async def _process_commands_loop():
     if cmd == None:
         if CMD_QUEUE.restart_now:
             print("Restarting now...")
-            try:
-                await CMD_QUEUE.restart_now.send("Restarting now...")
-            except:
-                print("Error sending restart message")
+            try: await CMD_QUEUE.restart_now.send("Restarting now...")
+            except: print("Error sending restart message")
             try:
                 await asyncio.sleep(2)
                 _restart_program()
@@ -1033,25 +1048,33 @@ async def gen(ctx):
 async def enhance(ctx):
     global CMD_QUEUE, DISCORD_BOT_SETTINGS
     if not check_server_roles(ctx, [DISCORD_BOT_SETTINGS.admin_role_name, DISCORD_BOT_SETTINGS.users_role_name]): return
-    await ctx.send("Sorry @" + str(ctx.message.author.name) + ", enhance is not implemented yet")
+    try: await ctx.send("Sorry @" + str(ctx.message.author.name) + ", enhance is not implemented yet")
+    except Exception as e: print("Error sending acknowledgement in !enhance - " + str(e))
     #await CMD_QUEUE.add_new(ctx)
     return 
     
 @client.command()
 async def about(ctx):
     global ABOUT_TXT
-    await ctx.send("@" + str(ctx.message.author.name) + " : " + ABOUT_TXT)
+    try: await ctx.send("@" + str(ctx.message.author.name) + " : " + ABOUT_TXT)
+    except Exception as e: print("Error sending acknowledgement in !about - " + str(e))
     
 @client.command()
 async def help(ctx):
     global HELP_TXT1, HELP_TXT2
-    await ctx.send("@" + str(ctx.message.author.name) + " : " + HELP_TXT1)
-    await ctx.send("@" + str(ctx.message.author.name) + " : " + HELP_TXT2)
+    try:
+        await ctx.send("@" + str(ctx.message.author.name) + " : " + HELP_TXT1)
+        await ctx.send("@" + str(ctx.message.author.name) + " : " + HELP_TXT2)
+    except Exception as e:
+        print("Error sending acknowledgement in !help - " + str(e))
+    return
     
 @client.command()
 async def examples(ctx):
     global EXAMPLES_TXT
-    await ctx.send("@" + str(ctx.message.author.name) + " : " + EXAMPLES_TXT)
+    try: await ctx.send("@" + str(ctx.message.author.name) + " : " + EXAMPLES_TXT)
+    except Exception as e: print("Error sending acknowledgement in !examples - " + str(e))
+    return
     
 @client.event
 async def on_message(message):
@@ -1067,8 +1090,13 @@ async def on_message(message):
 
 @client.event
 async def on_disconnect():
-    await asyncio.sleep(10)
+   await asyncio.sleep(10)
+   return
+
 
 if __name__ == "__main__":
     CMD_QUEUE = CommandQueue()
-    client.run(DISCORD_BOT_SETTINGS.token, reconnect=True)
+    try: client.run(DISCORD_BOT_SETTINGS.token, reconnect=True)
+    except Exception as e:
+        print("Error in discord client.run - " + str(e))
+        CMD_QUEUE.shutdown_now = True
