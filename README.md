@@ -37,20 +37,20 @@ Installation:
 Optional: edit g_diffuser_config.py and g_diffuser_defaults.py and change settings as appropriate, save your changes
  
  Running:
- - open a conda prompt (click on the start menu and look for "anaconda prompt"), then navigate to the g-diffuser folder
- - run "conda activate g_diffuser" (optional: on Windows you can open prompt.bat to do these 2 steps automatically)
- - run the discord bot with: "python g_diffuser_bot.py"
-   - alternatively, run the CLI interface with: "python g_diffuser_cli.py"
-   - You can use the CLI interface interactively with: "python g_diffuser_cli.py --interactive"
-   - If you see an out of memory error run: "python g_diffuser_cli.py --interactive --use-optimized"
-   - Verify your configuration by running: "python g_diffuser_config.py" or: "python g_diffuser_defaults.py"
+ 1)  open a conda prompt (click on the start menu and look for "anaconda prompt"), then navigate to the g-diffuser folder
+ 2)  run "conda activate g_diffuser" (optional: on Windows you can open prompt.bat to do these 2 steps automatically)
+ 3)  run the discord bot with: "python g_diffuser_bot.py"
+       - alternatively, run the CLI interface with: "python g_diffuser_cli.py"
+       - You can use the CLI interface interactively with: "python g_diffuser_cli.py --interactive"
+       - If you see an out of memory error run: "python g_diffuser_cli.py --interactive --use-optimized"
+       - Verify your configuration by running: "python g_diffuser_config.py" or: "python g_diffuser_defaults.py"
 
 Updating:
  - Simply git pull or download and replace your files with those from this repository. You probably won't need to replace your config and default settings files, but you may need to merge changes.
  
  
- G-Diffuser Experimental Fourier Shaped Noise In/out-painting Explanation:
  
+ G-Diffuser Experimental Fourier Shaped Noise In/out-painting Explanation:
  
   Why does this need to exist? I thought SD already did in/out-painting?:
  
