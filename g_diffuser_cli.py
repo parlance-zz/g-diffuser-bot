@@ -41,13 +41,13 @@ import argparse
 import code
 import importlib
 
-VERSION_STRING = "g-diffuser-cli v0.83b"
+VERSION_STRING = "g-diffuser-cli v0.84b"
 INTERACTIVE_MODE_BANNER_STRING = """
 Interactive mode:
     call sample() with keyword arguments and use the up/down arrow-keys to browse command history:
 
 sample("my prompt", n=3, scale=15) # generate 3 samples with a scale of 15
-sample("greg rutkowski", init_img="my_image.png", repeat=True, debug=True) # repeats until stopped
+sample("greg rutkowski", init_img="my_image.png", repeat=1, debug=1) # repeats until stopped, enables debug mode
 sample()     # arguments can be omitted to use your last args instead
 
 reset_args() # reset your arguments back to default values
