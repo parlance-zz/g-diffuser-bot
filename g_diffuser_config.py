@@ -21,12 +21,13 @@ MODEL_DEFAULTS.model_name = "stable-diffusion-v1-4"  # local path to downloaded 
 #MODEL_DEFAULTS.model_name = "waifu-diffusion"       # alternative models are available today at https://www.huggingface.co
 
 MODEL_DEFAULTS.use_optimized = False    # set this to True to lower memory consumption (attention slicing and fp16)
-MODEL_DEFAULTS.pipe_list = ["txt2img"] # if you'd like to lower memory consumption even further, you can opt to load only a sub-selection of pipes
+#MODEL_DEFAULTS.pipe_list = ["txt2img"] # if you'd like to lower memory consumption even further, you can opt to load only a sub-selection of pipes
 #MODEL_DEFAULTS.pipe_list = ["img2img"]
 
 #IMPORTANT - If you want to use a huggingface access token and download models just-in-time, enter your token below:
 # - Sign up for an account on https://www.huggingface.co and accept the required usage terms for the model of your choice (stable-diffusion-v1-4)
 # - Create an access token at https://huggingface.co/settings/tokens
+# - Accept the access terms for the models you wish to use, for stable-diffusion-v1-4 go here: https://huggingface.co/CompVis/stable-diffusion-v-1-4-original
 #MODEL_DEFAULTS.hf_token = "YOUR_HUGGINGFACE_ACCESS_TOKEN_HERE"
 #MODEL_DEFAULTS.model_name = "CompVis/stable-diffusion-v1-4" # the model names are slightly different when using a hugging-face token
 
