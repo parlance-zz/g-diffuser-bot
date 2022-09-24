@@ -101,7 +101,7 @@ def debug_print_namespace(namespace):
     for arg in namespace_dict: print(arg+"='"+str(namespace_dict[arg]) + "' "+str(type(namespace_dict[arg])))
     return
     
-def get_filename_from_prompt(prompt, truncate_length=0):
+def get_filename_from_prompt(prompt, truncate_length=75):
     file_str = re.sub(r'[\\/*?:"<>|]',"", prompt).replace("\t"," ").replace(" ","_").strip()
     if (truncate_length > len(file_str)) or (truncate_length==0): truncate_length = len(file_str)
     return file_str[0:truncate_length]
