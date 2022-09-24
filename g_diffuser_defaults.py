@@ -16,17 +16,17 @@ DEFAULT_SAMPLE_SETTINGS.noise_q = 1.
 # ******************** SETTINGS END ************************
 
 if __name__ == "__main__": # you can execute this file with python to see a summary of your defaults
-    from g_diffuser_lib import debug_print_namespace, get_args_parser
+    from g_diffuser_lib import print_namespace, get_args_parser
     print("\ndefault sample settings: ")
-    debug_print_namespace(DEFAULT_SAMPLE_SETTINGS)
+    print_namespace(DEFAULT_SAMPLE_SETTINGS, debug=True)
     
     parser = get_args_parser()
     args = parser.parse_args()
     print("\ndefault standard args: ")
-    debug_print_namespace(args)
+    print_namespace(args, debug=True)
     
     from g_diffuser_bot import get_bot_args_parser
     bot_parser = get_bot_args_parser()
     bot_args = bot_parser.parse_args()
     print("\ndefault bot args: ")
-    debug_print_namespace(bot_args)
+    print_namespace(bot_args, debug=True)

@@ -64,12 +64,12 @@ for path in DEFAULT_PATHS: _default_paths[path] = (root_path / DEFAULT_PATHS[pat
 DEFAULT_PATHS = argparse.Namespace(**_default_paths)
 
 if __name__ == "__main__": # you can execute this file with python to see a summary of your config
-    from g_diffuser_lib import debug_print_namespace
+    from g_diffuser_lib import print_namespace
     print("\ndefault paths: ")
-    debug_print_namespace(DEFAULT_PATHS)
+    print_namespace(DEFAULT_PATHS, debug=True)
     print("\nmodel defaults: ")
-    debug_print_namespace(MODEL_DEFAULTS)
+    print_namespace(MODEL_DEFAULTS, debug=True)
     print("\ndiscord bot settings: ")
-    debug_print_namespace(DISCORD_BOT_SETTINGS)
+    print_namespace(DISCORD_BOT_SETTINGS, debug=True)
     print("\ncmd server settings: ")
-    debug_print_namespace(CMD_SERVER_SETTINGS)
+    print_namespace(CMD_SERVER_SETTINGS, debug=True)

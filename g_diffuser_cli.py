@@ -41,7 +41,7 @@ import argparse
 import code
 import importlib
 
-VERSION_STRING = "g-diffuser-cli v0.65"
+VERSION_STRING = "g-diffuser-cli v0.72b"
 INTERACTIVE_MODE_BANNER_STRING = """
 Interactive mode: call sample() with keyword arguments and use the up/down arrow-keys to browse command history:
 sample("my prompt", n=3, scale=15) # generate 3 samples with a scale of 15
@@ -88,8 +88,7 @@ def main():
         cli_locals.save_args = cli_save_args
         cli_locals.cls = cli_cls
         cli_locals.help = cli_help
-        banner_str = INTERACTIVE_MODE_BANNER_STRING + "\nCurrent args: " + str(gdl.strip_args(args))+"\n"
-        code.interact(banner=banner_str, local=dict(globals(), **vars(cli_locals)), exitmsg="")
+        code.interact(banner=INTERACTIVE_MODE_BANNER_STRING, local=dict(globals(), **vars(cli_locals)), exitmsg="")
         exit(0)
     else:
         if args.load_args == "no_preload": print("Sample arguments: " + str(gdl.strip_args(args))+"\n")
@@ -120,8 +119,14 @@ def cli_get_samples(prompt=None, **kwargs):
     while True:
         importlib.reload(gdl) # this allows changes in g_diffuser_lib to take effect without restarting the cli
         
-        samples = gdl.get_samples(args)
-        gdl.save_samples(samples, args)
+        args_copy = argparse.Namespace(**vars(args))
+        try:
+            samples = gdl.get_samples(args)
+            gdl.save_samples(samples, args)
+        except KeyboardInterrupt:
+            print("Okay, stopping...")
+            INTERACTIVE_CLI_ARGS = args_copy
+            return
         
         INTERACTIVE_CLI_ARGS = args # preserve args for next call to sample()
         if args.debug: print(str(gdl.strip_args(args))+"\n")
@@ -135,7 +140,7 @@ def cli_get_samples(prompt=None, **kwargs):
     
 def cli_show_args():
     global INTERACTIVE_CLI_ARGS
-    print("Current args: " + str(gdl.strip_args(INTERACTIVE_CLI_ARGS))+"\n")
+    gdl.print_namespace(INTERACTIVE_CLI_ARGS)
     return
     
 def cli_load_args(name=""):
@@ -144,7 +149,7 @@ def cli_load_args(name=""):
         if not name: name = "last_args"
         saved_args_dict = gdl.load_json(name)
         INTERACTIVE_CLI_ARGS = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), saved_args_dict))
-        print("Loaded args from file: " + str(gdl.strip_args(INTERACTIVE_CLI_ARGS))+"\n")
+        gdl.print_namespace(INTERACTIVE_CLI_ARGS)
     except Exception as e:
         print("Error loading last args from file - " + str(e))
     return
@@ -165,9 +170,8 @@ def cli_cls():
     
 def cli_help():
     global VERSION_STRING, INTERACTIVE_MODE_BANNER_STRING
-    global INTERACTIVE_CLI_ARGS
-    help_str = VERSION_STRING + INTERACTIVE_MODE_BANNER_STRING + "\nCurrent args: " + str(gdl.strip_args(INTERACTIVE_CLI_ARGS))+"\n"
-    print(help_str)
+    print(VERSION_STRING+INTERACTIVE_MODE_BANNER_STRING+"\n")
+    return
     
 if __name__ == "__main__":
     main()

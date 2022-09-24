@@ -96,9 +96,16 @@ def get_random_string(digits=8):
     uuid_str = str(uuid.uuid4())
     return uuid_str[0:digits] # shorten uuid, don't need that many digits
 
-def debug_print_namespace(namespace):
+def get_formatted_arg_str(args):
+    namespace_dict = vars(strip_args(args))
+    return json.dumps(namespace_dict, indent=4)
+
+def print_namespace(namespace, debug=False, indent=4):
     namespace_dict = vars(strip_args(namespace))
-    for arg in namespace_dict: print(arg+"='"+str(namespace_dict[arg]) + "' "+str(type(namespace_dict[arg])))
+    if debug:
+        for arg in namespace_dict: print(arg+"='"+str(namespace_dict[arg]) + "' "+str(type(namespace_dict[arg])))
+    else:
+        print(json.dumps(namespace_dict, indent=indent))
     return
     
 def get_filename_from_prompt(prompt, truncate_length=75):
@@ -483,29 +490,35 @@ def get_samples(args):
         if args.debug: print("Using " + pipe_name + " pipeline...")
         pipe = args.loaded_pipes[pipe_name]
         assert(pipe)
-        
         for n in range(args.n): # batched mode doesn't seem to accomplish much besides using more memory
             if args.status == 3: return # if command is cancelled just bail out asap
-            if pipe_name == "txt2img":
-                sample = pipe(
-                    prompt=args.prompt,
-                    guidance_scale=args.scale,
-                    num_inference_steps=args.steps,
-                    width=args.w,
-                    height=args.h,
-                )
-            else:
-                sample = pipe(
-                    prompt=args.prompt,
-                    init_image=init_image,
-                    strength=strength,
-                    guidance_scale=args.scale,
-                    mask_image=mask_image,
-                    num_inference_steps=args.steps,
-                )
-            samples.append(sample["sample"][0])
+            try:
+                if pipe_name == "txt2img":
+                    sample = pipe(
+                        prompt=args.prompt,
+                        guidance_scale=args.scale,
+                        num_inference_steps=args.steps,
+                        width=args.w,
+                        height=args.h,
+                    )
+                else:
+                    sample = pipe(
+                        prompt=args.prompt,
+                        init_image=init_image,
+                        strength=strength,
+                        guidance_scale=args.scale,
+                        mask_image=mask_image,
+                        num_inference_steps=args.steps,
+                    )
+            except Exception as e:
+                print("Error running pipeline " + pipe_name)
+                sample = None
+                
+            if sample: samples.append(sample["sample"][0])
     
-    args.status = 2 # complete
+    if len(samples) == 0: args.status = -1 # error running command
+    else: args.status = 2 # completed successfully
+    
     end_time = datetime.datetime.now()
     args.end_time = str(end_time)
     args.elapsed_time = str(end_time-start_time)
@@ -513,6 +526,11 @@ def get_samples(args):
     return samples
 
 def save_samples(samples, args):
+    if len(samples) == 0: # if there are no samples to save just return (nothing) immediately
+        args.output = ""
+        args.output_samples = []
+        return args.output_samples 
+    
     global DEFAULT_PATHS
     assert(DEFAULT_PATHS.outputs)
     if not args.outputs_path: # if no outputs_path was explicitly specified use one based on the prompt
