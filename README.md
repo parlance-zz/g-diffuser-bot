@@ -27,6 +27,10 @@ Vision for the g-diffuser-lib project:
  - In the near future the diffusers library (https://github.com/huggingface/diffusers) being developed and promoted by hugging-face will expose multi-modality sampling abilities, meaning we will be able to arbitrarily mix and match input and output types. Tasks like txt2music, music2img, and everything in-between will be possible, and all of this will be coming within the next few months, not the next few years.
  - The goal of the project is to provide the best possible front-end, interface, and utilities for the diffusers library and to enable regular users to access these powerful abilities with a free and easy-to-use package that supports their local GPU and as many OS's / platforms as possible.
 
+Development and funding:
+ - Donations would also be greatly appreciated and will be used to fund further development.
+ - https://buy.stripe.com/fZe8xU2lo0wU3SgfYY
+ - ETH to 0x8e4BbD53bfF9C0765eE1859C590A5334722F2086
 
 Installation:
  1)  clone this repository to a folder of your choice (or click the green "code" button up top and click "download zip")
@@ -94,9 +98,6 @@ Trouble-shooting:
 
  This code is provided under the MIT license -  Copyright (c) 2022 Christopher Friesen
  To anyone who reads this I am seeking employment in related areas.
- Donations would also be greatly appreciated and will be used to fund further development.
- * https://buy.stripe.com/fZe8xU2lo0wU3SgfYY
- * ETH to 0x8e4BbD53bfF9C0765eE1859C590A5334722F2086
  
  Questions or comments can be sent to parlance@fifth-harmonic.com (https://github.com/parlance-zz/)
  
