@@ -52,9 +52,11 @@ Trouble-shooting:
  - If you have questions or problems running anything in g-diffuser-lib, please post as much detailed information as you can in (https://github.com/parlance-zz/g-diffuser-lib/discussions/categories/q-a), myself or someone in the community may be able to help you. Thank you for your patience.
  
  
+ 
 Vision for the g-diffuser-lib Project:
  - In the near future the diffusers library (https://github.com/huggingface/diffusers) being developed and promoted by hugging-face will expose multi-modality sampling abilities, meaning we will be able to arbitrarily mix and match input and output types. Tasks like txt2music, music2img, and everything in-between will be possible, and all of this will be coming within the next few months, not the next few years.
  - The goal of the project is to provide the best possible front-end, interface, and utilities for the diffusers library and to enable regular users to access these powerful abilities with a free and easy-to-use package that supports their local GPU and as many OS's / platforms as possible.
+ 
  
  G-Diffuser Experimental Fourier Shaped Noise In/out-painting Explanation:
  
