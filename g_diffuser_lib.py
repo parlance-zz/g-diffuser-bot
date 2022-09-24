@@ -120,12 +120,9 @@ def save_debug_img(np_image, name):
     
     image_path = DEFAULT_PATHS.debug + "/" + name + ".png"
     if type(np_image) == np.ndarray:
-        if np_image.ndim == 2:
-            mode = "L"
-        elif np_image.shape[2] == 4:
-            mode = "RGBA"
-        else:
-            mode = "RGB"
+        if np_image.ndim == 2: mode = "L"
+        elif np_image.shape[2] == 4: mode = "RGBA"
+        else: mode = "RGB"
         pil_image = PIL.Image.fromarray(np.clip(np.absolute(np_image)*255., 0., 255.).astype(np.uint8), mode=mode)
         pil_image.save(image_path)
     else:
@@ -135,7 +132,7 @@ def save_debug_img(np_image, name):
 def save_json(_dict, file_path):
     assert(file_path)
     (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True)
-
+    
     with open(file_path, "w") as file:
         json.dump(_dict, file, indent=4)
         file.close()
@@ -212,7 +209,6 @@ def ifft2(data):
     return out_ifft
             
 def get_gaussian(width, height, std=3.14, edge_filter=False): # simple gaussian kernel
-
     window_scale_x = float(width / min(width, height))  # for non-square aspect ratios we still want a circular gaussian
     window_scale_y = float(height / min(width, height)) 
     window = np.zeros((width, height))

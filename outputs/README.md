@@ -1,0 +1,1 @@
+- This folder is used as the root path for all sample and argument output files
