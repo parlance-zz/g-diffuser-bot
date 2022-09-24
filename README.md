@@ -30,7 +30,7 @@ Installation:
  - open a conda prompt, then navigate to the folder where you cloned / downloaded this repository
  - conda env create -f environment.yaml
  - optional: edit g_diffuser_config.py and g_diffuser_defaults.py as appropriate, make sure to save!
- - place any pre-downloaded models into the models folder, if you want to use a hugging-face token instead enter it in g_diffuser_config.py
+ - place any pre-downloaded models into the models folder, if you want to use a hugging-face token instead, enter it in g_diffuser_config.py
  
  Running:
  - open a conda prompt, then navigate to the g-diffuser folder
