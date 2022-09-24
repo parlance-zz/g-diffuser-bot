@@ -33,7 +33,7 @@ Installation:
  - place any pre-downloaded models into the models folder, if you want to use a hugging-face token instead, enter it in g_diffuser_config.py
  
  Running:
- - open a conda prompt, then navigate to the g-diffuser folder
+ - open a conda prompt (click on the start menu and look for "anaconda prompot"), then navigate to the g-diffuser folder
  - conda activate g_diffuser
  - optional: on Windows you can open prompt.bat to do the above automatically
  - run the discord bot with: python g_diffuser_bot.py
