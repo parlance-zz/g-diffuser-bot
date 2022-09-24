@@ -27,24 +27,24 @@ Sept 22/2022 Update - This is a temporary repository for breaking changes until 
 Installation:
  1)  clone this repository to a folder of your choice (or click the green "code" button up top and click "download zip")
  2)  download / install miniconda (https://docs.conda.io/en/latest/miniconda.html)
- 3)  open a conda prompt, then navigate to the folder where you cloned / downloaded this repository
- 4)  conda env create -f environment.yaml
- 5)  optional: edit g_diffuser_config.py and g_diffuser_defaults.py as appropriate, make sure to save!
+ 3)  open a conda prompt (click on the start menu and look for "anaconda prompt"),
+     then navigate to the folder where you cloned / downloaded this repository.
+ 4)  run "conda env create -f environment.yaml"
+ 5)  optional: edit g_diffuser_config.py and g_diffuser_defaults.py and change settings as appropriate, save your changes
  6)  place any pre-downloaded models into the models folder, if you want to use a hugging-face token instead, enter it in g_diffuser_config.py
  7)  If you are running Windows 10 you may need to turn on "developer mode". Look for "developer settings" in the start menu.
  
  Running:
- - open a conda prompt (click on the start menu and look for "anaconda prompot"), then navigate to the g-diffuser folder
- - conda activate g_diffuser
- - optional: on Windows you can open prompt.bat to do the above automatically
- - run the discord bot with: python g_diffuser_bot.py
- - alternatively, run the CLI interface with: python g_diffuser_cli.py
- - You can use the CLI interface interactively with: python g_diffuser_cli.py --interactive
- - If you see an out of memory error use --use_optimized or change the default setting in g_diffuser_config.py
- - Verify your configuration by running: python g_diffuser_config.py or: python g_diffuser_defaults.py
+ - open a conda prompt (click on the start menu and look for "anaconda prompt"), then navigate to the g-diffuser folder
+ - run "conda activate g_diffuser" (optional: on Windows you can open prompt.bat to do these 2 steps automatically)
+ - run the discord bot with: "python g_diffuser_bot.py"
+   - alternatively, run the CLI interface with: "python g_diffuser_cli.py"
+   - You can use the CLI interface interactively with: "python g_diffuser_cli.py --interactive"
+   - If you see an out of memory error run: "python g_diffuser_cli.py --interactive --use-optimized"
+   - Verify your configuration by running: "python g_diffuser_config.py" or: "python g_diffuser_defaults.py"
 
 Updating:
- - Simply download and replace your files with those from this repository. You probably won't need to replace your config and default settings files, but you may need to merge changes.
+ - Simply git pull or download and replace your files with those from this repository. You probably won't need to replace your config and default settings files, but you may need to merge changes.
  
  
  G-Diffuser Experimental Fourier Shaped Noise In/out-painting Explanation:
