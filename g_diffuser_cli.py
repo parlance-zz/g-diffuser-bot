@@ -91,13 +91,18 @@ def main():
     if args.interactive:
         cli_locals = argparse.Namespace()
         cli_locals.sample = cli_get_samples
+        cli_locals.s = cli_get_samples
         cli_locals.show_args = cli_show_args
+        cli_locals.sa = cli_show_args
         cli_locals.load_args = cli_load_args
-        cli_locals.load_last_args = cli_load_args
+        cli_locals.la = cli_load_args
         cli_locals.save_args = cli_save_args
+        cli_locals.sa = cli_save_args
         cli_locals.reset_args = cli_reset_args
+        cli_locals.ra = cli_reset_args
         cli_locals.cls = cli_cls
         cli_locals.help = cli_help
+        
         code.interact(banner=INTERACTIVE_MODE_BANNER_STRING, local=dict(globals(), **vars(cli_locals)), exitmsg="")
         exit(0)
     else:

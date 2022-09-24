@@ -604,7 +604,7 @@ def load_pipelines(args):
     if "hf_token" in MODEL_DEFAULTS: hf_token = MODEL_DEFAULTS.hf_token
     if "hf_token" in args: hf_token = args.hf_token
     use_optimized = MODEL_DEFAULTS.use_optimized
-    if "use_optimized" in args: use_optimized = args.use_optimized
+    if args.use_optimized: use_optimized = args.use_optimized
     
     if args.model_name: model_name = args.model_name
     else: model_name = MODEL_DEFAULTS.model_name
@@ -727,7 +727,7 @@ def get_args_parser():
         help="path to downloaded diffusers model (relative to default models path), or name of model if using a huggingface token",
     )
     parser.add_argument(
-        "--use_optimized",
+        "--use-optimized",
         action='store_true',
         default=False,
         help="enable memory optimizations that are currently available in diffusers",
