@@ -66,7 +66,7 @@ LAST_ARGS_PATH = DEFAULT_PATHS.inputs+"/json/last_args.json"
         
 def main():
     global VERSION_STRING, INTERACTIVE_MODE_BANNER_STRING, LAST_ARGS_PATH
-    global INTERACTIVE_CLI_ARGS
+    global INTERACTIVE_CLI_ARGS, INTERACTIVE_CLI_STARTING_ARGS
     INTERACTIVE_CLI_ARGS = argparse.Namespace()
     
     parser = gdl.get_args_parser()
@@ -85,6 +85,7 @@ def main():
         args = INTERACTIVE_CLI_ARGS
     else:
         INTERACTIVE_CLI_ARGS = args
+    INTERACTIVE_CLI_STARTING_ARGS = argparse.Namespace(**vars(args)) # copy for reset function
         
     gdl.load_pipelines(args)
     
@@ -93,7 +94,7 @@ def main():
         cli_locals.sample = cli_get_samples
         cli_locals.s = cli_get_samples
         cli_locals.show_args = cli_show_args
-        cli_locals.sa = cli_show_args
+        cli_locals.sha = cli_show_args
         cli_locals.load_args = cli_load_args
         cli_locals.la = cli_load_args
         cli_locals.save_args = cli_save_args
@@ -185,8 +186,10 @@ def cli_save_args(name):
         if args.debug: print("Error saving args - " + str(e))
     return
 
-def cli_reset_args(name):
-    # todo:
+def cli_reset_args():
+    global INTERACTIVE_CLI_ARGS, INTERACTIVE_CLI_STARTING_ARGS
+    INTERACTIVE_CLI_ARGS = argparse.Namespace(**vars(INTERACTIVE_CLI_STARTING_ARGS))
+    cli_show_args()
     return
 
 
