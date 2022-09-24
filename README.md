@@ -31,7 +31,7 @@ Installation:
      then navigate to the folder where you cloned / downloaded this repository.
  4)  run "conda env create -f environment.yaml"
  5)  place any pre-downloaded models into the models folder, if you want to use a hugging-face token instead, enter it in g_diffuser_config.py
-     for specific instructions on how to do this please see models/README.md
+     for specific instructions on model download / installation please see models/README.md
  6)  If you are running Windows 10 you may need to turn on "developer mode". Look for "developer settings" in the start menu.
      
 Optional: edit g_diffuser_config.py and g_diffuser_defaults.py and change settings as appropriate, save your changes
