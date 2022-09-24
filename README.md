@@ -46,7 +46,7 @@ Optional: edit g_diffuser_config.py and g_diffuser_defaults.py and change settin
        - Verify your configuration by running: "python g_diffuser_config.py" or: "python g_diffuser_defaults.py"
 
 Updating:
- - Simply git pull or download and replace your files with those from this repository. You probably won't need to replace your config and default settings files, but you may need to merge changes.
+ - Simply git pull or download and replace your files with those from this repository. You probably won't need to replace your g_diffuser_config.py or g_diffuser_defaults.py files, but you may need to merge changes.
  
  
  
