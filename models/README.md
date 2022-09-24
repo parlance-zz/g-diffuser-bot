@@ -1,4 +1,4 @@
-- ##IMPORTANT SETUP INSTRUCTIONS##
+- *** IMPORTANT SETUP INSTRUCTION ***
 - If you are using a hugging-face access token you do not need to worry about anything in this folder provided you have entered your token in g_diffuser_config.py
 - If you would prefer to use pre-downloaded model weights, sign up for a hugging-face account at https://huggingface.co/ and accept the terms of use for the repositories of your choice
 	- Download or clone models from https://huggingface.co/ model repositories (https://huggingface.co/CompVis/stable-diffusion-v1-4) (https://huggingface.co/hakurei/waifu-diffusion)
