@@ -8,7 +8,7 @@ CMD_SERVER_SETTINGS = argparse.Namespace()
 
 # ******************** SETTINGS BEGIN ************************
 
-#IMPORTANT - Change the default paths here if desired, these are relative to the root path
+# IMPORTANT - Change the default paths here if desired, these are relative to the root path
 DEFAULT_PATHS.models = "./models"
 DEFAULT_PATHS.inputs = "./inputs"
 DEFAULT_PATHS.outputs = "./outputs"
@@ -16,7 +16,15 @@ DEFAULT_PATHS.backups = "./backups"
 DEFAULT_PATHS.temp = "./temp"
 DEFAULT_PATHS.debug = "./debug"
 
-#IMPORTANT - **** Default model selection and settings ****
+# IMPORTANT - **** Default model selection and settings ****
+# If you want to use a huggingface access token and download models just-in-time, enter your token below:
+# 1) Sign up for an account on https://www.huggingface.co and accept the required usage terms for the model of your choice (stable-diffusion-v1-4)
+# 2) Create an access token at https://huggingface.co/settings/tokens
+# 3) Accept the access terms for the models you wish to use, for stable-diffusion-v1-4 go here: https://huggingface.co/CompVis/stable-diffusion-v-1-4-original
+#MODEL_DEFAULTS.hf_token = "YOUR_HUGGINGFACE_ACCESS_TOKEN_HERE"
+#MODEL_DEFAULTS.model_name = "CompVis/stable-diffusion-v1-4" # the model names are slightly different when using a hugging-face token
+
+# Alternatively, use these lines if you have pre-downloaded models in your g_diffusers model folder
 MODEL_DEFAULTS.model_name = "stable-diffusion-v1-4"  # local path to downloaded model relative to DEFAULT_PATHS.models
 #MODEL_DEFAULTS.model_name = "waifu-diffusion"       # alternative models are available today at https://www.huggingface.co
 
@@ -24,18 +32,11 @@ MODEL_DEFAULTS.use_optimized = False    # set this to True to lower memory consu
 #MODEL_DEFAULTS.pipe_list = ["txt2img"] # if you'd like to lower memory consumption even further, you can opt to load only a sub-selection of pipes
 #MODEL_DEFAULTS.pipe_list = ["img2img"]
 
-#IMPORTANT - If you want to use a huggingface access token and download models just-in-time, enter your token below:
-# 1) Sign up for an account on https://www.huggingface.co and accept the required usage terms for the model of your choice (stable-diffusion-v1-4)
-# 2) Create an access token at https://huggingface.co/settings/tokens
-# 3) Accept the access terms for the models you wish to use, for stable-diffusion-v1-4 go here: https://huggingface.co/CompVis/stable-diffusion-v-1-4-original
-#MODEL_DEFAULTS.hf_token = "YOUR_HUGGINGFACE_ACCESS_TOKEN_HERE"
-#MODEL_DEFAULTS.model_name = "CompVis/stable-diffusion-v1-4" # the model names are slightly different when using a hugging-face token
 
 #IMPORTANT - If you want to use the discord bot, use enter your access token below:
 # - Discord developers site: https://discordapp.com/developers/applications/
 # - Discord bot setup guide: https://www.writebots.com/discord-bot-token/
 DISCORD_BOT_SETTINGS.token = "" # "YOUR_DISCORD_BOT_TOKEN_HERE"
-#DISCORD_BOT_SETTINGS.token = 
 DISCORD_BOT_SETTINGS.admin_role = "moderator" # IMPORTANT - use your discord server / guild role names here accordingly, check the bot help text for associated command permissions
 DISCORD_BOT_SETTINGS.users_role = "everyone"  # if you want anyone to be able to use the bot, set this to "everyone"
 DISCORD_BOT_SETTINGS.cmd_prefix = "!"               # all discord bot commands will require this prefix (e.g. !gen)
