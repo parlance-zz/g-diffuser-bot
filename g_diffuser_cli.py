@@ -41,17 +41,22 @@ import argparse
 import code
 import importlib
 
-VERSION_STRING = "g-diffuser-cli v0.81b"
+VERSION_STRING = "g-diffuser-cli v0.82b"
 INTERACTIVE_MODE_BANNER_STRING = """
-Interactive mode: call sample() with keyword arguments and use the up/down arrow-keys to browse command history:
+Interactive mode:
+    call sample() with keyword arguments and use the up/down arrow-keys to browse command history:
+
 sample("my prompt", n=3, scale=15) # generate 3 samples with a scale of 15
 sample("greg rutkowski", init_img="my_image.png", repeat=True, debug=True) # repeats until stopped
-sample()     # arguments can be omitted to use your last arguments
-show_args()  # shows your current basic input arguments
+sample()     # arguments can be omitted to use your last args instead
+
+reset_args() # reset your arguments back to default values
+show_args()  # shows your *basic* input arguments
 show_args(0) # shows *all* your input arguments
 load_args()  # use your last arguments (from auto-saved json file in inputs/json)
-load_args("my_fav_args") # you can load saved args; these are json files in the inputs path
 save_args("my_fav_args") # you can save your args; these are saved as json files in the inputs path
+load_args("my_fav_args") # you can load saved args by name; these are json files in the inputs path
+
 cls()  # clear the command window if things get cluttered
 help() # display this message
 exit() # exit interactive mode
@@ -70,6 +75,7 @@ def main():
         parser.print_help()
         exit(1)
 
+    print("")
     if args.debug: print(VERSION_STRING + ": --debug enabled (verbose output on, writing debug files...)")
     else: print(VERSION_STRING + ": use --debug to enable verbose output and writing debug files...")
     if args.load_args != "no_preload":
@@ -89,6 +95,7 @@ def main():
         cli_locals.load_args = cli_load_args
         cli_locals.load_last_args = cli_load_args
         cli_locals.save_args = cli_save_args
+        cli_locals.reset_args = cli_reset_args
         cli_locals.cls = cli_cls
         cli_locals.help = cli_help
         code.interact(banner=INTERACTIVE_MODE_BANNER_STRING, local=dict(globals(), **vars(cli_locals)), exitmsg="")
@@ -172,6 +179,11 @@ def cli_save_args(name):
     except Exception as e:
         if args.debug: print("Error saving args - " + str(e))
     return
+
+def cli_reset_args(name):
+    # todo:
+    return
+
 
 def cli_cls():
     os.system("cls")
