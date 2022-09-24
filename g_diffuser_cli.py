@@ -27,6 +27,9 @@ g_diffuser_cli.py - command line interface for g-diffuser-lib with interactive m
 
 """
 
+import ntpath # these lines are inexplicably required for python to use long file paths on Windows -_-
+ntpath.realpath = ntpath.abspath
+
 import g_diffuser_lib as gdl
 from g_diffuser_config import DEFAULT_PATHS
 
@@ -37,7 +40,7 @@ import datetime
 import argparse
 import code
 import importlib
-  
+
 VERSION_STRING = "g-diffuser-cli v0.65"
 INTERACTIVE_MODE_BANNER_STRING = """
 Interactive mode: call sample() with keyword arguments and use the up/down arrow-keys to browse command history:

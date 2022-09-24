@@ -27,6 +27,9 @@ g_diffuser_lib.py - core diffuser operations and lib utilities
 
 """
 
+import ntpath # these lines are inexplicably required for python to use long file paths on Windows -_-
+ntpath.realpath = ntpath.abspath
+
 from g_diffuser_config import DEFAULT_PATHS, MODEL_DEFAULTS
 from g_diffuser_defaults import DEFAULT_SAMPLE_SETTINGS
 
@@ -47,11 +50,6 @@ import skimage
 from skimage.exposure import match_histograms
 from skimage import color
 from skimage import transform
-
-# Fix long path access:
-import ntpath
-ntpath.realpath = ntpath.abspath
-# Fix long path access.
 
 import torch
 from torch import autocast
