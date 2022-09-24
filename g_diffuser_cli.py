@@ -55,9 +55,11 @@ cls()  # clear the command window if things get cluttered
 help() # display this message
 exit() # exit interactive mode
 """
+
+LAST_ARGS_PATH = DEFAULT_PATHS.inputs+"/json/last_args.json"
         
 def main():
-    global VERSION_STRING, INTERACTIVE_MODE_BANNER_STRING
+    global VERSION_STRING, INTERACTIVE_MODE_BANNER_STRING, LAST_ARGS_PATH
     global INTERACTIVE_CLI_ARGS
     INTERACTIVE_CLI_ARGS = argparse.Namespace()
     
@@ -98,19 +100,20 @@ def main():
         gdl.save_samples(samples, args)
         
         try: # try to save the last used args in a json file for convenience
-            gdl.save_json(vars(gdl.strip_args(args)), DEFAULT_PATHS.inputs+"/last_args.json")
+            gdl.save_json(vars(gdl.strip_args(args)), LAST_ARGS_PATH)
         except Exception as e:
             if args.debug: print("Error saving sample args - " + str(e))
             
     return
     
 def cli_get_samples(prompt=None, **kwargs):
+    global LAST_ARGS_PATH
     global INTERACTIVE_CLI_ARGS
     args = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), kwargs))
     if prompt: args.prompt = prompt
-    if args.n < 0:
+    if args.n < 0: # using n < 0 is the same as using repeat=True
         args.repeat = True
-        args.n = 1    
+        args.n = 1
     if "repeat" in args: repeat = args.repeat
     else: repeat = False
     if repeat: print("Repeating sample, press ctrl+c to stop...")
@@ -119,8 +122,8 @@ def cli_get_samples(prompt=None, **kwargs):
     while True:
         importlib.reload(gdl) # this allows changes in g_diffuser_lib to take effect without restarting the cli
         
-        args_copy = argparse.Namespace(**vars(args))
-        try:
+        args_copy = argparse.Namespace(**vars(args)) # preserve args, if these functions are aborted part way through
+        try:                                         # anything could happen to the data
             samples = gdl.get_samples(args)
             gdl.save_samples(samples, args)
         except KeyboardInterrupt:
@@ -131,7 +134,7 @@ def cli_get_samples(prompt=None, **kwargs):
         INTERACTIVE_CLI_ARGS = args # preserve args for next call to sample()
         if args.debug: print(str(gdl.strip_args(args))+"\n")
         try: # try to save the last used args in a json tmp file for convenience
-            gdl.save_json(vars(gdl.strip_args(args)), DEFAULT_PATHS.inputs+"/last_args.json")
+            gdl.save_json(vars(gdl.strip_args(args)), LAST_ARGS_PATH)
         except Exception as e:
             if args.debug: print("Error saving sample args - " + str(e))
             
@@ -144,10 +147,12 @@ def cli_show_args():
     return
     
 def cli_load_args(name=""):
+    global DEFAULT_PATHS, LAST_ARGS_PATH
     global INTERACTIVE_CLI_ARGS
     try:
-        if not name: name = "last_args"
-        saved_args_dict = gdl.load_json(name)
+        if not name: json_path = LAST_ARGS_PATH
+        else: json_path = DEFAULT_PATHS.inputs+"/"+name+".json"
+        saved_args_dict = gdl.load_json(json_path)
         INTERACTIVE_CLI_ARGS = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), saved_args_dict))
         gdl.print_namespace(INTERACTIVE_CLI_ARGS)
     except Exception as e:

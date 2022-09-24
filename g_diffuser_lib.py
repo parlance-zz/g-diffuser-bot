@@ -96,10 +96,6 @@ def get_random_string(digits=8):
     uuid_str = str(uuid.uuid4())
     return uuid_str[0:digits] # shorten uuid, don't need that many digits
 
-def get_formatted_arg_str(args):
-    namespace_dict = vars(strip_args(args))
-    return json.dumps(namespace_dict, indent=4)
-
 def print_namespace(namespace, debug=False, indent=4):
     namespace_dict = vars(strip_args(namespace))
     if debug:
@@ -138,13 +134,11 @@ def save_json(_dict, file_path):
         file.close()
     return file_path
     
-def load_json(name):
-    global DEFAULT_PATHS
-    assert(DEFAULT_PATHS.inputs)
-    pathlib.Path(DEFAULT_PATHS.inputs).mkdir(exist_ok=True)
+def load_json(file_path):
+    assert(file_path)
+    (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True)
     
-    saved_json_file_path = (pathlib.Path(DEFAULT_PATHS.inputs) / (name + ".json")).as_posix()
-    with open(saved_json_file_path, "r") as file:
+    with open(file_path, "r") as file:
         data = json.load(file)
         file.close()
     return data
