@@ -141,7 +141,7 @@ def cli_show_args():
 def cli_load_args(name=""):
     global INTERACTIVE_CLI_ARGS
     try:
-        if not name: name = "last_sample_args"
+        if not name: name = "last_args"
         saved_args_dict = gdl.load_json(name)
         INTERACTIVE_CLI_ARGS = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), saved_args_dict))
         print("Loaded args from file: " + str(gdl.strip_args(INTERACTIVE_CLI_ARGS))+"\n")
