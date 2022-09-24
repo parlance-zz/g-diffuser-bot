@@ -25,7 +25,7 @@ Sept 22/2022 Update - This is a temporary repository for breaking changes until 
 
 
 Installation:
- - clone / download this repository to a folder of your choice
+ - clone this repository to a folder of your choice (or click the green "code" button up top and click "download zip")
  - download / install miniconda (https://docs.conda.io/en/latest/miniconda.html)
  - open a conda prompt, then navigate to the folder where you cloned / downloaded this repository
  - conda env create -f environment.yaml
