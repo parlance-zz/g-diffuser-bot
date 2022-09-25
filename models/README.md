@@ -1,6 +1,8 @@
 - *** IMPORTANT SETUP INSTRUCTIONS ***
 - If you are using a hugging-face access token you do not need to worry about anything in this folder provided you have entered your token in g_diffuser_config.py
 - If you would prefer to use pre-downloaded model weights, sign up for a hugging-face account at https://huggingface.co/ and accept the terms of use for the model repositories of your choice:
-	- Download or clone models from https://huggingface.co/ model repositories (https://huggingface.co/CompVis/stable-diffusion-v1-4) (https://huggingface.co/hakurei/waifu-diffusion)
-	- e.g. "git clone https://huggingface.co/CompVis/stable-diffusion-v1-4"
-	- Place the downloaded folder into this models folder such that the final path would be for example "g_diffuser_lib/models/stable-diffusion-v1-4"
+	- Download or clone models from https://huggingface.co/models?library=diffusers e.g.:
+	    - https://huggingface.co/CompVis/stable-diffusion-v1-4
+	    - https://huggingface.co/hakurei/waifu-diffusion
+	- Download with git: "git clone https://huggingface.co/CompVis/stable-diffusion-v1-4"
+	- Place the downloaded folder into this models folder such that the final path would be for example "g-diffuser-lib/models/stable-diffusion-v1-4"
