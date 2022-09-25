@@ -30,7 +30,8 @@ Vision for the g-diffuser-lib project:
  - The goal of the project is to provide the best possible front-end, interface, and utilities for the diffusers library and to enable regular users to access these powerful abilities with a free and easy-to-use package that supports their local GPU and as many OS's / platforms as possible.
  - The current frontends include an (interactive) cli, http / json based command server, and a discord bot.
  - The current experimental extensions include g-diffuser fourier shaped noise out-painting.
-
+ - For more information on progress and upcoming features please see: https://github.com/parlance-zz/g-diffuser-lib/issues
+ 
 Development and funding:
  - Donations would also be greatly appreciated and will be directly used to fund further development.
  - https://buy.stripe.com/fZe8xU2lo0wU3SgfYY
