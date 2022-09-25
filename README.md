@@ -1,7 +1,4 @@
-Sept 25/2022 Update - This branch is now extremely out-dated and will be deleted when the discord bot in the main branch is bug fixed and ready for use again, likely by the end of September. Please use the version in the main branch if possible.
-
-
-Real instructions and documentation to come later, but if you're feeling brave:
+Sept 25/2022 Update - **This branch is now extremely out-dated and will be deleted when the discord bot in the main branch is bug fixed and ready for use again, likely by the end of September. Please use the version in the main branch if possible.**
 
 Install instructions:
  - Install conda and python 3.8.5ish
