@@ -52,10 +52,10 @@ Optional: edit g_diffuser_config.py and g_diffuser_defaults.py and change settin
  
  Running:
  1)  open a conda prompt (click on the start menu and look for "anaconda prompt"), then navigate to the g-diffuser folder
- 2)  run "conda activate g_diffuser" (OPTIONAL: on Windows you can open prompt.bat to do these 2 steps automatically)
+ 2)  run "conda activate g_diffuser" (OPTIONAL: on Windows you can open start_prompt.bat to do these 2 steps automatically)
  3)  run the discord bot with: "python g_diffuser_bot.py"
        - alternatively, run the CLI interface with: "python g_diffuser_cli.py"
-       - You can use the CLI interface interactively with: "python g_diffuser_cli.py --interactive"
+       - You can use the CLI interface interactively with: "python g_diffuser_cli.py --interactive" (OPTIONAL: on Windows you can open start_interactive_cli.bat to open the interactive cli directly in one step)
        - If you see an out of memory error run: "python g_diffuser_cli.py --interactive --use-optimized"
        - Verify your configuration by running: "python g_diffuser_config.py" or: "python g_diffuser_defaults.py"
 
