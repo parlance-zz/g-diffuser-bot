@@ -26,7 +26,7 @@ DEFAULT_PATHS.debug = "./debug"
 
 # Alternatively, use these lines if you have pre-downloaded models in your g_diffusers model folder
 MODEL_DEFAULTS.model_name = "stable-diffusion-v1-4"  # local path to downloaded model relative to DEFAULT_PATHS.models
-#MODEL_DEFAULTS.model_name = "waifu-diffusion"       # alternative models are available today at https://www.huggingface.co
+#MODEL_DEFAULTS.model_name = "waifu-diffusion"       # alternative models are available today at https://huggingface.co/models?library=diffusers
 
 # IMPORTANT - *** Memory optimization settings ***
 MODEL_DEFAULTS.use_optimized = False    # set this to True to lower memory consumption (attention slicing and fp16)
