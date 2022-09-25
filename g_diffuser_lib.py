@@ -488,7 +488,9 @@ def get_samples(args):
     global DEFAULT_SAMPLE_SETTINGS
     global MODEL_DEFAULTS, LOADED_MODEL_NAME
     
+    args.uuid_str = get_random_string(digits=16) # new uuid for new sample(s)
     args.status = 1 # running
+    
     if args.init_img != "":
         pipe_name = "img2img"
         strength = 0.9999 # the real "strength" will be applied to the mask by load_image
@@ -765,7 +767,7 @@ def get_args_parser():
     parser.add_argument(
         "--uuid-str",
         type=str,
-        default=get_random_string(),
-        help="attach an id (default random) that can be used for identification or searching purposes later",
+        default="",
+        help="attach an id that can be used for identification or searching purposes later",
     )
     return parser
