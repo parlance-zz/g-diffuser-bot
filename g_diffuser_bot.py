@@ -895,7 +895,7 @@ async def show_input(ctx, attachments=None): # attaches the requesting user's in
         except Exception as e: print("Error sending show user input rejection - " + str(e))
     return
     
-@client.command() # behold; the oldest surviving lines of code in the project
+@client.command() # behold; the oldest surviving lines of code in g-diffuser-lib
 async def hello(ctx):
     try: await ctx.send("Hi")
     except Exception as e: print("Error sending acknowledgement in !hello - " + str(e))

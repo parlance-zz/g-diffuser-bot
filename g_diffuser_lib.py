@@ -486,7 +486,7 @@ def load_image(args):
         
 def get_samples(args):
     global DEFAULT_SAMPLE_SETTINGS
-    global MODEL_DEFAULTS
+    global MODEL_DEFAULTS, LOADED_MODEL_NAME
     
     args.status = 1 # running
     if args.init_img != "":
@@ -501,9 +501,13 @@ def get_samples(args):
         if not args.w: args.w = DEFAULT_SAMPLE_SETTINGS.resolution[0]
         if not args.h: args.h = DEFAULT_SAMPLE_SETTINGS.resolution[1]
         
+    if LOADED_MODEL_NAME != args.model_name:
+        print("Warning - model name requested in args '" + args.model_name + "' is not loaded")
+        print("Setting args.model_name to loaded model '" + LOADED_MODEL_NAME + "'...")
+        args.model_name = LOADED_MODEL_NAME
+        
     start_time = datetime.datetime.now()
     args.start_time = str(start_time)
-    args.model_name = MODEL_DEFAULTS.model_name
     args.used_pipe = pipe_name
     samples = []
     with autocast("cuda"):
@@ -591,6 +595,7 @@ def save_samples(samples, args):
 def load_pipelines(args):
     global DEFAULT_PATHS
     global MODEL_DEFAULTS
+    global LOADED_MODEL_NAME
     
     pipe_map = { "txt2img": StableDiffusionPipeline, "img2img": StableDiffusionInpaintPipeline }
     if args.interactive:
@@ -599,22 +604,25 @@ def load_pipelines(args):
     else:
         if args.init_img: pipe_list = ["img2img"]
         else: pipe_list = ["txt2img"]
+    args.pipe_list = pipe_list
     
     hf_token = None
     if "hf_token" in MODEL_DEFAULTS: hf_token = MODEL_DEFAULTS.hf_token
     if "hf_token" in args: hf_token = args.hf_token
+    args.hf_token = hf_token
+    
     use_optimized = MODEL_DEFAULTS.use_optimized
     if args.use_optimized: use_optimized = args.use_optimized
     
     if args.model_name: model_name = args.model_name
     else: model_name = MODEL_DEFAULTS.model_name
-    if not hf_token: final_model_name = (pathlib.Path(DEFAULT_PATHS.models) / model_name).as_posix()
-    else: final_model_name = model_name
+    args.model_name = model_name
+    LOADED_MODEL_NAME = model_name # remember this for now until we have the logistics to dynamically load models
     
-    args.model_name = final_model_name
-    MODEL_DEFAULTS.model_name = final_model_name
+    if not hf_token: final_model_path = (pathlib.Path(DEFAULT_PATHS.models) / model_name).as_posix() # not using hf token
+    else: final_model_path = model_name
+    print("Using model: " + final_model_path)
     
-    print("Using model: " + final_model_name)
     if use_optimized:
         torch_dtype = torch.float16 # use fp16 in optimized mode
         print("Using memory optimizations...")
@@ -626,7 +634,7 @@ def load_pipelines(args):
     for pipe_name in pipe_list:
         print("Loading " + pipe_name + " pipeline...")
         pipe = pipe_map[pipe_name].from_pretrained(
-            final_model_name, 
+            final_model_path, 
             torch_dtype=torch_dtype,
             use_auth_token=hf_token,
         )
@@ -637,11 +645,8 @@ def load_pipelines(args):
             
         loaded_pipes[pipe_name] = pipe
     if args.debug: print("load pipelines time : " + str(datetime.datetime.now() - load_start_time))
-
     args.loaded_pipes = loaded_pipes
-    args.pipe_list = pipe_list
-    args.model_name = model_name
-    args.hf_token = hf_token
+    
     return args.loaded_pipes
 
 def get_args_parser():
