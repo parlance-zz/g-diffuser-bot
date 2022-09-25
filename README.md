@@ -57,7 +57,7 @@ Optional: edit g_diffuser_config.py and g_diffuser_defaults.py and change settin
 Updating:
  - Simply git pull or download and replace your files with those from this repository. You probably won't need to replace your g_diffuser_config.py or g_diffuser_defaults.py files, but you may need to merge changes.
 
-Trouble-shooting:
+Troubleshooting:
  - If you have questions or problems running anything in g-diffuser-lib, please post as much detailed information as you can in (https://github.com/parlance-zz/g-diffuser-lib/discussions/categories/q-a), myself or someone in the community may be able to help you. Thank you for your patience.
  
  
