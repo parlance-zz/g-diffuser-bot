@@ -771,3 +771,6 @@ def get_args_parser():
         help="attach an id that can be used for identification or searching purposes later",
     )
     return parser
+    
+def get_default_args():
+    return get_args_parser().parse_args()

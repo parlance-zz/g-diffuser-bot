@@ -70,7 +70,7 @@ def main():
     INTERACTIVE_CLI_ARGS = argparse.Namespace()
     
     parser = gdl.get_args_parser()
-    args = parser.parse_args()    
+    args = parser.parse_args()
     if (args.prompt == "") and (args.interactive == False) and (args.load_args == "no_preload"):
         parser.print_help()
         exit(1)
@@ -85,9 +85,9 @@ def main():
         args = INTERACTIVE_CLI_ARGS
     else:
         INTERACTIVE_CLI_ARGS = args
-    INTERACTIVE_CLI_STARTING_ARGS = argparse.Namespace(**vars(args)) # copy for reset function
-        
+    
     gdl.load_pipelines(args)
+    INTERACTIVE_CLI_STARTING_ARGS = argparse.Namespace(**vars(args)) # copy for reset function
     
     if args.interactive:
         cli_locals = argparse.Namespace()
