@@ -56,7 +56,7 @@ Optional: edit g_diffuser_config.py and g_diffuser_defaults.py and change settin
  3)  run the discord bot with: "python g_diffuser_bot.py"
        - alternatively, run the CLI interface with: "python g_diffuser_cli.py"
        - You can use the CLI interface interactively with: "python g_diffuser_cli.py --interactive"
-         (OPTIONAL: on Windows you can open start_interactive_cli.bat to open the interactive cli directly in one step)
+       - On Windows you can open start_interactive_cli.bat to open the interactive cli directly in one step instad of using the above
        - If you see an out of memory error run: "python g_diffuser_cli.py --interactive --use-optimized"
        - Verify your configuration by running: "python g_diffuser_config.py" or: "python g_diffuser_defaults.py"
 
