@@ -27,6 +27,7 @@ g_diffuser_bot.py - discord bot interface for g-diffuser
 
 """
 
+
 import ntpath # these lines are inexplicably required for python to use long file paths on Windows -_-
 ntpath.realpath = ntpath.abspath
 
