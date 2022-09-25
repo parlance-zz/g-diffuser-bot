@@ -103,7 +103,8 @@ def main():
         cli_locals.ra = cli_reset_args
         cli_locals.cls = cli_cls
         cli_locals.help = cli_help
-        
+        cli_locals.h = cli_help
+        cli_locals.e = exit
         code.interact(banner=INTERACTIVE_MODE_BANNER_STRING, local=dict(globals(), **vars(cli_locals)), exitmsg="")
         exit(0)
     else:
