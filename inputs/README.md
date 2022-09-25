@@ -1,0 +1,1 @@
+- This folder is used for saved input images and argument files

@@ -1,87 +1,114 @@
-Sept 11/2022 Update:
-- If you're looking for the new in/out-painting code, check out the beta branch. This version of the bot is now very old but will soon be replaced by a new version
-based on the diffusers library.
+######  g-diffuser-lib ######
 
-######  G-Diffuser-Bot ######
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-  G-Diffuser-Bot is a simple, compact Discord bot for local installations of the public release of Stable-Diffusion (https://github.com/CompVis/stable-diffusion).
-  If you are able to successfully install stable-diffusion locally using the public release, you've already done everything you need to run this bot.
-  
-  This bot is designed to run on Windows for users with an Nvidia GPU that has > 10GB VRAM who wish to share the magic of stable-diffusion with small groups of friends on Discord. It may be possible to get it to run on Linux but it might take some small changes.
-  
-  The bot supports txt2img as well as img2img, optionally it also implements txt2imghd (https://github.com/jquesnelle/txt2imghd) and esrgan (https://github.com/xinntao/Real-ESRGAN).
-  Commands are queued for execution one at a time as my intention is to provide a solution for users to share stable-diffusion from their own PC and most commands require significant video memory.
-  The command queue can be dispatched in either round-robin or first-come first-serve modes, and there are commands for users and admins to monitor and manage the queue.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-  At the moment this is a quick and dirty version of what I wanted. It is provided without any kind of warranty under the Unlicense.
-  I've done as much testing as I can but there may be bugs or problems with the bot. To report a bug or request a feature please email me at parlance@fifth-harmonic.com.
-  
-######  Installation ######
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
-  1. Install the official stable-diffusion public release (https://github.com/CompVis/stable-diffusion) and download the appropriate model checkpoint / weights.
-     You should be able to activate the ldm environment and run the example command: python '/scripts/txt2img.py' --prompt 'an astronaut riding a horse on the moon'
-  2. Setup your Discord bot in the Discord developer portal. You should have your bot token. By default the bot asks for all "intents" on your server.
-  3. Download the contents of this repo into the folder "stable-diffusion-main/scripts/g-diffuser-bot/*"
-  4. Open g-diffuser-bot.py in a text editor of your choice and find and replace BOT_TOKEN, SD_ROOT_PATH, BOT_ADMIN_ROLE_NAME, and BOT_USERS_ROLE_NAME as appropriate.
-     You may also want to adjust other options here. Don't forget to save your changes!
-  5. If you are in the stable-diffusion-main folder in a conda prompt with the ldm environment activated,
-     run the bot with: python scripts/g-diffuser-bot/g-diffuser-bot.py
-  6. All done!
-  
-######  License ######
 
-  This software is licensed under the Unlicense. Please see LICENSE for more information.
-  
-######  Commands ######
+Sept 24/2022 Update - What use to be the beta2 branch is finally merged to main as there were simply too many improvements and features
+                      to avoid putting it off any longer. The discord bot is still under construction and will be operational again
+                      very soon, but in the meantime please enjoy the new interactive CLI (it's fun to use, I promise!)
+                      If you still need a functional SD discord bot with g-diffuser out-painting please check out the diffusers-beta branch.
 
-User Commands:
+Vision for the g-diffuser-lib project:
+ - In the near future the diffusers library (https://github.com/huggingface/diffusers) being developed and promoted by hugging-face will expose multi-modality sampling abilities, meaning we will be able to arbitrarily mix and match input and output types. Tasks like txt2music, music2img, and everything in-between will be possible, and all of this will be coming within the next few months, not the next few years.
+ - The goal of the project is to provide the best possible front-end, interface, and utilities for the diffusers library and to enable regular users to access these powerful abilities with a free and easy-to-use package that supports their local GPU and as many OS's / platforms as possible.
 
-  - !t2i : Generates an image with a prompt [-seed num] [-scale num] [-steps num][-x num]
-  - !t2ihd : As above, uses txt2imghd to generate 1 sample at 4x size
-  - !i2i : Generates an image with a prompt and input image [-seed num] [-str num] [-scale num] [-steps num] [-x num] 
-  - !enhance : Uses esrgan to upscale the input image image by 4x
-  - !queue : Shows running / waiting commands in the queue [-mine]
-  - !cancel : Cancels your last command (can be used while running) [-all]
-  - !top : Shows the top users' total running time
-  - !select : Selects an image by number from your last result and make it your input image (left to right, top to bottom) (skips the queue) 
-  - !show_input : Shows your current input image (skips the queue)
+Development and funding:
+ - Donations would also be greatly appreciated and will be directly used to fund further development.
+ - https://buy.stripe.com/fZe8xU2lo0wU3SgfYY
+ - ETH to 0x8e4BbD53bfF9C0765eE1859C590A5334722F2086
+
+Installation:
+ 1)  clone this repository to a folder of your choice (or click the green "code" button up top and click "download zip")
+ 2)  download / install miniconda (https://docs.conda.io/en/latest/miniconda.html)
+ 3)  open a conda prompt (click on the start menu and look for "anaconda prompt"),
+     then navigate to the folder where you cloned / downloaded this repository.
+ 4)  run "conda env create -f environment.yaml"
+ 5)  place any pre-downloaded models into the models folder, if you want to use a hugging-face token instead, enter it in g_diffuser_config.py
+     for specific instructions on model download / installation please see models/README.md (https://github.com/parlance-zz/g-diffuser-lib/tree/g-diffuser-bot-beta2/models)
+ 6)  If you are running Windows 10 you may need to turn on "developer mode". Look for "developer settings" in the start menu.
+     
+Optional: edit g_diffuser_config.py and g_diffuser_defaults.py and change settings as appropriate, save your changes
+ 
+ Running:
+ 1)  open a conda prompt (click on the start menu and look for "anaconda prompt"), then navigate to the g-diffuser folder
+ 2)  run "conda activate g_diffuser" (OPTIONAL: on Windows you can open prompt.bat to do these 2 steps automatically)
+ 3)  run the discord bot with: "python g_diffuser_bot.py"
+       - alternatively, run the CLI interface with: "python g_diffuser_cli.py"
+       - You can use the CLI interface interactively with: "python g_diffuser_cli.py --interactive"
+       - If you see an out of memory error run: "python g_diffuser_cli.py --interactive --use-optimized"
+       - Verify your configuration by running: "python g_diffuser_config.py" or: "python g_diffuser_defaults.py"
+
+Updating:
+ - Simply git pull or download and replace your files with those from this repository. You probably won't need to replace your g_diffuser_config.py or g_diffuser_defaults.py files, but you may need to merge changes.
+
+Trouble-shooting:
+ - If you have questions or problems running anything in g-diffuser-lib, please post as much detailed information as you can in (https://github.com/parlance-zz/g-diffuser-lib/discussions/categories/q-a), myself or someone in the community may be able to help you. Thank you for your patience.
  
  
-Admin Commands:
+ G-Diffuser Experimental Fourier Shaped Noise In/out-painting Explanation:
+ 
+  Why does this need to exist? I thought SD already did in/out-painting?:
+ 
+ This seems to be a common misconception. Non-latent diffusion models such as Dall-e can be readily used for in/out-painting
+ but the current SD in-painting pipeline is just regular img2img with a mask, and changing that would require training a
+ completely new model (at least to my understanding). In order to get good results, SD needs to have information in the
+ (completely) erased area of the image. Adding to the confusion is that the PNG file format is capable of saving color data in
+ (completely) erased areas of the image but most applications won't do this by default, and copying the image data to the "clipboard"
+ will erase the color data in the erased regions (at least in Windows). Code like this or patchmatch that can generate a
+ seed image (or "fixed code") will (at least for now) be required for seamless out-painting.
+ 
+ Although there are simple effective solutions for in-painting, out-painting can be especially challenging because there is no color data
+ in the masked area to help prompt the generator. Ideally, even for in-painting we'd like work effectively without that data as well.
 
-  - !shutdown : Cancel all pending / running commands and shutdown the bot (can only be used by bot owner)
-  - !clean : Delete temporary files in SD folders, -force will delete temporary files that may still be referenced (can only be used by bot owner) [-force]
-  - !restart : Restart the bot after the command queue is idle
-  - !clear [user]: Cancel all or only a specific user's pending / running commands
-  
-  
-Parameter Notes:
+ By taking a fourier transform of the unmasked source image we get a function that tells us the presence, orientation, and scale of features
+ in that source. Shaping the init/seed/fixed code noise to the same distribution of feature scales, orientations, and positions/phases
+ increases (visual) output coherence by helping keep features aligned and of similar orientation and size. This technique is applicable to any continuous
+ generation task such as audio or video, each of which can be conceptualized as a series of out-painting steps where the last half of the input "frame" is erased.
+ TLDR: The fourier transform of the unmasked source image is a strong prior for shaping the noise distribution of in/out-painted areas
+ 
+ For multi-channel data such as color or stereo sound the "color tone" of the noise can be bled into the noise with gaussian convolution and
+ a final histogram match to the unmasked source image ensures the palette of the source is mostly preserved. SD is extremely sensitive to
+ careful color and "texture" matching to ensure features are appropriately "bound" if they neighbor each other in the transition zone.
+ 
+ The effects of both of these techiques in combination include helping the generator integrate the pre-existing view distance and camera angle,
+ as well as being more likely to complete partially erased features (like appropriately completing a partially erased arm, house, or tree).
+ 
+ Please note this implementation is written for clarity and correctness rather than performance.
+ 
+ Todo: To be investigated is the idea of using the same technique directly in latent space. Spatial properties are (at least roughly?) preserved
+ in latent space so the fourier transform should be usable there for the same reason convolutions are usable there. The ideas presented here
+ could also be combined or augmented with other existing techniques.
+ Todo: It would be trivial to add brightness, contrast, and overall palette control using simple parameters
+ Todo: There are some simple optimizations that can increase speed significantly, e.g. re-using FFTs and gaussian kernels
 
-  - -seed : Any whole number (default random)
-  - -scale : Can be any positive real number (default 6). Controls the unconditional guidance scale. Good values are between 3-20.
-  - -str : Number between 0 and 1, (default 0.4). Controls how much to change the input image. 
-  - -plms : Use the plms instead of ddim sampler to generate your output.
-  - -steps: Any whole number from 10 to 200 (default 50). Controls how many times to recursively change the input image.
-  - -x: Repeat the given command some number of times. The number of possible repeats may be limited.
-
-
-Models and Samplers:
-
- - !t2i supports alternate samplers, and all generation commands support alternate models with [-m model] (sd1.4_small)
- - To use an alternate sampler use the following options [-plms] [-dpm_2_a] [-dpm_2] [-euler_a] [-euler] [-heun] [-lms]
-
-
-Input images:
-
-  - Commands that require an input image will use the image you attach to your message. If you do not attach an image it will attempt to use the last image you attached.
-  - Input images will be cropped to 1:1 aspect and resized to 512x512.
-  - The select command can be used to turn your last command's output image into your next input image, please see !select above.
-  
-  
-Examples:
-
-  - !t2i an astronaut riding a horse on the moon
-  - !t2i painting of an island by lisa frank -plms -seed 10
-  - !t2ihd baroque painting of a mystical island treehouse on the ocean, chrono trigger, trending on artstation, soft lighting, vivid colors, extremely detailed, very intricate -plms
-  - !t2i my little pony in space marine armor from warhammer 40k, trending on artstation, intricate detail, 3d render, gritty, dark colors, cinematic lighting, cosmic background with colorful constellations -scale 10 -seed 174468 -steps 50
-  - !t2ihd baroque painting of a mystical island treehouse on the ocean, chrono trigger, trending on artstation, soft lighting, vivid colors, extremely detailed, very intricate -scale 14 -str 0.375 -seed 252229
+ This code is provided under the MIT license -  Copyright (c) 2022 Christopher Friesen
+ To anyone who reads this I am seeking employment in related areas.
+ 
+ Questions or comments can be sent to parlance@fifth-harmonic.com (https://github.com/parlance-zz/)
+ 
+ The algorithm is constantly evolving but some out-dated samples can be seen here:
+ 
+    https://imgur.com/a/pwN6LHB
+    
+    https://imgur.com/a/S6g5SmI
+    
+    https://discord.gg/jS4vzBJxYz
+    
+    
+ This section will be updated with better samples when I have time to create them.

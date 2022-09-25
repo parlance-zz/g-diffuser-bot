@@ -1,0 +1,20 @@
+name: g_diffuser
+channels:
+  - pytorch
+  - defaults
+dependencies:
+  - python
+  - pip
+  - cudatoolkit
+  - pytorch
+  - torchvision
+  - numpy
+  - pip:
+    - image
+    - scikit-image
+    - psutil
+    - pytimeparse
+    - transformers
+    - discord
+    - ftfy
+    - git+https://github.com/huggingface/diffusers    
