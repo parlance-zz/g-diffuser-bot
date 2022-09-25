@@ -1,25 +1,26 @@
-######  g-diffuser-lib ######
+##  g-diffuser-lib - Frontend, Discord bot, command server, and utilities for the diffusers library (stable-diffusion)
 
 Sept 24/2022 Update - What use to be the beta2 branch is finally merged to main as there were simply too many improvements and features
                       to avoid putting it off any longer. The discord bot is still under construction and will be operational again
                       very soon, but in the meantime please enjoy the new interactive CLI (it's fun to use, I promise!)
                       If you still need a functional SD discord bot with g-diffuser out-painting please check out the diffusers-beta branch.
 
-- **an anaconda package for g-diffuser-lib will be published very soon**
+## Anaconda package
+- anaconda package for g-diffuser-lib will be published very soon!
 
-Vision for the g-diffuser-lib project:
+## Vision for the g-diffuser-lib project:
  - In the near future the diffusers library (https://github.com/huggingface/diffusers) being developed and promoted by hugging-face will expose multi-modality sampling abilities, meaning we will be able to arbitrarily mix and match input and output types. Tasks like txt2music, music2img, and everything in-between will be possible, and all of this will be coming within the next few months, not the next few years.
  - The goal of the project is to provide the best possible front-end, interface, and utilities for the diffusers library and to enable regular users to access these powerful abilities with a free and easy-to-use package that supports their local GPU and as many OS's / platforms as possible.
  - The current frontends include an (interactive) cli, http / json based command server, and a discord bot.
  - The current experimental extensions include g-diffuser fourier shaped noise out-painting.
  - For more information on progress and upcoming features please see: https://github.com/parlance-zz/g-diffuser-lib/issues
  
-Development and funding:
+## Development and funding:
  - Donations would also be greatly appreciated and will be directly used to fund further development.
  - https://buy.stripe.com/fZe8xU2lo0wU3SgfYY
  - ETH to 0x8e4BbD53bfF9C0765eE1859C590A5334722F2086
 
-Installation:
+## Installation:
  1)  clone this repository to a folder of your choice (or click the green "code" button up top and click "download zip")
  2)  download / install miniconda (https://docs.conda.io/en/latest/miniconda.html)
  3)  open a conda prompt (click on the start menu and look for "anaconda prompt"),
@@ -31,7 +32,7 @@ Installation:
      
 Optional: edit g_diffuser_config.py and g_diffuser_defaults.py and change settings as appropriate, save your changes
  
- Running:
+## Running:
  1)  open a conda prompt (click on the start menu and look for "anaconda prompt"), then navigate to the g-diffuser folder
  2)  run "conda activate g_diffuser" (OPTIONAL: on Windows you can open start_prompt.bat to do these 2 steps automatically)
  3)  run the discord bot with: "python g_diffuser_bot.py"
@@ -41,14 +42,15 @@ Optional: edit g_diffuser_config.py and g_diffuser_defaults.py and change settin
        - If you see an out of memory error run: "python g_diffuser_cli.py --interactive --use-optimized"
        - Verify your configuration by running: "python g_diffuser_config.py" or: "python g_diffuser_defaults.py"
 
-Updating:
+## Updating:
  - Simply git pull or download and replace your files with those from this repository. You probably won't need to replace your g_diffuser_config.py or g_diffuser_defaults.py files, but you may need to merge changes.
 
-Troubleshooting:
+## Troubleshooting:
  - If you have questions or problems running anything in g-diffuser-lib, please post as much detailed information as you can in (https://github.com/parlance-zz/g-diffuser-lib/discussions/categories/q-a), myself or someone in the community may be able to help you. Thank you for your patience.
  
  
- G-Diffuser Experimental Fourier Shaped Noise In/out-painting Explanation:
+
+## G-Diffuser Experimental Fourier Shaped Noise In/out-painting Explanation:
  
   Why does this need to exist? I thought SD already did in/out-painting?:
  
