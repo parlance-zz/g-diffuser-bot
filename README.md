@@ -16,7 +16,7 @@ Sept 24/2022 Update - What use to be the beta2 branch is finally merged to main 
  - For more information on progress and upcoming features please see: https://github.com/parlance-zz/g-diffuser-lib/issues
  
 ## Development and funding:
- - Donations would also be greatly appreciated and will be directly used to fund further development.
+ - Donations are greatly appreciated and will be directly used to fund further development.
  - https://buy.stripe.com/fZe8xU2lo0wU3SgfYY
  - ETH to 0x8e4BbD53bfF9C0765eE1859C590A5334722F2086
 
