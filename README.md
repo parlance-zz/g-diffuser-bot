@@ -1,9 +1,5 @@
-Sept 11/2022 Update - Basic implementation of the in/out-paint system is finally complete. Please try it ASAP! It's awesome!!
+Sept 25/2022 Update - This branch is now extremely out-dated and will be deleted when the discord bot in the main branch is bug fixed and ready for use again, likely by the end of September. Please use the version in the main branch if possible.
 
-With the Sept-11 update please use the following default params: -str 0.6, -scale 10, -blend 10, -color 0.005
-
-Edit: I have a feeling the outpaint implementation may garner some traffic. Please forgive the implementation as I've been very busy and trying
-to write code as fast as psosible. Thank you. Please also note this software is distributed under the MIT licenses, so LICENSE for more information.
 
 Real instructions and documentation to come later, but if you're feeling brave:
 
