@@ -23,7 +23,7 @@ Sept 24/2022 Update - What use to be the beta2 branch is finally merged to main 
                       to avoid putting it off any longer. The discord bot is still under construction and will be operational again
                       very soon, but in the meantime please enjoy the new interactive CLI (it's fun to use, I promise!)
                       If you still need a functional SD discord bot with g-diffuser out-painting please check out the diffusers-beta branch.
-                      **an anaconda package for g-diffuser-lib will be published very soon**
+                    - **an anaconda package for g-diffuser-lib will be published very soon**
 
 Vision for the g-diffuser-lib project:
  - In the near future the diffusers library (https://github.com/huggingface/diffusers) being developed and promoted by hugging-face will expose multi-modality sampling abilities, meaning we will be able to arbitrarily mix and match input and output types. Tasks like txt2music, music2img, and everything in-between will be possible, and all of this will be coming within the next few months, not the next few years.
