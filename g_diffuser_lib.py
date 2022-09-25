@@ -510,14 +510,14 @@ def get_samples(args):
     args.start_time = str(start_time)
     args.used_pipe = pipe_name
     samples = []
+    error_in_sampling = False
     with autocast("cuda"):
         if args.debug: print("Using " + pipe_name + " pipeline...")
         pipe = args.loaded_pipes[pipe_name]
         assert(pipe)
         for n in range(args.n): # batched mode doesn't seem to accomplish much besides using more memory
             if args.status == 3: return # if command is cancelled just bail out asap
-            #try:
-            if True:
+            try:
                 if pipe_name == "txt2img":
                     sample = pipe(
                         prompt=args.prompt,
@@ -535,13 +535,14 @@ def get_samples(args):
                         mask_image=mask_image,
                         num_inference_steps=args.steps,
                     )
-            #except Exception as e:
-            #    print("Error running pipeline " + pipe_name)
-            #    sample = None
+            except Exception as e:
+                print("Error running pipeline '" + pipe_name + "' - " + str(e))
+                sample = None
+                error_in_sampling = True # set args.status after all samples are completed only, otherwise stay "running"
                 
             if sample: samples.append(sample["sample"][0])
     
-    if len(samples) == 0: args.status = -1 # error running command
+    if (len(samples) == 0) or error_in_sampling: args.status = -1 # error running command
     else: args.status = 2 # completed successfully
     
     end_time = datetime.datetime.now()
