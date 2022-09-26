@@ -15,6 +15,7 @@ DEFAULT_PATHS.outputs = "./outputs"
 DEFAULT_PATHS.backups = "./backups"
 DEFAULT_PATHS.temp = "./temp"
 DEFAULT_PATHS.debug = "./debug"
+DEFAULT_PATHS.extensions = "./extensions"
 
 # IMPORTANT - **** Default model selection and settings ****
 # If you want to use a huggingface access token and download models just-in-time, enter your token below:
@@ -29,15 +30,15 @@ MODEL_DEFAULTS.model_name = "stable-diffusion-v1-4"  # local path to downloaded 
 #MODEL_DEFAULTS.model_name = "waifu-diffusion"       # alternative models are available today at https://huggingface.co/models?library=diffusers
 
 # IMPORTANT - *** Memory optimization settings ***
-MODEL_DEFAULTS.use_optimized = False    # set this to True to lower memory consumption (attention slicing and fp16)
-MODEL_DEFAULTS.pipe_list = ["txt2img"] # if you'd like to lower memory consumption even further, you can opt to load only a sub-selection of pipes
+MODEL_DEFAULTS.use_optimized = True    # set this to True to lower memory consumption (attention slicing and fp16)
+#MODEL_DEFAULTS.pipe_list = ["txt2img"] # if you'd like to lower memory consumption even further, you can opt to load only a sub-selection of pipes
 #MODEL_DEFAULTS.pipe_list = ["img2img"]
 
 
 #IMPORTANT - If you want to use the discord bot, use enter your access token below:
 # - Discord developers site: https://discordapp.com/developers/applications/
 # - Discord bot setup guide: https://www.writebots.com/discord-bot-token/
-DISCORD_BOT_SETTINGS.token = "" # "YOUR_DISCORD_BOT_TOKEN_HERE"
+DISCORD_BOT_SETTINGS.token = "YOUR_DISCORD_BOT_TOKEN_HERE"
 DISCORD_BOT_SETTINGS.admin_role = "moderator" # IMPORTANT - use your discord server / guild role names here accordingly, check the bot help text for associated command permissions
 DISCORD_BOT_SETTINGS.users_role = "everyone"  # if you want anyone to be able to use the bot, set this to "everyone"
 DISCORD_BOT_SETTINGS.cmd_prefix = "!"               # all discord bot commands will require this prefix (e.g. !gen)
