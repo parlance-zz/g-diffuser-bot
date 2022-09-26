@@ -54,7 +54,8 @@ from skimage import transform
 import torch
 from torch import autocast
 from diffusers import StableDiffusionPipeline
-from diffusers import StableDiffusionInpaintPipeline # we don't need the img2img pipeline because inpaint is a superset of its functionality
+#from diffusers import StableDiffusionInpaintPipeline # we don't need the img2img pipeline because inpaint is a superset of its functionality
+from extensions import StableDiffusionInpaintPipeline
 #from diffusers import LMSDiscreteScheduler          # broken at the moment I believe
 
 def get_image_dims(img_path):

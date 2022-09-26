@@ -1,0 +1,1 @@
+from .pipeline_stable_diffusion_inpaint_mk2 import StableDiffusionInpaintPipeline
