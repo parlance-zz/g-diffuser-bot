@@ -1,0 +1,1 @@
+- This path will be used for extension modules before they are brought into the g-diffuser-lib core
