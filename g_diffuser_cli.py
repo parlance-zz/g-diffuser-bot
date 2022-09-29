@@ -40,8 +40,9 @@ import datetime
 import argparse
 import code
 import importlib
+import time
 
-VERSION_STRING = "g-diffuser-cli v0.85b"
+VERSION_STRING = "g-diffuser-cli v0.91a"
 INTERACTIVE_MODE_BANNER_STRING = """
 Interactive mode:
     call sample() with keyword arguments and use the up/down arrow-keys to browse command history:
@@ -86,7 +87,7 @@ def main():
     else:
         INTERACTIVE_CLI_ARGS = args
     
-    gdl.load_pipelines(args)
+    gdl.start_grpc_server(args)
     INTERACTIVE_CLI_STARTING_ARGS = argparse.Namespace(**vars(args)) # copy for reset function
     
     if args.interactive:
@@ -104,7 +105,8 @@ def main():
         cli_locals.cls = cli_cls
         cli_locals.help = cli_help
         cli_locals.h = cli_help
-        cli_locals.e = exit
+        cli_locals.exit = cli_exit
+        cli_locals.e = cli_exit
         code.interact(banner=INTERACTIVE_MODE_BANNER_STRING, local=dict(globals(), **vars(cli_locals)), exitmsg="")
         exit(0)
     else:
@@ -193,7 +195,6 @@ def cli_reset_args():
     cli_show_args()
     return
 
-
 def cli_cls():
     os.system("cls")
     return   
@@ -202,6 +203,12 @@ def cli_help():
     global VERSION_STRING, INTERACTIVE_MODE_BANNER_STRING
     print(VERSION_STRING+INTERACTIVE_MODE_BANNER_STRING+"\n")
     return
+    
+def cli_exit():
+    global INTERACTIVE_CLI_ARGS
+    gdl._p_kill(INTERACTIVE_CLI_ARGS.grpc_server_process.pid)
+    time.sleep(0.05)
+    exit(0)
     
 if __name__ == "__main__":
     main()

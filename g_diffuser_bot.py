@@ -37,12 +37,12 @@ from g_diffuser_config import DEFAULT_PATHS, CMD_SERVER_SETTINGS, DISCORD_BOT_SE
 import os, sys
 os.chdir(DEFAULT_PATHS.root)
 
-import psutil
+
 #import pytimeparse
 import pathlib
 import urllib
 import json
-import subprocess
+
 import glob
 import asyncio
 import aiohttp
@@ -450,12 +450,12 @@ class CommandQueue:
 
     def start_command_server(self):
         run_str = "python g_diffuser_server.py --start-server"
-        self.cmd_server_process = run_string(run_str)
+        self.cmd_server_process = gdl.run_string(run_str)
         return
         
     def shutdown_command_server(self):
         if self.cmd_server_process:
-            _p_kill(self.cmd_server_process.pid)
+            gdl._p_kill(self.cmd_server_process.pid)
             self.cmd_server_process = None
         return
         
@@ -662,22 +662,7 @@ def check_server_roles(ctx, role_name_list): # resolve and check the roles of a 
         if role in ctx.message.author.roles: return True
     return False
     
-def _p_kill(proc_pid):  # kill all child processes recursively as well, its the only way to be sure
-    print("Killing process id " + str(proc_pid))
-    try:
-        process = psutil.Process(proc_pid)
-        for proc in process.children(recursive=True): proc.kill()
-        process.kill()
-    except Exception as e: print("Error killing process id " + str(proc_pid) + " - " + str(e))
-    return
-    
-def run_string(run_string):  # run shell command asynchronously to keep discord message pumps happy and allow cancellation
-    print("Running external command: " + run_string)
-    try: process = subprocess.Popen(run_string, shell=True)
-    except Exception as e: process = None
-    
-    if not process: print("Error running string '" + run_string + "' - " + str(e) + "...")
-    return process
+
     
 async def _top(ctx):    # replies to a message with a sorted list of all users and their run-time
     global CMD_QUEUE

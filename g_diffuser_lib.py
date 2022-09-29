@@ -30,9 +30,11 @@ g_diffuser_lib.py - core diffuser operations and lib utilities
 import ntpath # these lines are inexplicably required for python to use long file paths on Windows -_-
 ntpath.realpath = ntpath.abspath
 
-from g_diffuser_config import DEFAULT_PATHS, MODEL_DEFAULTS
+from g_diffuser_config import DEFAULT_PATHS, GRPC_SERVER_SETTINGS
 from g_diffuser_defaults import DEFAULT_SAMPLE_SETTINGS
 
+import os, sys
+import io
 import time
 import datetime
 import argparse
@@ -41,6 +43,8 @@ import pathlib
 import json
 import re
 import importlib
+import subprocess
+import psutil
 
 import numpy as np
 import PIL
@@ -48,11 +52,30 @@ from PIL import Image
 from PIL import ImageFilter
 from PIL import ImageEnhance
 
+from extensions import grpc_client
+
 import torch
 from torch import autocast
 
-from extensions.stable_diffusion_grpcserver.sdgrpcserver import server
-
+def _p_kill(proc_pid):  # kill all child processes, recursively as well. its the only way to be sure
+    print("Killing process id " + str(proc_pid))
+    try:
+        process = psutil.Process(proc_pid)
+        for proc in process.children(recursive=True): proc.kill()
+        process.kill()
+    except Exception as e: print("Error killing process id " + str(proc_pid) + " - " + str(e))
+    return
+    
+def run_string(run_string, cwd, show_output=False, log_path=""):  # run shell command asynchronously, return subprocess
+    print(run_string + " (cwd="+str(cwd)+")")
+    try:
+        if log_path != "": process = subprocess.Popen(run_string, shell=False, cwd=cwd, stdout=open(log_path, "w", 1))
+        else: process = subprocess.Popen(run_string, shell=False, cwd=cwd)
+    except Exception as e:
+        process = None
+        print("Error running string '" + run_string + "' - " + str(e) + "...")
+    return process
+    
 def valid_resolution(width, height, init_image=None):  # clip dimensions at max resolution, while keeping the correct resolution granularity,
                                                        # while roughly preserving aspect ratio. if width or height are None they are taken from the init_image
     global DEFAULT_SAMPLE_SETTINGS
@@ -132,7 +155,7 @@ def load_json(file_path):
     
 def strip_args(args, level=0): # remove args we wouldn't want to print or serialize, higher levels strip additional irrelevant fields
     args_stripped = argparse.Namespace(**(vars(args).copy()))
-    if "loaded_pipes" in args_stripped: del args_stripped.loaded_pipes
+    if "grpc_server_process" in args_stripped: del args_stripped.grpc_server_process
     
     if level >=1: # keep just the basics for most printing
         if "command" in args_stripped: del args_stripped.command
@@ -142,7 +165,6 @@ def strip_args(args, level=0): # remove args we wouldn't want to print or serial
         if "interactive" in args_stripped: del args_stripped.interactive
         if "load_args" in args_stripped: del args_stripped.load_args
         if "no_json" in args_stripped: del args_stripped.no_json
-        if "pipe_list" in args_stripped: del args_stripped.pipe_list
         if "hf_token" in args_stripped: del args_stripped.hf_token
         if "init_time" in args_stripped: del args_stripped.init_time
         if "start_time" in args_stripped: del args_stripped.start_time
@@ -189,7 +211,7 @@ def load_image(args):
     assert(DEFAULT_PATHS.inputs)
     final_init_img_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_img).as_posix()
     
-    # load and resize input image to multiple of 64x64
+    # load and resize input image to multiple of 8x8
     init_image = Image.open(final_init_img_path)
     width, height = valid_resolution(args.w, args.h, init_image=init_image)
     if (width, height) != init_image.size:
@@ -212,11 +234,11 @@ def load_image(args):
     return init_image, mask_image
         
 def get_samples(args):
-    global DEFAULT_SAMPLE_SETTINGS
-    global MODEL_DEFAULTS, LOADED_MODEL_ARGS
+    global DEFAULT_PATHS
+    global DEFAULT_SAMPLE_SETTINGS, GRPC_SERVER_SETTINGS
     
-    if args.debug:
-        importlib.reload(ext) # this allows us to test modifications to extensions without reloading the cli or model
+    #if args.debug:
+    #    importlib.reload(ext) # this allows us to test modifications to extensions without reloading the cli or model
     
     args.uuid_str = get_random_string(digits=16) # new uuid for new sample(s)
     args.status = 1 # running
@@ -228,61 +250,50 @@ def get_samples(args):
         if not args.w: args.w = DEFAULT_SAMPLE_SETTINGS.resolution[0] # if we don't have an input image, it's size can't be used as the default resolution
         if not args.h: args.h = DEFAULT_SAMPLE_SETTINGS.resolution[1]
         
-    # check if args came with model name or load-time settings we can't accommodate, at least until we can load models on the fly. if mismatch replace with the loaded model args
-    if args.model_name != LOADED_MODEL_ARGS.model_name:
-        if args.debug:
-            print("Warning - model name requested in args '" + args.model_name + "' is not loaded")
-            print("Setting args.model_name to loaded model '" + LOADED_MODEL_ARGS.model_name + "'...")
-        args.model_name = LOADED_MODEL_ARGS.model_name  
-    if args.use_optimized != LOADED_MODEL_ARGS.use_optimized: # check for memory optimizations requested in args mismatch against loaded model settings
-        if args.debug: print("Warning - use_optimized requested in args (" + str(args.use_optimized) + ") does not match loaded model settings (" + str(LOADED_MODEL_ARGS.use_optimized) + ")")
-        args.use_optimized = LOADED_MODEL_ARGS.use_optimized
-
-    assert(len(LOADED_MODEL_ARGS.pipe_list) > 0) # we need to have loaded at least one pipe
-    pipe_name = LOADED_MODEL_ARGS.pipe_list[0]
     
     start_time = datetime.datetime.now()
     args.start_time = str(start_time)
-    args.used_pipe = pipe_name
     error_in_sampling = False
     samples = []
     
-    with autocast("cuda"):
+    for n in range(args.n): 
+        if args.status == 3: return # if command is cancelled just bail out asap
+        try:
+            
+            request_dict = build_grpc_request_dict(args)
+            stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.key, engine=args.model_name, verbose=False)
     
-        if args.debug: print("Using " + pipe_name + " pipeline...")
-        pipe = args.loaded_pipes[pipe_name]
-        assert(pipe)
-        
-        for n in range(args.n): # batched mode doesn't seem to accomplish much besides using more memory
-            if args.status == 3: return # if command is cancelled just bail out asap
-            try:
-                sample = pipe(
-                    prompt=args.prompt,
-                    guidance_scale=args.scale,
-                    num_inference_steps=args.steps,
-                    width=args.w,
-                    height=args.h,
-                    init_image=init_image,
-                    mask_image=mask_image,
-                    strength=args.strength,
-                )
-            except Exception as e:
-                print("Error running pipeline '" + pipe_name + "' - " + str(e))
-                raise
-                sample = None
-                error_in_sampling = True # set args.status after all samples are completed only, otherwise stay "running"
-                
-            if sample: samples.append(sample["sample"][0])
-    
+            answers = stability_api.generate(args.prompt, **request_dict)
+            output_prefix = DEFAULT_PATHS.temp+"/"
+            grpc_samples = grpc_client.process_artifacts_from_answers(output_prefix, answers, write=True, verbose=False)
+            for path, artifact in grpc_samples:
+                image = Image.open(io.BytesIO(artifact.binary))
+                samples.append(image)
+            
+            """
+            sample = pipe(
+                prompt=args.prompt,
+                guidance_scale=args.scale,
+                num_inference_steps=args.steps,
+                width=args.w,
+                height=args.h,
+                init_image=init_image,
+                mask_image=mask_image,
+                strength=args.strength,
+            )
+            """
+        except Exception as e:
+            raise
+            error_in_sampling = True
+            args.status = -1
+            return []
+            
     end_time = datetime.datetime.now()
     args.end_time = str(end_time)
     args.elapsed_time = str(end_time-start_time)
     
-    if (len(samples) == 0) or error_in_sampling:    
-        args.status = -1 # error running command
-    else:
-        args.status = 2 # completed successfully
-        if args.debug: print("total sampling time : " + args.elapsed_time)
+    args.status = 2 # completed successfully
+    if args.debug: print("total sampling time : " + args.elapsed_time)
 
     return samples
 
@@ -328,61 +339,24 @@ def save_samples(samples, args):
         
     return args.output_samples
     
-def load_pipelines(args):
+def start_grpc_server(args):
     global DEFAULT_PATHS
-    global MODEL_DEFAULTS
-    global LOADED_MODEL_ARGS
-    
-    pipe_map = { "g-diffuser-lib_super": ext.G_Diffuser_SuperPipeline }
-    pipe_list = ["g-diffuser-lib_super"]
-    
-    hf_token = None
-    if "hf_token" in MODEL_DEFAULTS: hf_token = MODEL_DEFAULTS.hf_token
-    if "hf_token" in args: hf_token = args.hf_token
-    args.hf_token = hf_token
-    
-    use_optimized = MODEL_DEFAULTS.use_optimized
-    if args.use_optimized: use_optimized = args.use_optimized
-    if args.model_name: model_name = args.model_name
-    else: model_name = MODEL_DEFAULTS.model_name
-    args.model_name = model_name
-    
-    LOADED_MODEL_ARGS = argparse.Namespace()  # remember loaded model settings, this is needed for now until we have the memory and/or logistics to efficiently load models on the fly
-    LOADED_MODEL_ARGS.model_name = model_name
-    LOADED_MODEL_ARGS.use_optimized = use_optimized
-    LOADED_MODEL_ARGS.pipe_list = pipe_list
-    
-    if not hf_token: final_model_path = (pathlib.Path(DEFAULT_PATHS.models) / model_name).as_posix() # not using hf token
-    else: final_model_path = model_name
-    print("Using model: " + final_model_path)
-    
-    if use_optimized:
-        torch_dtype = torch.float16 # use fp16 in optimized mode
-        print("Using memory optimizations...")
-    else:
-        torch_dtype = None
-    
     if args.debug: load_start_time = datetime.datetime.now()
-    loaded_pipes = {}
-    for pipe_name in pipe_list:
-        print("Loading " + pipe_name + " pipeline...")
-        pipe = pipe_map[pipe_name].from_pretrained(
-            final_model_path, 
-            torch_dtype=torch_dtype,
-            use_auth_token=hf_token,
-        )
-        pipe = pipe.to("cuda")
-        #setattr(pipe, "safety_checker", dummy_checker)
-        if use_optimized == True:
-            pipe.enable_attention_slicing() # use attention slicing in optimized mode
-            
-        loaded_pipes[pipe_name] = pipe
-        if args.debug: print_namespace(pipe, debug=1)
-    if args.debug: print("load pipelines time : " + str(datetime.datetime.now() - load_start_time))
-    args.loaded_pipes = loaded_pipes
     
-    return args.loaded_pipes
-
+    engine_cfg_path = DEFAULT_PATHS.root+"/g_diffuser_config_models.yaml"
+    weight_root = DEFAULT_PATHS.models
+    
+    grpc_server_run_string = "python ./server.py"
+    grpc_server_run_string += " --enginecfg "+engine_cfg_path+" --weight_root "+weight_root
+    grpc_server_process = run_string(grpc_server_run_string, cwd=DEFAULT_PATHS.extensions+"/"+"stable-diffusion-grpcserver", log_path=DEFAULT_PATHS.grpc_log)
+    
+    if args.debug: print("sd_grpc_server start time : " + str(datetime.datetime.now() - load_start_time))
+    
+    args.grpc_server_process = grpc_server_process
+    return grpc_server_process
+   
+# todo: merge with my init args to allow user override without editing files
+"""
 def get_gprc_args_parser():
     # add gprc server args
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -404,9 +378,10 @@ def get_gprc_args_parser():
     parser.add_argument(
         "--reload", action="store_true", help="Auto-reload on source change"
     )
-    
+"""
+ 
 def get_args_parser():
-    global DEFAULT_SAMPLE_SETTINGS, MODEL_DEFAULTS
+    global DEFAULT_SAMPLE_SETTINGS
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         "--prompt",
@@ -415,6 +390,12 @@ def get_args_parser():
         default="",
         help="the text to condition sampling on",
     )
+    parser.add_argument(
+        "--sampler",
+        type=str,
+        default="k_euler",
+        help="sampler to use (ddim, plms, k_euler, k_euler_ancestral, k_heun, k_dpm_2, k_dpm_2_ancestral, k_lms)"
+    )  
     parser.add_argument(
         "--command",
         type=str,
@@ -426,7 +407,7 @@ def get_args_parser():
         type=int,
         default=int(np.random.randint(DEFAULT_SAMPLE_SETTINGS.auto_seed_range[0], DEFAULT_SAMPLE_SETTINGS.auto_seed_range[1])),
         help="random seed for sampling (auto-range defined in DEFAULT_SAMPLE_SETTINGS)",
-    )    
+    )
     parser.add_argument(
         "--steps",
         type=int,
@@ -481,21 +462,6 @@ def get_args_parser():
         default=None,
         help="set output height or override height of input image",
     )
-    """
-    parser.add_argument(
-        "--model-name",
-        type=str,
-        default=MODEL_DEFAULTS.model_name,
-        help="path to downloaded diffusers model (relative to default models path), or name of model if using a huggingface token",
-    )
-    parser.add_argument(
-        "--use-optimized",
-        action='store_true',
-        default=False,
-        help="enable memory optimizations that are currently available in diffusers",
-    )
-    """
-    
     parser.add_argument(
         "--debug",
         action='store_true',
@@ -527,11 +493,27 @@ def get_args_parser():
         help="attach an id that can be used for identification or searching purposes later",
     )
     
-
-    
     return parser
     
 def get_default_args():
     return get_args_parser().parse_args()
-
-server.main(enginecfg=DEFAULT_PATHS.model_cfg, models_root=DEFAULT_PATHS.models)
+    
+def build_grpc_request_dict(args):
+    """
+    Build a Request arguments dictionary from the CLI arguments.
+    """
+    return {
+        "height": args.h,
+        "width": args.w,
+        "start_schedule": None, #args.start_schedule,
+        "end_schedule": None, #args.end_schedule,
+        "cfg_scale": args.scale,
+        "eta": 0.,#args.eta,
+        "sampler": grpc_client.get_sampler_from_str(args.sampler),
+        "steps": args.steps,
+        "seed": args.seed,
+        "samples": args.n,
+        "init_image": None, #args.init_image,
+        "mask_image": None, #args.mask_image,
+        #"negative_prompt": args.negative_prompt
+    }    

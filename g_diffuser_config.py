@@ -4,7 +4,7 @@ import argparse
 DEFAULT_PATHS = argparse.Namespace()
 MODEL_DEFAULTS = argparse.Namespace()
 DISCORD_BOT_SETTINGS = argparse.Namespace()
-CMD_SERVER_SETTINGS = argparse.Namespace()
+GRPC_SERVER_SETTINGS = argparse.Namespace()
 
 # ******************** SETTINGS BEGIN ************************
 
@@ -17,21 +17,7 @@ DEFAULT_PATHS.temp = "./temp"
 DEFAULT_PATHS.debug = "./debug"
 DEFAULT_PATHS.extensions = "./extensions"
 DEFAULT_PATHS.model_cfg = "./g_diffuser_config_models.yaml"
-
-# IMPORTANT - **** Default model selection and settings ****
-# If you want to use a huggingface access token and download models just-in-time, enter your token below:
-# 1) Sign up for an account on https://www.huggingface.co and accept the required usage terms for the model of your choice (stable-diffusion-v1-4)
-# 2) Create an access token at https://huggingface.co/settings/tokens
-# 3) Accept the access terms for the models you wish to use, for stable-diffusion-v1-4 go here: https://huggingface.co/CompVis/stable-diffusion-v-1-4-original
-#MODEL_DEFAULTS.hf_token = "YOUR_HUGGINGFACE_ACCESS_TOKEN_HERE"
-#MODEL_DEFAULTS.model_name = "CompVis/stable-diffusion-v1-4" # the model names are slightly different when using a hugging-face token
-
-# Alternatively, use these lines if you have pre-downloaded models in your g_diffusers model folder
-MODEL_DEFAULTS.model_name = "stable-diffusion-v1-4"  # local path to downloaded model relative to DEFAULT_PATHS.models
-#MODEL_DEFAULTS.model_name = "waifu-diffusion"       # alternative models are available today at https://huggingface.co/models?library=diffusers
-
-# IMPORTANT - *** Memory optimization settings ***
-MODEL_DEFAULTS.use_optimized = False # True    # set this to True to lower memory consumption (attention slicing and fp16)
+DEFAULT_PATHS.grpc_log = "./sdgrpcserver.log"
 
 #IMPORTANT - If you want to use the discord bot, use enter your access token below:
 # - Discord developers site: https://discordapp.com/developers/applications/
@@ -52,9 +38,9 @@ DISCORD_BOT_SETTINGS.accepted_attachments = [".png", ".jpg", ".jpeg"] # attachme
 DISCORD_BOT_SETTINGS.state_file_path = "./g-diffuser-bot.json"        # relative to root path
 DISCORD_BOT_SETTINGS.activity = DISCORD_BOT_SETTINGS.cmd_prefix + "help, " + DISCORD_BOT_SETTINGS.cmd_prefix + "about"
 
-#IMPORTANT - Command server settings
-CMD_SERVER_SETTINGS.http_host = "localhost" # by default the command server binds to localhost to support the discord bot
-CMD_SERVER_SETTINGS.http_port = 39132       # change port if needed
+#IMPORTANT - GRPC server settings (you probably won't need to adjust these settings unless you are an advanced user)
+GRPC_SERVER_SETTINGS.host = "localhost:50051"
+GRPC_SERVER_SETTINGS.key = ""
 
 # ******************** SETTINGS END ************************
 
@@ -69,9 +55,7 @@ if __name__ == "__main__": # you can execute this file with python to see a summ
     from g_diffuser_lib import print_namespace
     print("\ndefault paths: ")
     print_namespace(DEFAULT_PATHS, debug=True)
-    print("\nmodel defaults: ")
-    print_namespace(MODEL_DEFAULTS, debug=True)
     print("\ndiscord bot settings: ")
     print_namespace(DISCORD_BOT_SETTINGS, debug=True)
-    print("\ncmd server settings: ")
-    print_namespace(CMD_SERVER_SETTINGS, debug=True)
+    print("\ngrpc server settings: ")
+    print_namespace(GRPC_SERVER_SETTINGS, debug=True)
