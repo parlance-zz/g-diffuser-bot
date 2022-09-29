@@ -20,7 +20,8 @@ to close a variety of issues that are open in the project. I will try to documen
 - The GRPC server is secure and separable from any front end you utilize. This means you can run your GRPC remotely, or a cluster of them, and use them to power any frontend that can use
   a GRPC server, such as all the frontends contained in g-diffuser-lib.
   
-This is still a very early implementation and now I will be debugging and tweaking until the big push back to main later this week.
+This is still a very early implementation and now I will be debugging and tweaking until the big push back to main later this week. Notably cancelling repeating commands is broken right now
+but will be bug fixed after I can get some rest.
 
 Thank you all very much.
 
