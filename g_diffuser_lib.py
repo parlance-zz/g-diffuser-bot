@@ -391,6 +391,12 @@ def get_args_parser():
         help="the text to condition sampling on",
     )
     parser.add_argument(
+        "--model-name",
+        type=str,
+        default=DEFAULT_SAMPLE_SETTINGS.model_name,
+        help="diffusers model name",
+    )
+    parser.add_argument(
         "--sampler",
         type=str,
         default="k_euler",

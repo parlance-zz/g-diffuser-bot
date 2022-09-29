@@ -13,6 +13,7 @@ DEFAULT_SAMPLE_SETTINGS.strength = 0.42
 DEFAULT_SAMPLE_SETTINGS.scale = 11.
 DEFAULT_SAMPLE_SETTINGS.steps = 32
 DEFAULT_SAMPLE_SETTINGS.noise_q = 1.
+DEFAULT_SAMPLE_SETTINGS.model_name = "stable-diffusion-v1-4"
 
 # ******************** SETTINGS END ************************
 
