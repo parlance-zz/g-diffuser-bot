@@ -108,7 +108,7 @@ def main():
         code.interact(banner=INTERACTIVE_MODE_BANNER_STRING, local=dict(globals(), **vars(cli_locals)), exitmsg="")
         exit(0)
     else:
-        if args.load_args == "no_preload": gdl.print_namespace(args, debug=args.debug, verbosity_level = 1-int(args.debug))
+        if args.load_args == "no_preload": gdl.print_namespace(args, debug=args.debug, verbosity_level=1)
         
         args.init_time = str(datetime.datetime.now()) # time the command was created / queued
         samples = gdl.get_samples(args)
@@ -124,7 +124,7 @@ def main():
 def cli_get_samples(prompt=None, **kwargs):
     global LAST_ARGS_PATH
     global INTERACTIVE_CLI_ARGS
-    args = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), kwargs))
+    args = argparse.Namespace(**(vars(INTERACTIVE_CLI_ARGS) | kwargs)) # merge with keyword args
     if prompt: args.prompt = prompt
     if args.n < 0: # using n < 0 is the same as using repeat=True
         args.repeat = True
@@ -135,7 +135,7 @@ def cli_get_samples(prompt=None, **kwargs):
     
     args.init_time = str(datetime.datetime.now()) # time the command was created / queued
     while True:
-        importlib.reload(gdl) # this allows changes in g_diffuser_lib to take effect without restarting the cli
+        if args.debug: importlib.reload(gdl) # this allows changes in g_diffuser_lib to take effect without restarting the cli
         
         args_copy = argparse.Namespace(**vars(args)) # preserve args, if these functions are aborted part way through
         try:                                         # anything could happen to the data
@@ -147,7 +147,7 @@ def cli_get_samples(prompt=None, **kwargs):
             return
         
         INTERACTIVE_CLI_ARGS = args # preserve args for next call to sample()
-        if args.debug: print(str(gdl.strip_args(args))+"\n")
+        if args.debug: gdl.print_namespace(INTERACTIVE_CLI_ARGS, debug=0, verbosity_level=1)
         try: # try to save the last used args in a json tmp file for convenience
             gdl.save_json(vars(gdl.strip_args(args)), LAST_ARGS_PATH)
         except Exception as e:
@@ -159,7 +159,7 @@ def cli_get_samples(prompt=None, **kwargs):
 def cli_show_args(level=None):
     global INTERACTIVE_CLI_ARGS
     if level != None: verbosity_level = level
-    else: verbosity_level = 1-int(INTERACTIVE_CLI_ARGS.debug)
+    else: verbosity_level = 1
     gdl.print_namespace(INTERACTIVE_CLI_ARGS, debug=INTERACTIVE_CLI_ARGS.debug, verbosity_level=verbosity_level)
     return
     
@@ -168,10 +168,10 @@ def cli_load_args(name=""):
     global INTERACTIVE_CLI_ARGS
     try:
         if not name: json_path = LAST_ARGS_PATH
-        else: json_path = DEFAULT_PATHS.inputs+"/"+name+".json"
+        else: json_path = DEFAULT_PATHS.inputs+"/json/"+name+".json"
         saved_args_dict = gdl.load_json(json_path)
-        INTERACTIVE_CLI_ARGS = argparse.Namespace(**gdl.merge_dicts(vars(INTERACTIVE_CLI_ARGS), saved_args_dict))
-        gdl.print_namespace(INTERACTIVE_CLI_ARGS, debug=INTERACTIVE_CLI_ARGS.debug, verbosity_level = 1-int(INTERACTIVE_CLI_ARGS.debug))
+        INTERACTIVE_CLI_ARGS = argparse.Namespace(**(vars(INTERACTIVE_CLI_ARGS) | saved_args_dict)) # merge with keyword args
+        gdl.print_namespace(INTERACTIVE_CLI_ARGS, debug=INTERACTIVE_CLI_ARGS.debug, verbosity_level=1)
     except Exception as e:
         print("Error loading last args from file - " + str(e))
     return

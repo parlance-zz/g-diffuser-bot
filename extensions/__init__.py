@@ -1,1 +1,2 @@
-from .pipeline_stable_diffusion_inpaint_mk2 import StableDiffusionInpaintPipeline
+#from .g_diffuser_utilities import *
+from stable_diffusion_grpcserver import sdgrpcserver

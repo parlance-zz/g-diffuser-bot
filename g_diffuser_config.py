@@ -30,10 +30,7 @@ MODEL_DEFAULTS.model_name = "stable-diffusion-v1-4"  # local path to downloaded 
 #MODEL_DEFAULTS.model_name = "waifu-diffusion"       # alternative models are available today at https://huggingface.co/models?library=diffusers
 
 # IMPORTANT - *** Memory optimization settings ***
-MODEL_DEFAULTS.use_optimized = True    # set this to True to lower memory consumption (attention slicing and fp16)
-#MODEL_DEFAULTS.pipe_list = ["txt2img"] # if you'd like to lower memory consumption even further, you can opt to load only a sub-selection of pipes
-MODEL_DEFAULTS.pipe_list = ["img2img"]
-
+MODEL_DEFAULTS.use_optimized = False # True    # set this to True to lower memory consumption (attention slicing and fp16)
 
 #IMPORTANT - If you want to use the discord bot, use enter your access token below:
 # - Discord developers site: https://discordapp.com/developers/applications/
