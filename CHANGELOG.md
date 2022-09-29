@@ -6,6 +6,8 @@ The first implementation integrating hafriedlander's grpc server for stable diff
 This is a huge upgrade as hafried has done much of the work in implementing many of the backend changes that would have been required
 to close a variety of issues that are open in the project. I will try to document as many of them as I can below:
 
+- Support for k-diffusion samplers: k_euler, k_euler_a, k_heun, k_dpm_2, k_dpm_2_a, and k_lms
+
 - Model loading and grpc server initialization is now performed asynchronously on startup, even in the interactive CLI. You can run non-sampling commands until the server is ready, and running a sampling command before it is ready will cause your command to be queued until it is ready.
   
 - All pipelines for tasks txt2img, img2img, and in/out-painting have been unified into a single pipeline. This is a Big Deal because it can save quite a lot of video memory. On top of this, hafried's unified pipeline supports a variety of other memory consumption improvements and even fallback modes to sacrifice performance and save even more memory.
