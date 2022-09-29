@@ -50,7 +50,8 @@ from PIL import ImageEnhance
 
 import torch
 from torch import autocast
-import extensions as ext
+
+from extensions.stable_diffusion_grpcserver.sdgrpcserver import server
 
 def valid_resolution(width, height, init_image=None):  # clip dimensions at max resolution, while keeping the correct resolution granularity,
                                                        # while roughly preserving aspect ratio. if width or height are None they are taken from the init_image
@@ -532,3 +533,5 @@ def get_args_parser():
     
 def get_default_args():
     return get_args_parser().parse_args()
+
+server.main(enginecfg=DEFAULT_PATHS.model_cfg, models_root=DEFAULT_PATHS.models)

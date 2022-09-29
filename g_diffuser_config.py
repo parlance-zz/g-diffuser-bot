@@ -16,6 +16,7 @@ DEFAULT_PATHS.backups = "./backups"
 DEFAULT_PATHS.temp = "./temp"
 DEFAULT_PATHS.debug = "./debug"
 DEFAULT_PATHS.extensions = "./extensions"
+DEFAULT_PATHS.model_cfg = "./g_diffuser_config_models.yaml"
 
 # IMPORTANT - **** Default model selection and settings ****
 # If you want to use a huggingface access token and download models just-in-time, enter your token below:

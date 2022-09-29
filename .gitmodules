@@ -1,6 +1,0 @@
-[submodule "extensions/stable-diffusion-grpcserver"]
-	path = extensions/stable-diffusion-grpcserver
-	url = https://github.com/hafriedlander/stable-diffusion-grpcserver
-[submodule "extensions/stable_diffusion_grpcserver"]
-	path = extensions/stable_diffusion_grpcserver
-	url = https://github.com/hafriedlander/stable-diffusion-grpcserver

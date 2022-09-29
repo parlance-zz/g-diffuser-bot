@@ -1,0 +1,10 @@
+name: sd-grpc-server
+channels:
+  - pytorch
+  - defaults
+dependencies:
+  - git
+  - python=3.10
+  - pip
+  - pip:
+    - -r requirements.txt

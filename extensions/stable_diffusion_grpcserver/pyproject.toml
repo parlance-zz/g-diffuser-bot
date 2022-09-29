@@ -1,0 +1,38 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "stable-diffusion-grpcserver"
+authors = [{name = "Hamish Friedlander", email = "hafriedlander@gmail.com"}]
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = [
+  "License :: OSI Approved :: Apache Software License"
+]
+dynamic = ["version", "description"]
+dependencies = [
+  "torch ~= 1.12.1",
+  "torchvision ~= 0.13.1",
+  "numpy ~= 1.23.3",
+  "opencv-python ~= 4.6.0.66",
+  "scipy ~= 1.9.1",
+  "transformers ~= 4.22.1",
+  "diffusers",
+  "protobuf~=3.20",
+  "grpcio~=1.48.1",
+  "Flask~=2.2.2",
+  "wsgicors~=0.7.0",
+  "waitress~=2.1.2",
+  "hupper~=1.10.3",
+  "watchdog ~= 2.1.9"
+]
+
+[project.urls]
+Home = "https://github.com/hafriedlander/stable-diffusion-grpcserver"
+
+[project.scripts]
+sdgrpcserver = "sdgrpcserver.server:main"
+
+[tool.flit.module]
+name = "sdgrpcserver"

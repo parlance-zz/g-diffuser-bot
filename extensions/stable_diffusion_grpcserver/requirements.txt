@@ -1,0 +1,42 @@
+# Use the CUDA-enabled versions of pytorch
+--extra-index-url https://download.pytorch.org/whl/cu116
+
+# Python AI basics
+torch~=1.12.1
+torchvision~=0.13.1
+numpy~=1.23.3
+opencv-python~=4.6.0.66
+scipy~=1.9.1
+
+# Transformers
+transformers~=4.22.1
+-e git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
+-e git+https://github.com/openai/CLIP.git@main#egg=clip
+-e git+https://github.com/huggingface/diffusers@main#egg=diffusers
+
+# Server libraries
+protobuf~=3.20
+grpcio~=1.48.1
+Flask~=2.2.2
+wsgicors~=0.7.0
+waitress~=2.1.2
+hupper~=1.10.3
+watchdog~=2.1.9
+
+# Additional AI libraries
+# These come from "taming transformers" or "diffusers" environment.yaml
+# and probably aren't needed for Stable Diffusion inferance
+#albumentations==0.4.3
+#pytorch-lightning==1.4.2
+#test-tube>=0.7.5
+#einops==0.3.0   
+#torch-fidelity==0.3.0
+#torchmetrics==0.6.0
+#invisible-watermark
+
+# Other stuff from the taming transformers or diffusers environment.yaml
+#pudb==2019.2
+#imageio==2.9.0
+#imageio-ffmpeg==0.4.2
+#omegaconf==2.1.1
+#streamlit>=0.73.1
