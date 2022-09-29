@@ -68,12 +68,9 @@ def _p_kill(proc_pid):  # kill all child processes, recursively as well. its the
     
 def run_string(run_string, cwd, show_output=False, log_path=""):  # run shell command asynchronously, return subprocess
     print(run_string + " (cwd="+str(cwd)+")")
-    try:
-        if log_path != "": process = subprocess.Popen(run_string, shell=False, cwd=cwd, stdout=open(log_path, "w", 1))
-        else: process = subprocess.Popen(run_string, shell=False, cwd=cwd)
-    except Exception as e:
-        process = None
-        print("Error running string '" + run_string + "' - " + str(e) + "...")
+    if log_path != "": process = subprocess.Popen(run_string, shell=False, cwd=cwd, stdout=open(log_path, "w", 1))
+    else: process = subprocess.Popen(run_string, shell=False, cwd=cwd)
+    assert(process)
     return process
     
 def valid_resolution(width, height, init_image=None):  # clip dimensions at max resolution, while keeping the correct resolution granularity,
@@ -340,14 +337,13 @@ def save_samples(samples, args):
     return args.output_samples
     
 def start_grpc_server(args):
-    global DEFAULT_PATHS
+    global DEFAULT_PATHS, GRPC_SERVER_SETTINGS
     if args.debug: load_start_time = datetime.datetime.now()
     
-    engine_cfg_path = DEFAULT_PATHS.root+"/g_diffuser_config_models.yaml"
-    weight_root = DEFAULT_PATHS.models
-    
     grpc_server_run_string = "python ./server.py"
-    grpc_server_run_string += " --enginecfg "+engine_cfg_path+" --weight_root "+weight_root
+    grpc_server_run_string += " --enginecfg "+DEFAULT_PATHS.root+"/g_diffuser_config_models.yaml" + " --weight_root "+DEFAULT_PATHS.models
+    grpc_server_run_string += " --vram_optimisation_level " + str(GRPC_SERVER_SETTINGS.memory_optimization_level)
+    if GRPC_SERVER_SETTINGS.enable_mps: grpc_server_run_string += " --enable_mps"
     grpc_server_process = run_string(grpc_server_run_string, cwd=DEFAULT_PATHS.extensions+"/"+"stable-diffusion-grpcserver", log_path=DEFAULT_PATHS.grpc_log)
     
     if args.debug: print("sd_grpc_server start time : " + str(datetime.datetime.now() - load_start_time))
@@ -411,8 +407,8 @@ def get_args_parser():
     parser.add_argument(
         "--seed",
         type=int,
-        default=int(np.random.randint(DEFAULT_SAMPLE_SETTINGS.auto_seed_range[0], DEFAULT_SAMPLE_SETTINGS.auto_seed_range[1])),
-        help="random seed for sampling (auto-range defined in DEFAULT_SAMPLE_SETTINGS)",
+        default=0,
+        help="random seed for sampling (0 for auto, auto-range defined in DEFAULT_SAMPLE_SETTINGS)",
     )
     parser.add_argument(
         "--steps",
@@ -505,9 +501,15 @@ def get_default_args():
     return get_args_parser().parse_args()
     
 def build_grpc_request_dict(args):
-    """
-    Build a Request arguments dictionary from the CLI arguments.
-    """
+    global DEFAULT_SAMPLE_SETTINGS
+    
+    # auto-seed if none provided
+    if args.seed != 0:
+        seed = args.seed
+    else:
+        args.auto_seed =  int(np.random.randint(DEFAULT_SAMPLE_SETTINGS.auto_seed_range[0], DEFAULT_SAMPLE_SETTINGS.auto_seed_range[1]))
+        seed = args.auto_seed
+        
     return {
         "height": args.h,
         "width": args.w,
@@ -517,7 +519,7 @@ def build_grpc_request_dict(args):
         "eta": 0.,#args.eta,
         "sampler": grpc_client.get_sampler_from_str(args.sampler),
         "steps": args.steps,
-        "seed": args.seed,
+        "seed": seed,
         "samples": args.n,
         "init_image": None, #args.init_image,
         "mask_image": None, #args.mask_image,

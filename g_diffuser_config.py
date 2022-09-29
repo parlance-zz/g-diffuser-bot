@@ -41,6 +41,9 @@ DISCORD_BOT_SETTINGS.activity = DISCORD_BOT_SETTINGS.cmd_prefix + "help, " + DIS
 #IMPORTANT - GRPC server settings (you probably won't need to adjust these settings unless you are an advanced user)
 GRPC_SERVER_SETTINGS.host = "localhost:50051"
 GRPC_SERVER_SETTINGS.key = ""
+GRPC_SERVER_SETTINGS.memory_optimization_level = 0  # 2 is maximum memory savings, 1 is less, and 0 is off
+                                                    # saving more memory generally means mildly decreased performance or output coherence
+GRPC_SERVER_SETTINGS.enable_mps = False
 
 # ******************** SETTINGS END ************************
 

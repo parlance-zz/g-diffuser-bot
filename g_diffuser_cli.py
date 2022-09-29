@@ -47,14 +47,17 @@ INTERACTIVE_MODE_BANNER_STRING = """
 Interactive mode:
     call sample() with keyword arguments and use the up/down arrow-keys to browse command history:
 
-sample("my prompt", n=3, scale=15) # generate 3 samples with a scale of 15
-sample("greg rutkowski", init_img="my_image.png", repeat=1, debug=1) # repeats until stopped, enables debug mode
-sample()     # arguments can be omitted to use your last args instead
+sample("pillars of creation", n=3, scale=15)                           # batch of 3 samples with scale 15
+sample("greg rutkowski", init_img="my_image.png", repeat=1, debug=1)   # repeats until stopped, enables debug mode
+sample("something's wrong with the g-diffuser", sampler="k_euler_a")   # uses the k_euler_ancestral sampler
 
-reset_args() # reset your arguments back to default values
+sample() # arguments can be omitted to use your last args instead
+s()      # some commands have shortcuts / aliases
+
+reset_args() # reset your arguments back to defaults
 show_args()  # shows your *basic* input arguments
 show_args(0) # shows *all* your input arguments
-load_args()  # use your last arguments (from auto-saved json file in inputs/json)
+load_args()  # use your last args (from auto-saved json file in inputs/json)
 save_args("my_fav_args") # you can save your args; these are saved as json files in the inputs path
 load_args("my_fav_args") # you can load saved args by name; these are json files in the inputs path
 
@@ -67,7 +70,8 @@ LAST_ARGS_PATH = DEFAULT_PATHS.inputs+"/json/last_args.json"
         
 def main():
     global VERSION_STRING, INTERACTIVE_MODE_BANNER_STRING, LAST_ARGS_PATH
-    global INTERACTIVE_CLI_ARGS, INTERACTIVE_CLI_STARTING_ARGS
+    global INTERACTIVE_CLI_ARGS, INTERACTIVE_CLI_STARTING_ARGS, INTERACTIVE_CLI_INTERPRETER
+    
     INTERACTIVE_CLI_ARGS = argparse.Namespace()
     
     parser = gdl.get_args_parser()
@@ -107,7 +111,8 @@ def main():
         cli_locals.h = cli_help
         cli_locals.exit = cli_exit
         cli_locals.e = cli_exit
-        code.interact(banner=INTERACTIVE_MODE_BANNER_STRING, local=dict(globals(), **vars(cli_locals)), exitmsg="")
+        INTERACTIVE_CLI_INTERPRETER = code.InteractiveConsole(locals=dict(globals(), **vars(cli_locals)))
+        INTERACTIVE_CLI_INTERPRETER.interact(banner=INTERACTIVE_MODE_BANNER_STRING, exitmsg="")
         exit(0)
     else:
         if args.load_args == "no_preload": gdl.print_namespace(args, debug=args.debug, verbosity_level=1)
@@ -125,7 +130,7 @@ def main():
     
 def cli_get_samples(prompt=None, **kwargs):
     global LAST_ARGS_PATH
-    global INTERACTIVE_CLI_ARGS
+    global INTERACTIVE_CLI_ARGS, INTERACTIVE_CLI_INTERPRETER
     args = argparse.Namespace(**(vars(INTERACTIVE_CLI_ARGS) | kwargs)) # merge with keyword args
     if prompt: args.prompt = prompt
     if args.n < 0: # using n < 0 is the same as using repeat=True
@@ -143,8 +148,7 @@ def cli_get_samples(prompt=None, **kwargs):
         try:                                         # anything could happen to the data
             samples = gdl.get_samples(args)
             gdl.save_samples(samples, args)
-        except KeyboardInterrupt:
-            print("Okay, stopping...")
+        except Exception as e:
             INTERACTIVE_CLI_ARGS = args_copy
             return
         
