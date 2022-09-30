@@ -340,11 +340,16 @@ def start_grpc_server(args):
     global DEFAULT_PATHS, GRPC_SERVER_SETTINGS
     if args.debug: load_start_time = datetime.datetime.now()
     
+    if DEFAULT_PATHS.grpc_log != DEFAULT_PATHS.root:
+        log_path = DEFAULT_PATHS.grpc_log
+    else:
+        log_path = ""
+        
     grpc_server_run_string = "python ./server.py"
     grpc_server_run_string += " --enginecfg "+DEFAULT_PATHS.root+"/g_diffuser_config_models.yaml" + " --weight_root "+DEFAULT_PATHS.models
     grpc_server_run_string += " --vram_optimisation_level " + str(GRPC_SERVER_SETTINGS.memory_optimization_level)
     if GRPC_SERVER_SETTINGS.enable_mps: grpc_server_run_string += " --enable_mps"
-    grpc_server_process = run_string(grpc_server_run_string, cwd=DEFAULT_PATHS.extensions+"/"+"stable-diffusion-grpcserver", log_path=DEFAULT_PATHS.grpc_log)
+    grpc_server_process = run_string(grpc_server_run_string, cwd=DEFAULT_PATHS.extensions+"/"+"stable-diffusion-grpcserver", log_path=log_path)
     
     if args.debug: print("sd_grpc_server start time : " + str(datetime.datetime.now() - load_start_time))
     
@@ -514,7 +519,7 @@ def build_grpc_request_dict(args):
         "height": args.h,
         "width": args.w,
         "start_schedule": None, #args.start_schedule,
-        "end_schedule": None, #args.end_schedule,
+        "end_schedule": None,   #args.end_schedule,
         "cfg_scale": args.scale,
         "eta": 0.,#args.eta,
         "sampler": grpc_client.get_sampler_from_str(args.sampler),

@@ -5,15 +5,15 @@
   name: "Stable Diffusion V1.4"
   description: "Stable Diffusion using the CompVis model and our Unified pipeline"
   class: "UnifiedPipeline"
-  model: "CompVis/stable-diffusion-v1-4"
+  model: ""
   local_model: "./stable-diffusion-v1-4"
   has_fp16: True
   use_auth_token: False
 - id: "waifu-diffusion"
-  enabled: True
+  enabled: False
   visible: True
-  name: "Waifu Diffusion"
-  description: "Stable Diffusion using the Hakurei Waitfu Diffusion model and our Unified pipeline"
+  name: "Waifu Diffusion V1.2"
+  description: "Stable Diffusion using the Hakurei Waifu Diffusion model and our Unified pipeline"
   class: "UnifiedPipeline"
   model: "hakurei/waifu-diffusion"
   local_model: "./waifu-diffusion"
