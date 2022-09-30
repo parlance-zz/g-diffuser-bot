@@ -263,8 +263,8 @@ def get_samples(args):
             stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.key, engine=args.model_name, verbose=False)
     
             answers = stability_api.generate(args.prompt, **request_dict)
-            output_prefix = DEFAULT_PATHS.temp+"/"
-            grpc_samples = grpc_client.process_artifacts_from_answers(output_prefix, answers, write=True, verbose=False)
+            output_prefix = DEFAULT_PATHS.temp+"/s"
+            grpc_samples = grpc_client.process_artifacts_from_answers(output_prefix, answers, write=False, verbose=False)
             for path, artifact in grpc_samples:
                 image = Image.open(io.BytesIO(artifact.binary))
                 samples.append(image)
