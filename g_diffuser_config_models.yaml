@@ -1,0 +1,45 @@
+- id: "stable-diffusion-v1-4-standard"
+  enabled: False
+  visible: True
+  name: "Stable Diffusion V1.4 standard"
+  description: "Stable Diffusion using the original Stability.AI model and Diffusers pipeline"
+  class: "StableDiffusionPipeline"
+  model: "CompVis/stable-diffusion-v1-4"
+  local_model: "./stable-diffusion-v1-4"
+  has_fp16: True
+  use_auth_token: True
+- id: "waifu-diffusion-v1-2-standard"
+  enabled: False
+  visible: True
+  name: "Waifu Diffusion V1.2 standard"
+  description: "Stable Diffusion using Hakurei Waitfu Diffusion model and the original Diffusers pipeline"
+  class: "StableDiffusionPipeline"
+  model: "hakurei/waifu-diffusion"
+  local_model: "./waifu-diffusion"
+  has_fp16: True
+  use_auth_token: False
+- id: "stable-diffusion-v1-4"
+  default: True
+  enabled: True
+  visible: True
+  name: "Stable Diffusion V1.4"
+  description: "Stable Diffusion using the CompVis model and our Unified pipeline"
+  class: "UnifiedPipeline"
+  model: "CompVis/stable-diffusion-v1-4"
+  local_model: "./stable-diffusion-v1-4"
+  has_fp16: False
+  use_auth_token: False
+- id: "waifu-diffusion-v1-2"
+  enabled: False
+  visible: True
+  name: "Waifu Diffusion V1.2"
+  description: "Stable Diffusion using the Hakurei Waitfu Diffusion model and our Unified pipeline"
+  class: "UnifiedPipeline"
+  model: "hakurei/waifu-diffusion"
+  local_model: "./waifu-diffusion"
+  has_fp16: True
+  use_auth_token: False
+
+
+
+
