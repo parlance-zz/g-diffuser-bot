@@ -53,6 +53,7 @@ from PIL import ImageFilter
 from PIL import ImageEnhance
 
 from extensions import grpc_client
+from extensions import g_diffuser_utilities as gdl_utils
 
 import torch
 from torch import autocast
@@ -200,7 +201,7 @@ def get_image_grid(imgs, layout, mode=0): # make an image grid out of a set of i
     grid = Image.new('RGB', size=(layout[1]*w, layout[0]*h))
     grid_w, grid_h = grid.size
     for i, img in enumerate(imgs):
-        if mode: grid.paste(img, box=(i//layout[0]*w, ilayout[0]*h))
+        if mode: grid.paste(img, box=(i//layout[0]*w, i%layout[0]*h))
         else: grid.paste(img, box=(i%layout[1]*w, i//layout[1]*h))
     return grid
 
@@ -226,7 +227,7 @@ def load_image(args):
 
     else: # img2img
         if args.strength == 0.: args.strength = DEFAULT_SAMPLE_SETTINGS.strength
-        blend_mask = np_img_grey_to_rgb(np.ones((args.w, args.h)) * np.clip(args.strength**(0.075), 0., 1.)) # todo: find strength mapping or do a better job of seeding
+        blend_mask = gdl_utils.np_img_grey_to_rgb(np.ones((args.w, args.h)) * np.clip(args.strength**(0.075), 0., 1.)) # todo: find strength mapping or do a better job of seeding
         mask_image = PIL.Image.fromarray(np.clip(blend_mask*255., 0., 255.).astype(np.uint8), mode="RGB")
 
     return init_image, mask_image
@@ -356,31 +357,6 @@ def start_grpc_server(args):
     
     args.grpc_server_process = grpc_server_process
     return grpc_server_process
-   
-# todo: merge with my init args to allow user override without editing files
-"""
-def get_gprc_args_parser():
-    # add gprc server args
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument(
-        "--enginecfg", "-E", type=str, default="./extensions/gprc_engines.yaml", help="Path to the engines.yaml file"
-    )
-    parser.add_argument(
-        "--listen_to_all", "-L", action='store_true', help="Accept requests from the local network, not just localhost" 
-    )
-    parser.add_argument(
-        "--enable_mps", type=bool, default=False, help="Use MPS on MacOS where available"
-    )
-    parser.add_argument(
-        "--vram_optimisation_level", "-V", type=int, default=2, help="How much to trade off performance to reduce VRAM usage (0 = none, 2 = max)"
-    )
-    parser.add_argument(
-        "--nsfw_behaviour", "-N", type=str, default="block", choices=["block", "flag"], help="What to do with images detected as NSFW"
-    )
-    parser.add_argument(
-        "--reload", action="store_true", help="Auto-reload on source change"
-    )
-"""
  
 def get_args_parser():
     global DEFAULT_SAMPLE_SETTINGS
