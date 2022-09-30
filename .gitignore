@@ -6,4 +6,3 @@ __pycache__/
 *.jpg
 *.jpeg
 *.log
-#g_diffuser_config_models.yaml
