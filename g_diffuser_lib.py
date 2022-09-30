@@ -194,13 +194,14 @@ def get_grid_layout(num_samples):
     rows = num_samples // columns
     return (rows, columns)
     
-def get_image_grid(imgs, layout): # make an image grid out of a set of images
+def get_image_grid(imgs, layout, mode=0): # make an image grid out of a set of images
     assert len(imgs) == layout[0]*layout[1]
     w, h = imgs[0].size
     grid = Image.new('RGB', size=(layout[1]*w, layout[0]*h))
     grid_w, grid_h = grid.size
     for i, img in enumerate(imgs):
-        grid.paste(img, box=(i%layout[1]*w, i//layout[1]*h))
+        if mode: grid.paste(img, box=(i//layout[0]*w, ilayout[0]*h))
+        else: grid.paste(img, box=(i%layout[1]*w, i//layout[1]*h))
     return grid
 
 def load_image(args):
