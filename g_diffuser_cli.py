@@ -42,6 +42,7 @@ import code
 import importlib
 import time
 import glob
+import shutil
 
 import numpy as np
 import cv2
@@ -65,16 +66,19 @@ load_args()  # use your last args (from auto-saved json file in inputs/json)
 save_args("my_fav_args") # you can save your args; these are saved as json files in the inputs path
 load_args("my_fav_args") # you can load saved args by name; these are json files in the inputs path
 
-compare("path1", "path2", "path3") # make a grid from all images in specified paths / folders
-compare("a", "b", mode="rows")     # arrange each folder's images into rows instead
-compare("a", "b", grid_file="my_compare.png") # the comparison grid image will be saved in outputs/compare.png
-                                              # use grid_file to specify the output filename instead
+compare("path1", "path2", "path3") # make a grid from all images in specified output paths
+compare("a", "b", mode="rows")     # arrange each output path's images into rows instead
+compare("a", "b", file="my_compare.png") # the comparison image will be saved in ./outputs/compare.png
+                                         # use file to specify the output filename instead
 
-dir()          # show list of files / folders in outputs
-dir("my_path") # show list of files / folders in specified output path
-cls()          # clear the command window if things get cluttered
-help()         # display this message
-exit()         # exit interactive mode
+list()             # show list of files / folders in ./outputs
+list("my_path")    # show list of files / folders in specified output path
+remove("my_path")  # moves the specified output path from ./outputs to ./backups
+restore("my_path") # moves the specified output path from ./backups to ./outputs
+save("my_path")    # copies the specified output path from ./outputs to ./saved
+clear()            # clear the command window if things get cluttered
+help()             # display this message
+exit()             # exit interactive mode
 """
 
 LAST_ARGS_PATH = DEFAULT_PATHS.inputs+"/json/last_args.json"
@@ -117,8 +121,15 @@ def main():
         cli_locals.sa = cli_save_args
         cli_locals.reset_args = cli_reset_args
         cli_locals.ra = cli_reset_args
+        cli_locals.list = cli_dir
+        cli_locals.ls = cli_dir
         cli_locals.dir = cli_dir
-        cli_locals.cls = cli_cls
+        cli_locals.remove = cli_remove
+        cli_locals.rm = cli_remove
+        cli_locals.restore = cli_restore
+        cli_locals.save = cli_save
+        cli_locals.clear = cli_clear
+        cli_locals.cls = cli_clear
         cli_locals.help = cli_help
         cli_locals.exit = cli_exit
         cli_locals.compare = cli_save_comparison_grid
@@ -205,11 +216,37 @@ def cli_dir(output_path=""):
     global DEFAULT_PATHS
     target_path = DEFAULT_PATHS.outputs
     if output_path: target_path += "/"+output_path
-    print(target_path)
     os.system('dir "'+target_path+'"')
     return   
 
-def cli_cls():
+def cli_remove(output_path):
+    assert(output_path)
+    global DEFAULT_PATHS
+    old_path = DEFAULT_PATHS.outputs+"/"+output_path
+    new_path = DEFAULT_PATHS.backups+"/"+output_path
+    shutil.move(old_path, new_path)
+    print("Removed '"+output_path+"' to "+DEFAULT_PATHS.backups)
+    return   
+
+def cli_restore(output_path):
+    assert(output_path)
+    global DEFAULT_PATHS
+    old_path = DEFAULT_PATHS.backups+"/"+output_path
+    new_path = DEFAULT_PATHS.outputs+"/"+output_path
+    shutil.move(old_path, new_path)
+    print("Restored '"+output_path+"' to "+DEFAULT_PATHS.outputs)
+    return   
+
+def cli_save(output_path):
+    assert(output_path)
+    global DEFAULT_PATHS
+    old_path = DEFAULT_PATHS.outputs+"/"+output_path
+    new_path = DEFAULT_PATHS.saved+"/"+output_path
+    shutil.copytree(old_path, new_path)
+    print("Saved copy of '"+output_path+"' to "+DEFAULT_PATHS.saved)
+    return   
+
+def cli_clear():
     os.system("cls")
     return   
     
@@ -228,8 +265,8 @@ def cli_save_comparison_grid(*paths, **kwargs):
     args = argparse.Namespace(**kwargs)
     if not "mode" in args: args.mode="columns"
     else: args.mode = args.mode.lower()
-    if not "grid_file" in args: grid_filename = "compare.png"
-    else: grid_filename = args.grid_file
+    if not "file" in args: grid_filename = "compare.png"
+    else: grid_filename = args.file
     grid_filename = DEFAULT_PATHS.outputs+"/"+grid_filename
 
     num_paths = len(paths)

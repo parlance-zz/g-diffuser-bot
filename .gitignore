@@ -5,8 +5,4 @@ __pycache__/
 *.json
 *.jpg
 *.jpeg
-<<<<<<< HEAD
 *.log
-=======
-*.log
->>>>>>> 0edcc05e52fd9e1a8091356d60764671e38b2225
