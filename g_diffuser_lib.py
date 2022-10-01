@@ -114,7 +114,7 @@ def print_namespace(namespace, debug=False, verbosity_level=0, indent=4):
     return
 
 def get_default_output_name(args, truncate_length=70):
-    sanitized_name = re.sub(r'[\\/*?:"<>|]',"", args.prompt).replace("\t"," ").replace(" ","_").strip()
+    sanitized_name = re.sub(r'[\\/*?:"<>|]',"", args.prompt).replace("'","").replace('"',"").replace("\t"," ").replace(" ","_").strip()
     if (truncate_length > len(sanitized_name)) or (truncate_length==0): truncate_length = len(sanitized_name)
 
     if truncate_length < len(sanitized_name): # if we had to shorten the filename because the prompt was too long, add a hash of the prompt after truncating length

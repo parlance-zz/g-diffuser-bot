@@ -59,23 +59,26 @@ sample("something's wrong with the g-diffuser", sampler="k_euler")   # uses the 
 sample() # arguments can be omitted to use your last args instead
 s()      # some commands have shortcuts / aliases
 
-reset_args() # reset your arguments back to defaults
-show_args()  # shows your *basic* input arguments
-show_args(0) # shows *all* your input arguments
-load_args()  # use your last args (from auto-saved json file in inputs/json)
-save_args("my_fav_args") # you can save your args; these are saved as json files in the inputs path
-load_args("my_fav_args") # you can load saved args by name; these are json files in the inputs path
+reset_args()  # reset your arguments back to defaults
+show_args()   # shows your *basic* input arguments
+show_args(0)  # shows *all* your input arguments
+load_args()   # load and use your last arguments (from auto-saved json file in inputs/json)
+save_args("my_fav_args")  # you can save your args; these are saved as json files in the inputs path
+load_args("my_fav_args")  # you can load those saved argumentss by name
 
-compare("path1", "path2", "path3") # make a grid from all images in specified output paths
-compare("a", "b", mode="rows")     # arrange each output path's images into rows instead
-compare("a", "b", file="my_compare.png") # the comparison image will be saved in ./outputs/compare.png
-                                         # use file to specify the output filename instead
+list()                          # show list of files / folders in ./outputs
+list("my_path")                 # show list of files / folders in specified output path
+remove("my_path")               # moves the specified output path from ./outputs to ./backups
+restore("my_path")              # moves the specified output path from ./backups to ./outputs
+save("my_path")                 # copies the specified output path from ./outputs to ./saved
+rename("old_path", "new_path")  # renames the specified output path in ./outputs
 
-list()             # show list of files / folders in ./outputs
-list("my_path")    # show list of files / folders in specified output path
-remove("my_path")  # moves the specified output path from ./outputs to ./backups
-restore("my_path") # moves the specified output path from ./backups to ./outputs
-save("my_path")    # copies the specified output path from ./outputs to ./saved
+regen("old_path", "new_path", scale=20)   # renames the specified output path in ./outputs
+compare("path1", "path2", "path3")        # make a grid from all images in specified output paths
+compare("a", "b", mode="rows")            # arrange each output path's images into rows instead
+compare("a", "b", file="my_compare.jpg")  # the comparison image will be saved in ./outputs/compare.png
+                                          # use file to specify the output filename instead
+
 clear()            # clear the command window if things get cluttered
 help()             # display this message
 exit()             # exit interactive mode
@@ -128,11 +131,15 @@ def main():
         cli_locals.rm = cli_remove
         cli_locals.restore = cli_restore
         cli_locals.save = cli_save
+        cli_locals.rename = cli_rename
+        cli_locals.move = cli_rename
+        cli_locals.regen = cli_regen
+        cli_locals.compare = cli_save_comparison_grid
         cli_locals.clear = cli_clear
         cli_locals.cls = cli_clear
         cli_locals.help = cli_help
         cli_locals.exit = cli_exit
-        cli_locals.compare = cli_save_comparison_grid
+        
         
         INTERACTIVE_CLI_INTERPRETER = code.InteractiveConsole(locals=dict(globals(), **vars(cli_locals)))
         INTERACTIVE_CLI_INTERPRETER.interact(banner=INTERACTIVE_MODE_BANNER_STRING, exitmsg="")
@@ -246,9 +253,25 @@ def cli_save(output_path):
     print("Saved copy of '"+output_path+"' to "+DEFAULT_PATHS.saved)
     return   
 
+def cli_rename(old_path, new_path):
+    assert(old_path); assert(new_path)
+    global DEFAULT_PATHS
+    shutil.move(DEFAULT_PATHS.outputs+"/"+old_path, DEFAULT_PATHS.outputs+"/"+new_path)
+    print("Renamed '"+old_path+"' to '"+new_path+"'")
+    return   
+
+def cli_regen(output_path):
+    assert(output_path)
+    global DEFAULT_PATHS
+    old_path = DEFAULT_PATHS.outputs+"/"+output_path
+    new_path = DEFAULT_PATHS.saved+"/"+output_path
+    shutil.copytree(old_path, new_path)
+    print("Saved copy of '"+output_path+"' to "+DEFAULT_PATHS.saved)
+    return   
+
 def cli_clear():
     os.system("cls")
-    return   
+    return
     
 def cli_help():
     global VERSION_STRING, INTERACTIVE_MODE_BANNER_STRING
@@ -265,7 +288,7 @@ def cli_save_comparison_grid(*paths, **kwargs):
     args = argparse.Namespace(**kwargs)
     if not "mode" in args: args.mode="columns"
     else: args.mode = args.mode.lower()
-    if not "file" in args: grid_filename = "compare.png"
+    if not "file" in args: grid_filename = "compare.jpg"
     else: grid_filename = args.file
     grid_filename = DEFAULT_PATHS.outputs+"/"+grid_filename
 
