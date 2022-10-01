@@ -34,19 +34,20 @@ ntpath.realpath = ntpath.abspath
 from g_diffuser_config import DEFAULT_PATHS, GRPC_SERVER_SETTINGS
 from g_diffuser_defaults import DEFAULT_SAMPLE_SETTINGS
 
-import os, sys
-import io
-import time
+import os #, sys
+#import io
+#import time
 import datetime
 import argparse
 import uuid
 import pathlib
 import json
 import re
-import importlib
+#import importlib
 import subprocess
 import psutil
-import hashlib
+#import hashlib
+import glob
 
 import numpy as np
 import PIL            # ...
@@ -114,37 +115,23 @@ def print_namespace(namespace, debug=False, verbosity_level=0, indent=4):
     return
 
 def get_default_output_name(args, truncate_length=70):
-    sanitized_name = re.sub(r'[\\/*?:"<>|]',"", args.prompt).replace("'","").replace('"',"").replace("\t"," ").replace(" ","_").strip()
+    sanitized_name = re.sub(r'[\\/*?:"<>|]',"", args.prompt).replace(".","").replace("'","").replace('"',"").replace("\t"," ").replace(" ","_").strip()
     if (truncate_length > len(sanitized_name)) or (truncate_length==0): truncate_length = len(sanitized_name)
-
-    if truncate_length < len(sanitized_name): # if we had to shorten the filename because the prompt was too long, add a hash of the prompt after truncating length
-        sanitized_name = sanitized_name[0:truncate_length]
-        sanitized_name += "_" + (hashlib.sha256(sanitized_name.encode()).hexdigest())[0:5]
-
+    if truncate_length < len(sanitized_name):  sanitized_name = sanitized_name[0:truncate_length]
     return sanitized_name
 
-"""
-def save_debug_img(np_image, name):
-    global DEFAULT_PATHS
-    if not DEFAULT_PATHS.debug: return
-    pathlib.Path(DEFAULT_PATHS.debug).mkdir(exist_ok=True)
-    
-    image_path = DEFAULT_PATHS.debug + "/" + name + ".png"
-    if type(np_image) == np.ndarray:
-        if np_image.ndim == 2: mode = "L"
-        elif np_image.shape[2] == 4: mode = "RGBA"
-        else: mode = "RGB"
-        pil_image = PIL.Image.fromarray(np.clip(np.absolute(np_image)*255., 0., 255.).astype(np.uint8), mode=mode)
-        pil_image.save(image_path)
+def get_noclobber_checked_path(base_path, file_path):
+    full_path = base_path+"/"+file_path
+    if os.path.exists(full_path):
+        file_path_noext, file_path_ext = os.path.splitext(file_path)
+        existing_count = len(glob.glob(base_path+"/"+file_path_noext+"*"+file_path_ext)); assert(existing_count > 0)
+        return file_path_noext+"__"+str(existing_count)+file_path_ext
     else:
-        np_image.save(image_path)
-    return image_path
-"""
-
+        return file_path
+        
 def save_json(_dict, file_path):
     assert(file_path)
     (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True)
-    
     with open(file_path, "w") as file:
         json.dump(_dict, file, indent=4)
         file.close()
@@ -180,7 +167,7 @@ def strip_args(args, level=0): # remove args we wouldn't want to print or serial
         if "final_output_name" in args_stripped: del args_stripped.final_output_name
         if "output_file" in args_stripped: del args_stripped.output_file
         if "output_file_type" in args_stripped: del args_stripped.output_file_type
-        if "args_output" in args_stripped: del args_stripped.args_output
+        if "args_file" in args_stripped: del args_stripped.args_file
         if "no_json" in args_stripped: del args_stripped.no_json
 
         if "uuid_str" in args_stripped: del args_stripped.uuid_str
@@ -195,23 +182,22 @@ def strip_args(args, level=0): # remove args we wouldn't want to print or serial
 
     return args_stripped
     
-def factorize(num):
-    return [n for n in range(1, num + 1) if num % n == 0]
-    
 def get_grid_layout(num_samples):
+    def factorize(num):
+        return [n for n in range(1, num + 1) if num % n == 0]
     factors = factorize(num_samples)
     median_factor = factors[len(factors)//2]
     rows = median_factor
     columns = num_samples // rows
     return (columns, rows)
     
-def get_image_grid(imgs, layout, mode=0): # make an image grid out of a set of images
+def get_image_grid(imgs, layout, mode="columns"): # make an image grid out of a set of images
     assert len(imgs) == layout[0]*layout[1]
     width, height = (imgs[0].shape[0], imgs[0].shape[1])
 
     np_grid = np.zeros((layout[0]*width, layout[1]*height, 3), dtype="uint8")
     for i, img in enumerate(imgs):
-        if not mode:
+        if mode != "rows":
             paste_x = i // layout[1] * width
             paste_y = i % layout[1] * height
         else:
@@ -319,19 +305,6 @@ def get_samples(args, write=True):
 
     return samples
 
-def save_samples_grid(samples, args):
-    assert(len(samples)> 1)
-    grid_layout = get_grid_layout(len(samples))
-    if args.debug: print("Creating grid layout - " + str(grid_layout))
-
-    grid_image = get_image_grid(samples, grid_layout)
-    args.output_file = args.final_output_path+"/grid_"+args.final_output_name+".png"
-    args.output_file_type = "grid_img"
-    cv2.imwrite(DEFAULT_PATHS.outputs+"/"+args.output_file, grid_image)
-    print("Saved grid " + str(DEFAULT_PATHS.outputs+"/"+args.output_file))
-
-    return
-
 def save_sample(sample, args):
     global DEFAULT_PATHS
     assert(DEFAULT_PATHS.outputs)
@@ -341,16 +314,32 @@ def save_sample(sample, args):
 
     pathlib.Path(DEFAULT_PATHS.outputs+"/"+args.final_output_path).mkdir(exist_ok=True)
     args.output_file = args.final_output_path+"/"+args.final_output_name+"_s"+str(seed)+".png"
-    args.output_file_type = "img" # the future is coming, holds on to your butts
+    args.output_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.output_file) # add suffix if filename already exists
+    args.output_file_type = "img" # the future is coming, hold on to your butts
     cv2.imwrite(DEFAULT_PATHS.outputs+"/"+args.output_file, sample)
     print("Saved " + str(DEFAULT_PATHS.outputs+"/"+args.output_file))
 
     if not args.no_json:
-        args.args_output = args.final_output_path+"/json/"+args.final_output_name+"_s"+str(seed)+".json"
-        save_json(vars(strip_args(args)), DEFAULT_PATHS.outputs+"/"+args.args_output)
+        args.args_file = args.final_output_path+"/json/"+args.final_output_name+"_s"+str(seed)+".json"
+        args.args_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.args_file) # add suffix if filename already exists
+        save_json(vars(strip_args(args)), DEFAULT_PATHS.outputs+"/"+args.args_file)
 
     return
     
+def save_samples_grid(samples, args):
+    assert(len(samples)> 1)
+    grid_layout = get_grid_layout(len(samples))
+    if args.debug: print("Creating grid layout - " + str(grid_layout))
+
+    grid_image = get_image_grid(samples, grid_layout)
+    args.output_file = args.final_output_path+"/grid_"+args.final_output_name+".jpg"
+    args.output_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.output_file)
+    args.output_file_type = "grid_img"
+    cv2.imwrite(DEFAULT_PATHS.outputs+"/"+args.output_file, grid_image)
+    print("Saved grid " + str(DEFAULT_PATHS.outputs+"/"+args.output_file))
+
+    return
+
 def start_grpc_server(args):
     global DEFAULT_PATHS, GRPC_SERVER_SETTINGS
     if args.debug: load_start_time = datetime.datetime.now()

@@ -260,13 +260,11 @@ def cli_rename(old_path, new_path):
     print("Renamed '"+old_path+"' to '"+new_path+"'")
     return   
 
-def cli_regen(output_path):
-    assert(output_path)
+def cli_regen(old_path, new_path, **kwargs):
+    assert(old_path); assert(new_path)
     global DEFAULT_PATHS
-    old_path = DEFAULT_PATHS.outputs+"/"+output_path
-    new_path = DEFAULT_PATHS.saved+"/"+output_path
-    shutil.copytree(old_path, new_path)
-    print("Saved copy of '"+output_path+"' to "+DEFAULT_PATHS.saved)
+    
+    print("Renamed '"+old_path+"' to '"+new_path+"'")
     return   
 
 def cli_clear():
