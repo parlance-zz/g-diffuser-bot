@@ -173,16 +173,17 @@ def cli_get_samples(prompt=None, **kwargs):
     try:                                         # anything could happen to the data
         samples = gdl.get_samples(args)
     except KeyboardInterrupt:           # if sampling is aborted with ctrl+c or an error, restore the args we started with
-        INTERACTIVE_CLI_ARGS = args_copy
+        args = args_copy
     except Exception as e:
         print("Error in gdl.get_samples '" + str(e) + "'")
-        INTERACTIVE_CLI_ARGS = args_copy
-    else:
-        INTERACTIVE_CLI_ARGS = args    # preserve args for next call to sample() if everything went ok
-        try:                           # try to save the used args in a json tmp file for convenience
-            gdl.save_json(vars(gdl.strip_args(args)), LAST_ARGS_PATH)
-        except Exception as e:
-            if args.debug: print("Error saving sample args - " + str(e))
+        args = args_copy
+        if args.debug: raise
+
+    INTERACTIVE_CLI_ARGS = args    # preserve args for next call to sample() if everything went ok
+    try:                           # try to save the used args in a json tmp file for convenience
+        gdl.save_json(vars(gdl.strip_args(args)), LAST_ARGS_PATH)
+    except Exception as e:
+        if args.debug: print("Error saving sample args - " + str(e))
 
     if args.debug: gdl.print_namespace(args, debug=0, verbosity_level=1)
     return

@@ -230,18 +230,11 @@ def load_image(args):
     
     num_channels = init_image.shape[2]
     if num_channels == 4: # input image has an alpha channel, setup mask for in/out-painting
-        # prep masks, note that you only need to prep masks once if you're doing multiple samples
-        mask_image = init_image.split()[-1]
-        np_mask_rgb = (np.asarray(mask_image.convert("RGB"))/255.).astype(np.float64)
-        mask_image = PIL.Image.fromarray(np.clip(np_mask_rgb*255., 0., 255.).astype(np.uint8), mode="RGB")
-
-    elif num_channels == 3: # rgb image, setup img2img
-        if args.strength == 0.: args.strength = DEFAULT_SAMPLE_SETTINGS.strength
-        blend_mask = gdl_utils.np_img_grey_to_rgb(np.ones((args.w, args.h)) * np.clip(args.strength**(0.075), 0., 1.)) # todo: find strength mapping or do a better job of seeding
-        mask_image = PIL.Image.fromarray(np.clip(blend_mask*255., 0., 255.).astype(np.uint8), mode="RGB")
-
+        mask_image = init_image[:,:,3]
+    elif num_channels == 3: # rgb image, regular img2img without a mask
+        mask_image = None
     else:
-        print("Error loading init_image "+final_init_img_path+": unsupported image format in ")
+        print("Error loading init_image "+final_init_img_path+": unsupported image format")
         return None, None
 
     return init_image, mask_image
@@ -275,7 +268,7 @@ def get_samples(args, write=True):
     samples = []
     while True: # watch out! a wild shrew!
         try:
-            request_dict = build_grpc_request_dict(args)
+            request_dict = build_grpc_request_dict(args, init_image, mask_image)
             answers = stability_api.generate(args.prompt, **request_dict)
             grpc_output_prefix = DEFAULT_PATHS.temp+"/s"
             grpc_samples = grpc_client.process_artifacts_from_answers(grpc_output_prefix, answers, write=False, verbose=False)
@@ -429,8 +422,8 @@ def get_args_parser():
     parser.add_argument(
         "--strength",
         type=float,
-        default=0.,
-        help="overall amount to change the input image (default value defined in DEFAULT_SAMPLE_SETTINGS)",
+        default=DEFAULT_SAMPLE_SETTINGS.strength,
+        help="overall amount of change for img2img",
     )
     parser.add_argument(
         "--n",
@@ -503,7 +496,7 @@ def get_args_parser():
 def get_default_args():
     return get_args_parser().parse_args()
     
-def build_grpc_request_dict(args):
+def build_grpc_request_dict(args, init_image, mask_image):
     global DEFAULT_SAMPLE_SETTINGS
     # use auto-seed if none provided
     if args.seed: seed = args.seed
@@ -511,6 +504,11 @@ def build_grpc_request_dict(args):
         args.auto_seed
         seed = args.auto_seed
     
+    if init_image: init_image_bytes = np.array(cv2.imencode(".png", init_image)[1]).tobytes()
+    else: init_image_bytes = None
+    if mask_image: mask_image_bytes = np.array(cv2.imencode(".png", mask_image)[1]).tobytes()
+    else: mask_image_bytes = None
+
     # if repeating just use the default batch size
     if args.n <= 0: n = int(1e10) #DEFAULT_SAMPLE_SETTINGS.batch_size
     else: n = args.n
@@ -526,7 +524,8 @@ def build_grpc_request_dict(args):
         "steps": args.steps,
         "seed": seed,
         "samples": n,
-        "init_image": None, #args.init_image,
-        "mask_image": None, #args.mask_image,
+        "init_image": init_image_bytes,
+        "mask_image": mask_image_bytes,
+        "strength": args.strength,
         #"negative_prompt": args.negative_prompt
     }    
