@@ -322,11 +322,10 @@ def save_sample(sample, args):
     if args.seed: seed = args.seed
     else: seed = args.auto_seed
 
-    pathlib.Path(DEFAULT_PATHS.outputs+"/"+args.final_output_path).mkdir(exist_ok=True)
+    pathlib.Path(DEFAULT_PATHS.outputs+"/"+args.final_output_path).mkdir(exist_ok=True, parents=True)
     args.output_file = args.final_output_path+"/"+args.final_output_name+"_s"+str(seed)+".png"
     args.output_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.output_file) # add suffix if filename already exists
     args.output_file_type = "img" # the future is coming, hold on to your butts
-    #print(DEFAULT_PATHS.outputs+"/"+args.output_file)
     cv2.imwrite(DEFAULT_PATHS.outputs+"/"+args.output_file, sample)
     print("Saved " + str(DEFAULT_PATHS.outputs+"/"+args.output_file))
 
@@ -341,11 +340,11 @@ def save_samples_grid(samples, args):
     assert(len(samples)> 1)
     grid_layout = get_grid_layout(len(samples))
     grid_image = get_image_grid(samples, grid_layout)
-    args.output_file = args.final_output_path+"/grid_"+args.final_output_name+".jpg"
-    args.output_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.output_file)
-    args.output_file_type = "grid_img"
-    cv2.imwrite(DEFAULT_PATHS.outputs+"/"+args.output_file, grid_image)
-    print("Saved grid " + str(DEFAULT_PATHS.outputs+"/"+args.output_file))
+    output_file = args.final_output_path+"/grid_"+args.final_output_name+".jpg"
+    output_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, output_file)
+    pathlib.Path(DEFAULT_PATHS.outputs+"/"+args.final_output_path).mkdir(exist_ok=True, parents=True)
+    cv2.imwrite(DEFAULT_PATHS.outputs+"/"+output_file, grid_image)
+    print("Saved grid " + str(DEFAULT_PATHS.outputs+"/"+output_file))
     return
 
 def start_grpc_server(args):
