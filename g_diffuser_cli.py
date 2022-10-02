@@ -33,14 +33,12 @@ ntpath.realpath = ntpath.abspath
 import g_diffuser_lib as gdl
 from g_diffuser_config import DEFAULT_PATHS
 
-import os, sys
+import os
 os.chdir(DEFAULT_PATHS.root)
 
 import datetime
 import argparse
 import code
-import importlib
-import time
 import glob
 import shutil
 

@@ -34,19 +34,15 @@ ntpath.realpath = ntpath.abspath
 from g_diffuser_config import DEFAULT_PATHS, GRPC_SERVER_SETTINGS
 from g_diffuser_defaults import DEFAULT_SAMPLE_SETTINGS
 
-import os #, sys
-#import io
-#import time
+import os
 import datetime
 import argparse
 import uuid
 import pathlib
 import json
 import re
-#import importlib
 import subprocess
 import psutil
-#import hashlib
 import glob
 
 import numpy as np
