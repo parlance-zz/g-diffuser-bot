@@ -129,14 +129,20 @@ def get_default_output_name(args, truncate_length=70):
     return sanitized_name
 
 def get_noclobber_checked_path(base_path, file_path):
-    full_path = base_path+"/"+file_path
+    """
     if os.path.exists(full_path):
         file_path_noext, file_path_ext = os.path.splitext(file_path)
         existing_count = len(glob.glob(base_path+"/"+file_path_noext+"*"+file_path_ext)); assert(existing_count > 0)
         return file_path_noext+"_x"+str(existing_count)+file_path_ext
     else:
         return file_path
-        
+    """
+    clobber_num_padding = 3
+    full_path = base_path+"/"+file_path    
+    file_path_noext, file_path_ext = os.path.splitext(file_path)
+    existing_count = len(glob.glob(base_path+"/"+file_path_noext+"*"+file_path_ext))
+    return file_path_noext+"_x"+str(existing_count).zfill(clobber_num_padding)+file_path_ext
+
 def save_json(_dict, file_path):
     assert(file_path)
     (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True)
@@ -317,8 +323,9 @@ def save_sample(sample, args):
     if args.seed: seed = args.seed
     else: seed = args.auto_seed
 
+    seed_num_padding = 5
     pathlib.Path(DEFAULT_PATHS.outputs+"/"+args.final_output_path).mkdir(exist_ok=True, parents=True)
-    args.output_file = args.final_output_path+"/"+args.final_output_name+"_s"+str(seed)+".png"
+    args.output_file = args.final_output_path+"/"+args.final_output_name+"_s"+str(seed).zfill(seed_num_padding)+".png"
     args.output_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.output_file) # add suffix if filename already exists
     args.output_file_type = "img" # the future is coming, hold on to your butts
     cv2.imwrite(DEFAULT_PATHS.outputs+"/"+args.output_file, sample)
@@ -326,7 +333,7 @@ def save_sample(sample, args):
     if args.show and args.n <= 1: os.system(DEFAULT_PATHS.outputs+"/"+args.output_file)
 
     if not args.no_json:
-        args.args_file = args.final_output_path+"/json/"+args.final_output_name+"_s"+str(seed)+".json"
+        args.args_file = args.final_output_path+"/json/"+args.final_output_name+"_s"+str(seed).zfill(seed_num_padding)+".json"
         args.args_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.args_file) # add suffix if filename already exists
         save_json(vars(strip_args(args)), DEFAULT_PATHS.outputs+"/"+args.args_file)
 
@@ -367,7 +374,7 @@ def start_grpc_server(args):
     GRPC_SERVER_PROCESS = run_string(grpc_server_run_string, cwd=DEFAULT_PATHS.extensions+"/"+"stable-diffusion-grpcserver", log_path=log_path)
     if args.debug: print("sd_grpc_server start time : " + str(datetime.datetime.now() - load_start_time))
     return
- 
+    
 def get_args_parser():
     global DEFAULT_SAMPLE_SETTINGS
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
