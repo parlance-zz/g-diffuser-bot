@@ -302,7 +302,7 @@ def cli_resample(old_path, new_path, **kwargs):
             output_resample_args.output_path = new_path # ensure output goes to specified path, regardless of output_path in args
 
             try:
-                samples = gdl.get_samples(resample_args)
+                samples = gdl.get_samples(output_resample_args)
                 all_resampled_samples.extend(samples)
             except KeyboardInterrupt: 
                 print("Aborting resample...")
