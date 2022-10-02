@@ -62,19 +62,19 @@ s()      # some commands have shortcuts / aliases
 reset_args()  # reset your arguments back to defaults
 show_args()   # shows your *basic* input arguments
 show_args(0)  # shows *all* your input arguments
-load_args()   # load and use your last arguments (from auto-saved json file in ./inputs/json)
-save_args("my_fav_args")  # you can save your arguments as json files in ./inputs/json
+load_args()   # load and use your last arguments (from auto-saved file in ./inputs/json)
+save_args("my_fav_args")  # you can save your arguments in ./inputs/json
 load_args("my_fav_args")  # you can load those saved arguments by name
 
-list()                          # show list of files / folders in ./outputs
-list("my_path")                 # show list of files / folders in specified output path
+list()                          # show list of files and folders in ./outputs
+list("my_path")                 # show list of files and folders in specified output path
 remove("my_path")               # moves the specified output path from ./outputs to ./backups
 restore("my_path")              # moves the specified output path from ./backups to ./outputs
 save("my_path")                 # copies the specified output path from ./outputs to ./saved
 rename("old_path", "new_path")  # renames the specified output path in ./outputs
 
 resample("old_path", "new_path", scale=20)  # regenerate all saved outputs in old_path into new_path with replacement arguments
-compare("path1", "path2", "path3")          # make a comparison grid from all images in specified the specified output paths
+compare("path1", "path2", "path3")          # make a comparison grid from all images in the specified output paths
 compare("a", "b", mode="rows")              # arrange each output path's images into rows instead
 compare("a", "b", file="my_compare.jpg")    # the comparison image will be saved by default as ./outputs/compare.jpg
                                             # use 'file' to specify an alternate filename
