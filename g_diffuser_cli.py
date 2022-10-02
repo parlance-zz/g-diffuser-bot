@@ -140,7 +140,6 @@ def main():
         cli_locals.help = cli_help
         cli_locals.exit = cli_exit
         
-        
         INTERACTIVE_CLI_INTERPRETER = code.InteractiveConsole(locals=dict(globals(), **vars(cli_locals)))
         INTERACTIVE_CLI_INTERPRETER.interact(banner=INTERACTIVE_MODE_BANNER_STRING, exitmsg="")
         exit(0)
@@ -250,6 +249,10 @@ def cli_remove(output_path):
     global DEFAULT_PATHS
     old_path = DEFAULT_PATHS.outputs+"/"+output_path
     new_path = DEFAULT_PATHS.backups+"/"+output_path
+    if not os.path.exists(old_path):
+        print("Error: Output path '" + str(old_path) + "' does not exist")
+        return
+
     shutil.move(old_path, new_path)
     print("Removed '"+output_path+"' to "+DEFAULT_PATHS.backups)
     return   
@@ -280,6 +283,7 @@ def cli_rename(old_path, new_path):
     return   
 
 def cli_resample(old_path, new_path, **kwargs):
+    resample_args = argparse.Namespace(**kwargs)
     assert(old_path); assert(new_path)
     global DEFAULT_PATHS
     
@@ -291,7 +295,20 @@ def cli_resample(old_path, new_path, **kwargs):
     if len(old_arg_files) > 0:
         print("Resampling "+str(len(old_arg_files)) + " output samples...")
         for arg_file in old_arg_files:
-            print(arg_file)
+            args_file_dict = gdl.load_json(arg_file); assert(args_file_dict)
+            if args_file_dict["n"] < 1: continue # skip samples that were endlessly repeated
+
+            resample_args = argparse.Namespace(**(args_file_dict | vars(resample_args))) # merge with original args
+            resample_args.n = 1  
+            resample_args.output_path = new_path # ensure output goes to specified path, regardless of output_path in args
+
+            try:
+                samples = gdl.get_samples(resample_args)
+            except KeyboardInterrupt: 
+                print("Aborting resample...")
+                return
+            except Exception as e:
+                print("Error in gdl.get_samples '" + str(e) + "'")
     else:
         print("No outputs found in '" + str(DEFAULT_PATHS.outputs+"/"+old_path) + "' to resample")
     return
