@@ -291,6 +291,7 @@ def cli_resample(old_path, new_path, **kwargs):
         print("Error: Output path '" + str(DEFAULT_PATHS.outputs+"/"+old_path) + "' does not exist")
         return
 
+    all_resampled_samples = []
     old_arg_files = glob.glob(DEFAULT_PATHS.outputs+"/"+old_path+"/**/*.json", recursive=True)
     if len(old_arg_files) > 0:
         print("Resampling "+str(len(old_arg_files)) + " output samples...")
@@ -304,6 +305,7 @@ def cli_resample(old_path, new_path, **kwargs):
 
             try:
                 samples = gdl.get_samples(resample_args)
+                all_resampled_samples.extend(samples)
             except KeyboardInterrupt: 
                 print("Aborting resample...")
                 return
@@ -311,6 +313,8 @@ def cli_resample(old_path, new_path, **kwargs):
                 print("Error in gdl.get_samples '" + str(e) + "'")
     else:
         print("No outputs found in '" + str(DEFAULT_PATHS.outputs+"/"+old_path) + "' to resample")
+
+    gdl.save_samples_grid(all_resampled_samples, resample_args) # lastly, saved a summary grid of all the resampled outputs
     return
 
 def cli_clear():
