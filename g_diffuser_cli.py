@@ -77,6 +77,7 @@ compare("path1", "path2", "path3")          # make a comparison grid from all im
 compare("a", "b", mode="rows")              # arrange each output path's images into rows instead
 compare("a", "b", file="my_compare.jpg")    # the comparison image will be saved by default as ./outputs/compare.jpg
                                             # use 'file' to specify an alternate filename
+show("my_file.png", output_path="folder")   # open an output sample using your os default application
 
 run_script("demo")  # you can save cli scripts(.py) in ./inputs/scripts
 
@@ -137,6 +138,7 @@ def main():
         cli_locals.move = cli_rename
         cli_locals.resample = cli_resample
         cli_locals.compare = cli_save_comparison_grid
+        cli_locals.show = cli_show
         cli_locals.run_script = cli_run_script
         cli_locals.run = cli_run_script
         cli_locals.clear = cli_clear
@@ -384,6 +386,15 @@ def cli_save_comparison_grid(*paths, **kwargs):
     
     cv2.imwrite(grid_filename, np_grid)
     print("Saved " + grid_filename)
+    return
+
+def cli_show(file, output_path=""):
+    global DEFAULT_PATHS
+    final_path = DEFAULT_PATHS.outputs+"/"+output_path+"/"+file
+    if not os.path.exists(final_path):
+        print("Error: Could not open file '" + final_path + "'")
+        return
+    os.system(final_path)
     return
 
 def cli_run_script(script_name):
