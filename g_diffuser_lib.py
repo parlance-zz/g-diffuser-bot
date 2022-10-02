@@ -58,6 +58,9 @@ from extensions import g_diffuser_utilities as gdl_utils
 import torch
 from torch import autocast
 
+global GRPC_SERVER_PROCESS
+GRPC_SERVER_PROCESS = None
+
 def _p_kill(proc_pid):  # kill all child processes, recursively as well. its the only way to be sure
     print("Killing process id " + str(proc_pid))
     try:
@@ -153,7 +156,6 @@ def load_json(file_path):
     
 def strip_args(args, level=0): # remove args we wouldn't want to print or serialize, higher levels strip additional irrelevant fields
     args_stripped = argparse.Namespace(**(vars(args).copy()))
-    if "grpc_server_process" in args_stripped: del args_stripped.grpc_server_process
     
     if level >=1: # keep just the basics for most printing
         if "command" in args_stripped: del args_stripped.command
@@ -350,13 +352,10 @@ def save_samples_grid(samples, args):
     return
 
 def start_grpc_server(args):
-    global DEFAULT_PATHS, GRPC_SERVER_SETTINGS
+    global DEFAULT_PATHS, GRPC_SERVER_SETTINGS, GRPC_SERVER_PROCESS
     if args.debug: load_start_time = datetime.datetime.now()
-    
-    if DEFAULT_PATHS.grpc_log != DEFAULT_PATHS.root:
-        log_path = DEFAULT_PATHS.grpc_log
-    else:
-        log_path = ""
+    if DEFAULT_PATHS.grpc_log != DEFAULT_PATHS.root: log_path = DEFAULT_PATHS.grpc_log
+    else: log_path = ""
     
     """
     from extensions import grpc_server
@@ -371,12 +370,9 @@ def start_grpc_server(args):
     grpc_server_run_string += " --enginecfg "+DEFAULT_PATHS.root+"/g_diffuser_config_models.yaml" + " --weight_root "+DEFAULT_PATHS.models
     grpc_server_run_string += " --vram_optimisation_level " + str(GRPC_SERVER_SETTINGS.memory_optimization_level)
     if GRPC_SERVER_SETTINGS.enable_mps: grpc_server_run_string += " --enable_mps"
-    grpc_server_process = run_string(grpc_server_run_string, cwd=DEFAULT_PATHS.extensions+"/"+"stable-diffusion-grpcserver", log_path=log_path)
-    
+    GRPC_SERVER_PROCESS = run_string(grpc_server_run_string, cwd=DEFAULT_PATHS.extensions+"/"+"stable-diffusion-grpcserver", log_path=log_path)
     if args.debug: print("sd_grpc_server start time : " + str(datetime.datetime.now() - load_start_time))
-    
-    args.grpc_server_process = grpc_server_process
-    return grpc_server_process
+    return
  
 def get_args_parser():
     global DEFAULT_SAMPLE_SETTINGS
@@ -502,7 +498,6 @@ def get_args_parser():
         default=False,
         help="enable verbose CLI output and debug file dumps",
     )
-    
     return parser
     
 def get_default_args():
@@ -510,7 +505,6 @@ def get_default_args():
     
 def build_grpc_request_dict(args):
     global DEFAULT_SAMPLE_SETTINGS
-    
     # use auto-seed if none provided
     if args.seed: seed = args.seed
     else:
