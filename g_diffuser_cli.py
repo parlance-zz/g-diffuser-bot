@@ -297,9 +297,9 @@ def cli_resample(old_path, new_path, **kwargs):
             args_file_dict = gdl.load_json(arg_file); assert(args_file_dict)
             if args_file_dict["n"] < 1: continue # skip samples that were endlessly repeated
 
-            resample_args = argparse.Namespace(**(args_file_dict | vars(resample_args))) # merge with original args
-            resample_args.n = 1  
-            resample_args.output_path = new_path # ensure output goes to specified path, regardless of output_path in args
+            output_resample_args = argparse.Namespace(**(args_file_dict | vars(resample_args))) # merge with original args
+            output_resample_args.n = 1
+            output_resample_args.output_path = new_path # ensure output goes to specified path, regardless of output_path in args
 
             try:
                 samples = gdl.get_samples(resample_args)

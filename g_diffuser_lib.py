@@ -50,7 +50,8 @@ import PIL            # ...
 from PIL import Image # ...
 import cv2
 
-from extensions import grpc_client
+from extensions import grpc_server, grpc_client
+#from extensions import grpc_client
 from extensions import g_diffuser_utilities as gdl_utils
 
 import torch
