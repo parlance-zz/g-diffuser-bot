@@ -84,16 +84,16 @@ def run_string(run_string, cwd, show_output=False, log_path=""):  # run shell co
     assert(process)
     return process
     
-def valid_resolution(width, height, init_image=None):  # clip dimensions at max resolution, while keeping the correct resolution granularity,
+def valid_resolution(width, height, init_image_dims):  # clip dimensions at max resolution, while keeping the correct resolution granularity,
                                                        # while roughly preserving aspect ratio. if width or height are None they are taken from the init_image
     global DEFAULT_SAMPLE_SETTINGS
-    
-    if not init_image:
+
+    if init_image_dims == None:
         if not width: width = DEFAULT_SAMPLE_SETTINGS.resolution[0]
         if not height: height = DEFAULT_SAMPLE_SETTINGS.resolution[1]
     else:
-        if not width: width = init_image.size[0]
-        if not height: height = init_image.size[1]
+        if not width: width = init_image_dims[0]
+        if not height: height = init_image_dims[1]
         
     aspect_ratio = width / height 
     if width > DEFAULT_SAMPLE_SETTINGS.max_resolution[0]:
@@ -221,8 +221,9 @@ def load_image(args):
     
     # load and resize input image to multiple of 8x8
     init_image = cv2.imread(final_init_img_path, cv2.IMREAD_UNCHANGED)
-    width, height = valid_resolution(args.w, args.h, init_image=init_image)
-    if (width, height) != init_image.size:
+    init_image_dims = (init_image.shape[0], init_image.shape[1])
+    width, height = valid_resolution(args.w, args.h, init_image_dims)
+    if (width, height) != (init_image.shape[0], init_image.shape[1]):
         if args.debug: print("Resizing input image to (" + str(width) + ", " + str(height) + ")")
         init_image = cv2.resize(init_image, (width, height), interpolation=cv2.INTER_LANCZOS4)
     args.w = width
@@ -504,10 +505,10 @@ def build_grpc_request_dict(args, init_image, mask_image):
         args.auto_seed
         seed = args.auto_seed
     
-    if init_image: init_image_bytes = np.array(cv2.imencode(".png", init_image)[1]).tobytes()
-    else: init_image_bytes = None
-    if mask_image: mask_image_bytes = np.array(cv2.imencode(".png", mask_image)[1]).tobytes()
-    else: mask_image_bytes = None
+    if init_image is None: init_image_bytes = None
+    else: init_image_bytes = np.array(cv2.imencode(".png", init_image)[1]).tobytes()
+    if mask_image is None: mask_image_bytes = None
+    else: mask_image_bytes = np.array(cv2.imencode(".png", init_image)[1]).tobytes()
 
     # if repeating just use the default batch size
     if args.n <= 0: n = int(1e10) #DEFAULT_SAMPLE_SETTINGS.batch_size
@@ -526,6 +527,6 @@ def build_grpc_request_dict(args, init_image, mask_image):
         "samples": n,
         "init_image": init_image_bytes,
         "mask_image": mask_image_bytes,
-        "strength": args.strength,
+        #"strength": args.strength,
         #"negative_prompt": args.negative_prompt
     }    
