@@ -221,9 +221,30 @@ def cli_reset_args():
 
 def cli_dir(output_path=""):
     global DEFAULT_PATHS
+
     target_path = DEFAULT_PATHS.outputs
     if output_path: target_path += "/"+output_path
-    os.system('dir "'+target_path+'"')
+    print(target_path + ":")
+
+    path_folders = sorted(glob.glob(target_path+"/*/"))
+    path_pngs = sorted(glob.glob(target_path+"/*.png"))
+    path_json = sorted(glob.glob(target_path+"/*.json"))
+    path_jpeg = glob.glob(target_path+"/*.jpg")
+    path_jpeg.extend(glob.glob(target_path+"/*.jpeg"))
+    path_jpeg = sorted(path_jpeg)
+
+    full_list = path_folders
+    full_list.extend(path_pngs)
+    full_list.extend(path_json)
+    full_list.extend(path_jpeg)
+
+    if len(full_list) > 0:
+        for path in full_list:
+            basename = path.replace("\\", "/").replace(DEFAULT_PATHS.outputs+"/", "")
+            print(basename)
+    else:
+        print("Nothing here!")
+    print("")
     return   
 
 def cli_remove(output_path):
