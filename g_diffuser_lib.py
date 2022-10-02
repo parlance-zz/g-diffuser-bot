@@ -326,6 +326,7 @@ def save_sample(sample, args):
     args.output_file = args.final_output_path+"/"+args.final_output_name+"_s"+str(seed)+".png"
     args.output_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.output_file) # add suffix if filename already exists
     args.output_file_type = "img" # the future is coming, hold on to your butts
+    #print(DEFAULT_PATHS.outputs+"/"+args.output_file)
     cv2.imwrite(DEFAULT_PATHS.outputs+"/"+args.output_file, sample)
     print("Saved " + str(DEFAULT_PATHS.outputs+"/"+args.output_file))
 
