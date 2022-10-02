@@ -211,11 +211,12 @@ def load_image(args):
     final_init_img_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_img).as_posix()
     
     # load and resize input image to multiple of 8x8
-    init_image = Image.open(final_init_img_path)
+    init_image = cv2.imread(final_init_img_path)
     width, height = valid_resolution(args.w, args.h, init_image=init_image)
     if (width, height) != init_image.size:
         if args.debug: print("Resizing input image to (" + str(width) + ", " + str(height) + ")")
-        init_image = init_image.resize((width, height), resample=PIL.Image.LANCZOS)
+        #init_image = init_image.resize((width, height), resample=PIL.Image.LANCZOS)
+        init_image = cv2.resize(init_image, (width, height), interpolation=cv2.INTER_LANCZOS4)
     args.w = width
     args.h = height
         
