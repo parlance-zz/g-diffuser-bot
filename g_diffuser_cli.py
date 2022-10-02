@@ -314,7 +314,7 @@ def cli_resample(old_path, new_path, **kwargs):
     else:
         print("No outputs found in '" + str(DEFAULT_PATHS.outputs+"/"+old_path) + "' to resample")
 
-    gdl.save_samples_grid(all_resampled_samples, resample_args) # lastly, saved a summary grid of all the resampled outputs
+    gdl.save_samples_grid(all_resampled_samples, resample_args) # lastly, save a summary grid of all the resampled outputs
     return
 
 def cli_clear():
