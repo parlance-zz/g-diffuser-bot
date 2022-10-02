@@ -138,6 +138,7 @@ def main():
         cli_locals.resample = cli_resample
         cli_locals.compare = cli_save_comparison_grid
         cli_locals.run_script = cli_run_script
+        cli_locals.run = cli_run_script
         cli_locals.clear = cli_clear
         cli_locals.cls = cli_clear
         cli_locals.help = cli_help
