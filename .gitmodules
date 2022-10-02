@@ -1,3 +1,0 @@
-[submodule "extensions/stable-diffusion-grpcserver"]
-	path = extensions/stable-diffusion-grpcserver
-	url = https://github.com/parlance-zz/stable-diffusion-grpcserver.git
