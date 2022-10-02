@@ -31,7 +31,7 @@ from importlib.machinery import PathFinder
 import ntpath # these lines are inexplicably required for python to use long file paths on Windows -_-
 ntpath.realpath = ntpath.abspath
 
-from g_diffuser_config import DEFAULT_PATHS, GRPC_SERVER_SETTINGS
+from g_diffuser_config import DEFAULT_PATHS, GRPC_SERVER_SETTINGS, CLI_SETTINGS
 from g_diffuser_defaults import DEFAULT_SAMPLE_SETTINGS
 
 import os
@@ -68,9 +68,16 @@ def _p_kill(proc_pid):  # kill all child processes, recursively as well. its the
     return
     
 def run_string(run_string, cwd, show_output=False, log_path=""):  # run shell command asynchronously, return subprocess
+    global CLI_SETTINGS
     print(run_string + " (cwd="+str(cwd)+")")
-    if log_path != "": process = subprocess.Popen(run_string, shell=False, cwd=cwd, stdout=open(log_path, "w", 1))
-    else: process = subprocess.Popen(run_string, shell=False, cwd=cwd)
+
+    if CLI_SETTINGS.disable_progress_bars:
+        if log_path != "": process = subprocess.Popen(run_string, shell=False, cwd=cwd, stdout=open(log_path, "w", 1), stderr=open("stderr.log", "w", 1))
+        else: process = subprocess.Popen(run_string, shell=False, cwd=cwd, stderr=open("stderr.log", "w", 1))
+    else:
+        if log_path != "": process = subprocess.Popen(run_string, shell=False, cwd=cwd, stdout=open(log_path, "w", 1))
+        else: process = subprocess.Popen(run_string, shell=False, cwd=cwd)
+
     assert(process)
     return process
     

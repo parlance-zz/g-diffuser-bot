@@ -5,8 +5,11 @@ DEFAULT_PATHS = argparse.Namespace()
 MODEL_DEFAULTS = argparse.Namespace()
 DISCORD_BOT_SETTINGS = argparse.Namespace()
 GRPC_SERVER_SETTINGS = argparse.Namespace()
+CLI_SETTINGS = argparse.Namespace()
 
 # ******************** SETTINGS BEGIN ************************
+
+CLI_SETTINGS.disable_progress_bars = True
 
 # IMPORTANT - Change the default paths here if desired, these are relative to the root path
 DEFAULT_PATHS.models = "./models"
@@ -63,3 +66,5 @@ if __name__ == "__main__": # you can execute this file with python to see a summ
     print_namespace(DISCORD_BOT_SETTINGS, debug=True)
     print("\ngrpc server settings: ")
     print_namespace(GRPC_SERVER_SETTINGS, debug=True)
+    print("\ncli settings: ")
+    print_namespace(CLI_SETTINGS, debug=True)    
