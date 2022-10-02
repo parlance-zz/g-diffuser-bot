@@ -123,7 +123,7 @@ def get_noclobber_checked_path(base_path, file_path):
     if os.path.exists(full_path):
         file_path_noext, file_path_ext = os.path.splitext(file_path)
         existing_count = len(glob.glob(base_path+"/"+file_path_noext+"*"+file_path_ext)); assert(existing_count > 0)
-        return file_path_noext+"__"+str(existing_count)+file_path_ext
+        return file_path_noext+"_x"+str(existing_count)+file_path_ext
     else:
         return file_path
         

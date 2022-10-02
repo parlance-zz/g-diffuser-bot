@@ -41,6 +41,7 @@ import argparse
 import code
 import glob
 import shutil
+import importlib
 
 import numpy as np
 import cv2
@@ -77,6 +78,8 @@ compare("a", "b", mode="rows")              # arrange each output path's images 
 compare("a", "b", file="my_compare.jpg")    # the comparison image will be saved by default as ./outputs/compare.jpg
                                             # use 'file' to specify an alternate filename
 
+run_script("demo")  # you can save cli scripts(.py) in ./inputs/scripts
+
 clear()            # clear the command window history
 help()             # display this message
 exit()             # exit interactive mode
@@ -111,6 +114,7 @@ def main():
     INTERACTIVE_CLI_STARTING_ARGS = argparse.Namespace(**vars(args)) # copy for reset function
     
     if args.interactive:
+        global cli_locals
         cli_locals = argparse.Namespace()
         cli_locals.sample = cli_get_samples
         cli_locals.s = cli_get_samples
@@ -133,6 +137,7 @@ def main():
         cli_locals.move = cli_rename
         cli_locals.resample = cli_resample
         cli_locals.compare = cli_save_comparison_grid
+        cli_locals.run_script = cli_run_script
         cli_locals.clear = cli_clear
         cli_locals.cls = cli_clear
         cli_locals.help = cli_help
@@ -379,6 +384,14 @@ def cli_save_comparison_grid(*paths, **kwargs):
     cv2.imwrite(grid_filename, np_grid)
     print("Saved " + grid_filename)
     return
+
+def cli_run_script(script_name):
+    assert(script_name)
+    global DEFAULT_PATHS, cli_locals
+    script_path = DEFAULT_PATHS.inputs+"/scripts/"+script_name+".py"
+    exec(open(script_path).read(), dict(globals(), **vars(cli_locals)))
+    return   
+
 
 if __name__ == "__main__":
     main()
