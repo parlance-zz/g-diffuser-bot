@@ -47,7 +47,7 @@ import shutil
 import numpy as np
 import cv2
 
-VERSION_STRING = "g-diffuser-cli v0.95b"
+VERSION_STRING = "g-diffuser-cli v0.96b"
 INTERACTIVE_MODE_BANNER_STRING = """
 Interactive mode:
     call sample() with keyword arguments and use the up/down arrow-keys to browse command history:
@@ -73,13 +73,13 @@ restore("my_path")              # moves the specified output path from ./backups
 save("my_path")                 # copies the specified output path from ./outputs to ./saved
 rename("old_path", "new_path")  # renames the specified output path in ./outputs
 
-regen("old_path", "new_path", scale=20)   # renames the specified output path in ./outputs
-compare("path1", "path2", "path3")        # make a grid from all images in specified output paths
-compare("a", "b", mode="rows")            # arrange each output path's images into rows instead
-compare("a", "b", file="my_compare.jpg")  # the comparison image will be saved in ./outputs/compare.png
-                                          # use file to specify the output filename instead
+resample("old_path", "new_path", scale=20)  # re-generate all saved args in old_path into new_path with replacement arguments
+compare("path1", "path2", "path3")          # make a comparison grid from all images in specified output paths
+compare("a", "b", mode="rows")              # arrange each output path's images into rows instead
+compare("a", "b", file="my_compare.jpg")    # the comparison image will be saved by default as ./outputs/compare.jpg
+                                            # use 'file' to specify an alternate filename
 
-clear()            # clear the command window if things get cluttered
+clear()            # clear the command window history
 help()             # display this message
 exit()             # exit interactive mode
 """
@@ -133,7 +133,7 @@ def main():
         cli_locals.save = cli_save
         cli_locals.rename = cli_rename
         cli_locals.move = cli_rename
-        cli_locals.regen = cli_regen
+        cli_locals.resample = cli_resample
         cli_locals.compare = cli_save_comparison_grid
         cli_locals.clear = cli_clear
         cli_locals.cls = cli_clear
@@ -221,7 +221,6 @@ def cli_reset_args():
 
 def cli_dir(output_path=""):
     global DEFAULT_PATHS
-
     target_path = DEFAULT_PATHS.outputs
     if output_path: target_path += "/"+output_path
     print(target_path + ":")
@@ -244,7 +243,6 @@ def cli_dir(output_path=""):
             print(basename)
     else:
         print("Nothing here!")
-    print("")
     return   
 
 def cli_remove(output_path):
@@ -281,12 +279,22 @@ def cli_rename(old_path, new_path):
     print("Renamed '"+old_path+"' to '"+new_path+"'")
     return   
 
-def cli_regen(old_path, new_path, **kwargs):
+def cli_resample(old_path, new_path, **kwargs):
     assert(old_path); assert(new_path)
     global DEFAULT_PATHS
     
-    print("Renamed '"+old_path+"' to '"+new_path+"'")
-    return   
+    if not os.path.exists(DEFAULT_PATHS.outputs+"/"+old_path):
+        print("Error: Output path '" + str(DEFAULT_PATHS.outputs+"/"+old_path) + "' does not exist")
+        return
+
+    old_arg_files = glob.glob(DEFAULT_PATHS.outputs+"/"+old_path+"/**/*.json", recursive=True)
+    if len(old_arg_files) > 0:
+        print("Resampling "+str(len(old_arg_files)) + " output samples...")
+        for arg_file in old_arg_files:
+            print(arg_file)
+    else:
+        print("No outputs found in '" + str(DEFAULT_PATHS.outputs+"/"+old_path) + "' to resample")
+    return
 
 def cli_clear():
     os.system("cls")
