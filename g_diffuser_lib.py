@@ -318,7 +318,6 @@ def get_samples(args, write=True):
 def save_sample(sample, args):
     global DEFAULT_PATHS
     assert(DEFAULT_PATHS.outputs)
-
     if args.seed: seed = args.seed
     else: seed = args.auto_seed
 
@@ -328,6 +327,7 @@ def save_sample(sample, args):
     args.output_file_type = "img" # the future is coming, hold on to your butts
     cv2.imwrite(DEFAULT_PATHS.outputs+"/"+args.output_file, sample)
     print("Saved " + str(DEFAULT_PATHS.outputs+"/"+args.output_file))
+    if args.show and args.n <= 1: os.system(DEFAULT_PATHS.outputs+"/"+args.output_file)
 
     if not args.no_json:
         args.args_file = args.final_output_path+"/json/"+args.final_output_name+"_s"+str(seed)+".json"
@@ -342,9 +342,11 @@ def save_samples_grid(samples, args):
     grid_image = get_image_grid(samples, grid_layout)
     output_file = args.final_output_path+"/grid_"+args.final_output_name+".jpg"
     output_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, output_file)
+
     pathlib.Path(DEFAULT_PATHS.outputs+"/"+args.final_output_path).mkdir(exist_ok=True, parents=True)
     cv2.imwrite(DEFAULT_PATHS.outputs+"/"+output_file, grid_image)
     print("Saved grid " + str(DEFAULT_PATHS.outputs+"/"+output_file))
+    if args.show: os.system(DEFAULT_PATHS.outputs+"/"+output_file)
     return
 
 def start_grpc_server(args):
@@ -467,9 +469,15 @@ def get_args_parser():
     parser.add_argument(
         "--output_name",
         type=str,
-        help="normally output files are named for the their prompt and seed, override to use a static name instead",
+        help="use a specified output file name instead of one based on the prompt",
         default="",
     )
+    parser.add_argument(
+        "--show",
+        action='store_true',
+        default=False,
+        help="show the output after sample is completed",
+    )    
     parser.add_argument(
         "--interactive",
         action='store_true',
@@ -480,19 +488,19 @@ def get_args_parser():
         "--load-args",
         type=str,
         default="",
-        help="if set, preload and use a saved set of arguments from a json file in your inputs path",
+        help="load and use a saved set of arguments from ./inputs/json",
     )
     parser.add_argument(
         "--no-json",
         action='store_true',
         default=False,
-        help="disable saving arg files for each sample output in output path/json",
+        help="disable saving arg files for each sample output in ./outputs/output_path/json",
     )
     parser.add_argument(
         "--debug",
         action='store_true',
         default=False,
-        help="enable verbose CLI output and debug image dumps",
+        help="enable verbose CLI output and debug file dumps",
     )
     
     return parser
