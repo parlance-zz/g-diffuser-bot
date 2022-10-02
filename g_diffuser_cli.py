@@ -47,7 +47,7 @@ import shutil
 import numpy as np
 import cv2
 
-VERSION_STRING = "g-diffuser-cli v0.96b"
+VERSION_STRING = "g-diffuser-cli v0.97b"
 INTERACTIVE_MODE_BANNER_STRING = """
 Interactive mode:
     call sample() with keyword arguments and use the up/down arrow-keys to browse command history:
@@ -62,9 +62,9 @@ s()      # some commands have shortcuts / aliases
 reset_args()  # reset your arguments back to defaults
 show_args()   # shows your *basic* input arguments
 show_args(0)  # shows *all* your input arguments
-load_args()   # load and use your last arguments (from auto-saved json file in inputs/json)
-save_args("my_fav_args")  # you can save your args; these are saved as json files in the inputs path
-load_args("my_fav_args")  # you can load those saved argumentss by name
+load_args()   # load and use your last arguments (from auto-saved json file in ./inputs/json)
+save_args("my_fav_args")  # you can save your arguments as json files in ./inputs/json
+load_args("my_fav_args")  # you can load those saved arguments by name
 
 list()                          # show list of files / folders in ./outputs
 list("my_path")                 # show list of files / folders in specified output path
@@ -73,8 +73,8 @@ restore("my_path")              # moves the specified output path from ./backups
 save("my_path")                 # copies the specified output path from ./outputs to ./saved
 rename("old_path", "new_path")  # renames the specified output path in ./outputs
 
-resample("old_path", "new_path", scale=20)  # re-generate all saved args in old_path into new_path with replacement arguments
-compare("path1", "path2", "path3")          # make a comparison grid from all images in specified output paths
+resample("old_path", "new_path", scale=20)  # regenerate all saved outputs in old_path into new_path with replacement arguments
+compare("path1", "path2", "path3")          # make a comparison grid from all images in specified the specified output paths
 compare("a", "b", mode="rows")              # arrange each output path's images into rows instead
 compare("a", "b", file="my_compare.jpg")    # the comparison image will be saved by default as ./outputs/compare.jpg
                                             # use 'file' to specify an alternate filename
@@ -166,14 +166,14 @@ def cli_get_samples(prompt=None, **kwargs):
     args_copy = argparse.Namespace(**vars(args)) # preserve args, if sampling is aborted part way through
     try:                                         # anything could happen to the data
         samples = gdl.get_samples(args)
-    except KeyboardInterrupt:             # if sampling is aborted with ctrl+c or an error, restore the args we started with
+    except KeyboardInterrupt:           # if sampling is aborted with ctrl+c or an error, restore the args we started with
         INTERACTIVE_CLI_ARGS = args_copy
     except Exception as e:
         print("Error in gdl.get_samples '" + str(e) + "'")
         INTERACTIVE_CLI_ARGS = args_copy
     else:
-        INTERACTIVE_CLI_ARGS = args        # preserve args for next call to sample() if everything went ok
-        try:                               # try to save the used args in a json tmp file for convenience
+        INTERACTIVE_CLI_ARGS = args    # preserve args for next call to sample() if everything went ok
+        try:                           # try to save the used args in a json tmp file for convenience
             gdl.save_json(vars(gdl.strip_args(args)), LAST_ARGS_PATH)
         except Exception as e:
             if args.debug: print("Error saving sample args - " + str(e))
@@ -195,7 +195,7 @@ def cli_load_args(name=""):
         if not name: json_path = LAST_ARGS_PATH
         else: json_path = DEFAULT_PATHS.inputs+"/json/"+name+".json"
         saved_args_dict = gdl.load_json(json_path)
-        INTERACTIVE_CLI_ARGS = argparse.Namespace(**(vars(INTERACTIVE_CLI_ARGS) | saved_args_dict)) # merge with keyword args
+        INTERACTIVE_CLI_ARGS = argparse.Namespace(**(vars(INTERACTIVE_CLI_ARGS) | saved_args_dict))  # merge with keyword args
         gdl.print_namespace(INTERACTIVE_CLI_ARGS, debug=INTERACTIVE_CLI_ARGS.debug, verbosity_level=1)
     except Exception as e:
         print("Error loading last args from file - " + str(e))
