@@ -10,7 +10,7 @@ dependencies:
   - torchvision
   - numpy
   - pip:
-    - image
+    - cv2
     - scikit-image
     - psutil
     - pytimeparse

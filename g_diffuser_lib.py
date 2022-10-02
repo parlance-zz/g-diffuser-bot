@@ -44,14 +44,15 @@ import re
 import subprocess
 import psutil
 import glob
+import hupper
 
 import numpy as np
 import PIL            # ...
 from PIL import Image # ...
 import cv2
 
-from extensions import grpc_server, grpc_client
-#from extensions import grpc_client
+#from extensions import grpc_server, grpc_client  # ideally we'd want to keep the server inside the first g-diffuser-lib frontend that is running on this machine
+from extensions import grpc_client
 from extensions import g_diffuser_utilities as gdl_utils
 
 import torch
@@ -345,7 +346,16 @@ def start_grpc_server(args):
         log_path = DEFAULT_PATHS.grpc_log
     else:
         log_path = ""
-        
+    
+    """
+    from extensions import grpc_server
+    reloader = hupper.start_reloader('grpc_server.main', reload_interval=10)
+    with open(os.path.normpath(args.enginecfg), 'r') as cfg:
+        engines = yaml.load(cfg, Loader=Loader)
+        manager = EngineManager(engines, weight_root=args.weight_root, enable_mps=args.enable_mps, vram_optimisation_level=args.vram_optimisation_level, nsfw_behaviour=args.nsfw_behaviour)
+        start(manager, "*:5000" if args.listen_to_all else "localhost:5000")
+    """
+
     grpc_server_run_string = "python ./server.py"
     grpc_server_run_string += " --enginecfg "+DEFAULT_PATHS.root+"/g_diffuser_config_models.yaml" + " --weight_root "+DEFAULT_PATHS.models
     grpc_server_run_string += " --vram_optimisation_level " + str(GRPC_SERVER_SETTINGS.memory_optimization_level)
