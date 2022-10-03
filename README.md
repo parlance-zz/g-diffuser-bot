@@ -37,7 +37,7 @@ Optional: edit g_diffuser_config_models.yaml, g_diffuser_config.py and g_diffuse
        - alternatively, run the CLI interface with: "python g_diffuser_cli.py"
        - You can use the CLI interface interactively with: "python g_diffuser_cli.py --interactive"
        - On Windows you can open start_interactive_cli.bat to open the interactive cli directly in one step instead of the above
-       - If you see an out of memory error run: "python g_diffuser_cli.py --interactive --use-optimized"
+       - If you see an out of memory error check the settings and config files for low-memory options
        - Verify your configuration by running: "python g_diffuser_config.py" or: "python g_diffuser_defaults.py"
 
 ## Updating:
