@@ -32,7 +32,7 @@ DEFAULT_PATHS.grpc_log = "./sdgrpcserver.log"
 #IMPORTANT - If you want to use the discord bot, use enter your access token below:
 # - Discord developers site: https://discordapp.com/developers/applications/
 # - Discord bot setup guide: https://www.writebots.com/discord-bot-token/
-DISCORD_BOT_SETTINGS.token = "MTAxMTcxNDAzMzMyMzM0Mzk4Mw.G_FuXq.-uMDC6H6DGPDl8le_jWsetYRuJT4COD4VL714M"
+DISCORD_BOT_SETTINGS.token = "YOUR_DISCORD_BOT_TOKEN_HERE"
 DISCORD_BOT_SETTINGS.admin_role = "moderator" # IMPORTANT - use your discord server / guild role names here accordingly, check the bot help text for associated command permissions
 DISCORD_BOT_SETTINGS.users_role = "everyone"  # if you want anyone to be able to use the bot, set this to "everyone"
 DISCORD_BOT_SETTINGS.queue_mode = 0                 # 0 for round-robin, 1 for first-come first-serve
