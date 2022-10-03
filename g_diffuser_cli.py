@@ -27,14 +27,13 @@ g_diffuser_cli.py - command line interface for g-diffuser-lib with interactive m
 
 """
 
-import ntpath # these lines are inexplicably required for python to use long file paths on Windows -_-
+import ntpath # these lines are inexplicably required for python to understand long file paths on Windows -_-
 ntpath.realpath = ntpath.abspath
 
 import g_diffuser_lib as gdl
 from g_diffuser_config import DEFAULT_PATHS, CLI_SETTINGS
 
-import os
-os.chdir(DEFAULT_PATHS.root)
+import os; os.chdir(DEFAULT_PATHS.root)
 
 import datetime
 import argparse

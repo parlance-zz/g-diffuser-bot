@@ -27,8 +27,7 @@ g_diffuser_lib.py - core diffuser / grpc client operations and lib utilities
 
 """
 
-from importlib.machinery import PathFinder
-import ntpath # these lines are inexplicably required for python to use long file paths on Windows -_-
+import ntpath # these lines are inexplicably required for python to understand long file paths on Windows -_-
 ntpath.realpath = ntpath.abspath
 
 from g_diffuser_config import DEFAULT_PATHS, GRPC_SERVER_SETTINGS, CLI_SETTINGS
@@ -48,7 +47,6 @@ import socket
 
 import numpy as np
 import cv2
-import grpc
 
 #from extensions import grpc_server, grpc_client  # ideally we'd want to keep the server inside the first g-diffuser-lib frontend that is running on this machine
 from extensions import grpc_client
