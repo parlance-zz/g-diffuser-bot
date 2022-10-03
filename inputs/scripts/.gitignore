@@ -2,5 +2,6 @@
 *
 # Except this file
 !.gitignore
-!demo.py
+!*.py
 !README.md
+!*.jpg
