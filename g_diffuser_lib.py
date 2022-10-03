@@ -92,8 +92,8 @@ def get_socket_listening_status(host_str):
     except:
         return False
 
-def valid_resolution(width, height, init_image_dims):  # clip dimensions at max resolution, while keeping the correct resolution granularity,
-                                                       # while roughly preserving aspect ratio. if width or height are None they are taken from the init_image
+def validate_resolution(width, height, init_image_dims):  # clip output dimensions at max_resolution, while keeping the correct resolution granularity,
+                                                          # while roughly preserving aspect ratio. if width or height are None they are taken from the init_image
     global DEFAULT_SAMPLE_SETTINGS
 
     if init_image_dims == None:
@@ -120,7 +120,7 @@ def valid_resolution(width, height, init_image_dims):  # clip dimensions at max 
     
 def get_random_string(digits=8):
     uuid_str = str(uuid.uuid4())
-    return uuid_str[0:digits] # shorten uuid, don't need that many digits
+    return uuid_str[0:digits] # shorten uuid, don't need that many digits usually
 
 def print_namespace(namespace, debug=False, verbosity_level=0, indent=4):
     namespace_dict = vars(strip_args(namespace, level=verbosity_level))
@@ -146,13 +146,13 @@ def get_noclobber_checked_path(base_path, file_path):
 
 def save_image(cv2_image, file_path):
     assert(file_path); 
-    (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True)
+    (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
     cv2.imwrite(file_path, cv2_image)
     return
 
 def save_json(_dict, file_path):
     assert(file_path); 
-    (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True)
+    (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
     with open(file_path, "w") as file:
         json.dump(_dict, file, indent=4)
         file.close()
@@ -160,7 +160,7 @@ def save_json(_dict, file_path):
     
 def load_json(file_path):
     assert(file_path); 
-    (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True)
+    (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
     with open(file_path, "r") as file:
         data = json.load(file)
         file.close()
@@ -238,7 +238,7 @@ def load_image(args):
     # load and resize input image to multiple of 8x8
     init_image = cv2.imread(final_init_img_path, cv2.IMREAD_UNCHANGED)
     init_image_dims = (init_image.shape[0], init_image.shape[1])
-    width, height = valid_resolution(args.w, args.h, init_image_dims)
+    width, height = validate_resolution(args.w, args.h, init_image_dims)
     if (width, height) != (init_image.shape[0], init_image.shape[1]):
         if args.debug: print("Resizing input image to (" + str(width) + ", " + str(height) + ")")
         init_image = cv2.resize(init_image, (width, height), interpolation=cv2.INTER_LANCZOS4)
