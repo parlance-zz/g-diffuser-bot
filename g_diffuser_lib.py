@@ -44,18 +44,14 @@ import re
 import subprocess
 import psutil
 import glob
-import hupper
 
 import numpy as np
-import PIL            # ...
-from PIL import Image # ...
 import cv2
 
 #from extensions import grpc_server, grpc_client  # ideally we'd want to keep the server inside the first g-diffuser-lib frontend that is running on this machine
 from extensions import grpc_client
-from extensions import g_diffuser_utilities as gdl_utils
+#from extensions import g_diffuser_utilities as gdl_utils
 
-import torch
 from torch import autocast
 
 global GRPC_SERVER_PROCESS
@@ -78,8 +74,8 @@ def run_string(run_string, cwd=".", log_path=None, err_path=None):  # run shell 
     if err_path: err_file = open(err_path, "w", 1)
     else: err_file = None
 
-    if log_path == None: log_file = subprocess.DEVNULL
-    if err_path == None: err_file = subprocess.DEVNULL
+    #if log_path == None: log_file = subprocess.DEVNULL
+    #if err_path == None: err_file = subprocess.DEVNULL
 
     process = subprocess.Popen(run_string, shell=False, cwd=cwd, stdin=subprocess.DEVNULL, stdout=log_file, stderr=err_file, encoding='ascii')
     assert(process)

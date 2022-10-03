@@ -41,7 +41,6 @@ import argparse
 import code
 import glob
 import shutil
-import importlib
 
 import numpy as np
 import cv2
