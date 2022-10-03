@@ -132,8 +132,7 @@ def print_namespace(namespace, debug=False, verbosity_level=0, indent=4):
     return
 
 def get_default_output_name(args, truncate_length=70):
-    ascii_prompt = str(args.prompt.encode('utf-8').decode('ascii', 'ignore'))
-    sanitized_name = re.sub(r'[\\/*?:"<>|]',"", ascii_prompt).replace(".","").replace("'","").replace('"',"").replace("\t"," ").replace(" ","_").strip()
+    sanitized_name = re.sub(r'[\\/*?:"<>|]',"", args.prompt).replace(".","").replace("'","").replace('"',"").replace("\t"," ").replace(" ","_").strip()
     if (truncate_length > len(sanitized_name)) or (truncate_length==0): truncate_length = len(sanitized_name)
     if truncate_length < len(sanitized_name):  sanitized_name = sanitized_name[0:truncate_length]
     return sanitized_name
@@ -248,12 +247,13 @@ def load_image(args):
     
     num_channels = init_image.shape[2]
     if num_channels == 4: # input image has an alpha channel, setup mask for in/out-painting
-        mask_image = init_image[:,:,3]*255.   # extract mask
+        mask_image = init_image[:,:,3]   # extract mask
         init_image = init_image[:,:,0:3] # strip mask from init_img / convert to rgb
+
         args.noise_start = 2.  # todo: possibly temporary, grpc server current expects start_schedule of 2. to trigger in/out-paint mode
-        #args.sampler = "ddim" # todo: possibly temporary, only the ddim sampler adds enough noise to be worth a damn for out-painting
         if args.sampler == "k_euler": args.sampler = "k_euler_ancestral" # k_euler currently does not add noise during sampling
-        
+        elif args.sampler != "k_euler_ancestral": args.sampler = "ddim"  # and samplers that aren't k_euler_a or ddim are pretty awful
+
     elif num_channels == 3: # rgb image, regular img2img without a mask
         mask_image = None
     else:
@@ -593,25 +593,15 @@ def build_grpc_request_dict(args, init_image, mask_image):
     if mask_image is None: mask_image_bytes = None
     else: mask_image_bytes = np.array(cv2.imencode(".png", mask_image)[1]).tobytes()
 
-    #init_image_bytes.tofile("init_img.png")
-    #mask_image_bytes.tofile("mask_img.png")
-
-    """
-    if init_image is None: init_image_pil = None
-    else: init_image_pil = #np.array(cv2.imencode(".png", init_image)[0]).tobytes()
-    if mask_image is None: mask_image_bytes = None
-    else: mask_image_bytes = np.array(cv2.imencode(".png", init_image)[0]).tobytes()
-    """
-
-    # if repeating just use the default batch size
-    if args.n <= 0: n = int(1e10) #DEFAULT_SAMPLE_SETTINGS.batch_size
+    # if repeating just use a giant batch size for now
+    if args.n <= 0: n = int(1e10)
     else: n = args.n
 
     return {
         "height": args.h,
         "width": args.w,
-        "start_schedule": args.noise_start, #args.start_schedule,
-        "end_schedule": args.noise_end,     #args.end_schedule,
+        "start_schedule": args.noise_start,
+        "end_schedule": args.noise_end,
         "cfg_scale": args.scale,
         "eta": args.noise_eta,
         "sampler": grpc_client.get_sampler_from_str(args.sampler),
