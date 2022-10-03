@@ -70,17 +70,18 @@ def _p_kill(proc_pid):  # kill all child processes, recursively as well. its the
     except Exception as e: print("Error killing process id " + str(proc_pid) + " - " + str(e))
     return
     
-def run_string(run_string, cwd, show_output=False, log_path=""):  # run shell command asynchronously, return subprocess
-    global CLI_SETTINGS
+def run_string(run_string, cwd=".", log_path=None, err_path=None):  # run shell command asynchronously, return subprocess
     print(run_string + " (cwd="+str(cwd)+")")
 
-    if CLI_SETTINGS.disable_progress_bars:
-        if log_path != "": process = subprocess.Popen(run_string, shell=False, cwd=cwd, stdout=open(log_path, "w", 1), stderr=open("stderr.log", "w", 1))
-        else: process = subprocess.Popen(run_string, shell=False, cwd=cwd, stderr=open("stderr.log", "w", 1))
-    else:
-        if log_path != "": process = subprocess.Popen(run_string, shell=False, cwd=cwd, stdout=open(log_path, "w", 1))
-        else: process = subprocess.Popen(run_string, shell=False, cwd=cwd)
+    if log_path: log_file = open(log_path, "w", 1)
+    else: log_file = None
+    if err_path: err_file = open(err_path, "w", 1)
+    else: err_file = None
 
+    if log_path == None: log_file = subprocess.DEVNULL
+    if err_path == None: err_file = subprocess.DEVNULL
+
+    process = subprocess.Popen(run_string, shell=False, cwd=cwd, stdin=subprocess.DEVNULL, stdout=log_file, stderr=err_file, encoding='ascii')
     assert(process)
     return process
     
@@ -123,28 +124,27 @@ def print_namespace(namespace, debug=False, verbosity_level=0, indent=4):
     return
 
 def get_default_output_name(args, truncate_length=70):
-    sanitized_name = re.sub(r'[\\/*?:"<>|]',"", args.prompt).replace(".","").replace("'","").replace('"',"").replace("\t"," ").replace(" ","_").strip()
+    ascii_prompt = str(args.prompt.encode('utf-8').decode('ascii', 'ignore'))
+    sanitized_name = re.sub(r'[\\/*?:"<>|]',"", ascii_prompt).replace(".","").replace("'","").replace('"',"").replace("\t"," ").replace(" ","_").strip()
     if (truncate_length > len(sanitized_name)) or (truncate_length==0): truncate_length = len(sanitized_name)
     if truncate_length < len(sanitized_name):  sanitized_name = sanitized_name[0:truncate_length]
     return sanitized_name
 
 def get_noclobber_checked_path(base_path, file_path):
-    """
-    if os.path.exists(full_path):
-        file_path_noext, file_path_ext = os.path.splitext(file_path)
-        existing_count = len(glob.glob(base_path+"/"+file_path_noext+"*"+file_path_ext)); assert(existing_count > 0)
-        return file_path_noext+"_x"+str(existing_count)+file_path_ext
-    else:
-        return file_path
-    """
     clobber_num_padding = 3
     full_path = base_path+"/"+file_path    
     file_path_noext, file_path_ext = os.path.splitext(file_path)
     existing_count = len(glob.glob(base_path+"/"+file_path_noext+"*"+file_path_ext))
     return file_path_noext+"_x"+str(existing_count).zfill(clobber_num_padding)+file_path_ext
 
+def save_image(cv2_image, file_path):
+    assert(file_path); 
+    (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True)
+    cv2.imwrite(file_path, cv2_image)
+    return
+
 def save_json(_dict, file_path):
-    assert(file_path)
+    assert(file_path); 
     (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True)
     with open(file_path, "w") as file:
         json.dump(_dict, file, indent=4)
@@ -152,9 +152,8 @@ def save_json(_dict, file_path):
     return
     
 def load_json(file_path):
-    assert(file_path)
+    assert(file_path); 
     (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True)
-    
     with open(file_path, "r") as file:
         data = json.load(file)
         file.close()
@@ -189,11 +188,13 @@ def strip_args(args, level=0): # remove args we wouldn't want to print or serial
         if "status" in args_stripped: del args_stripped.status
         if "err_txt" in args_stripped: del args_stripped.err_txt
 
+        if "noise_end" in args_stripped: del args_stripped.noise_end
+        if "noise_eta" in args_stripped: del args_stripped.noise_start
         if "init_img" in args_stripped:
             if args_stripped.init_img == "": # if there was no input image these fields are not relevant
                 del args_stripped.init_img
                 if "noise_q" in args_stripped: del args_stripped.noise_q
-                if "strength" in args_stripped: del args_stripped.strength
+                if "noise_start" in args_stripped: del args_stripped.noise_start
 
     return args_stripped
     
@@ -241,8 +242,10 @@ def load_image(args):
     if num_channels == 4: # input image has an alpha channel, setup mask for in/out-painting
         mask_image = init_image[:,:,3]*255.   # extract mask
         init_image = init_image[:,:,0:3] # strip mask from init_img / convert to rgb
-        args.strength = 2.    # todo: possibly temporary, grpc server current expects start_schedule of 2. to trigger in/out-paint mode
+        args.noise_start = 2.  # todo: possibly temporary, grpc server current expects start_schedule of 2. to trigger in/out-paint mode
         #args.sampler = "ddim" # todo: possibly temporary, only the ddim sampler adds enough noise to be worth a damn for out-painting
+        if args.sampler == "k_euler": args.sampler = "k_euler_ancestral" # k_euler currently does not add noise during sampling
+        
     elif num_channels == 3: # rgb image, regular img2img without a mask
         mask_image = None
     else:
@@ -323,20 +326,25 @@ def get_samples(args, write=True):
     return samples
 
 def save_sample(sample, args):
-    global DEFAULT_PATHS
+    global DEFAULT_PATHS, CLI_SETTINGS
     assert(DEFAULT_PATHS.outputs)
     if args.seed: seed = args.seed
     else: seed = args.auto_seed
 
     seed_num_padding = 5
-    pathlib.Path(DEFAULT_PATHS.outputs+"/"+args.final_output_path).mkdir(exist_ok=True, parents=True)
-    args.output_file = args.final_output_path+"/"+args.final_output_name+"_s"+str(seed).zfill(seed_num_padding)+".png"
-    args.output_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.output_file) # add suffix if filename already exists
+    filename = args.final_output_name+"_s"+str(seed).zfill(seed_num_padding)+".png"
+    args.output_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.final_output_path+"/"+filename)
     args.output_file_type = "img" # the future is coming, hold on to your butts
-    cv2.imwrite(DEFAULT_PATHS.outputs+"/"+args.output_file, sample)
-    print("Saved " + str(DEFAULT_PATHS.outputs+"/"+args.output_file))
-    if args.show and args.n <= 1: os.system(DEFAULT_PATHS.outputs+"/"+args.output_file)
 
+    final_path = DEFAULT_PATHS.outputs+"/"+args.output_file
+    save_image(sample, final_path)
+    print("Saved " + final_path)
+    if args.show and args.n <= 1 and False:
+        if CLI_SETTINGS.image_viewer_path:
+            run_string(CLI_SETTINGS.image_viewer_path+" "+args.output_file+" "+CLI_SETTINGS.image_viewer_options, cwd=DEFAULT_PATHS.outputs)
+        else:
+            os.system(final_path)
+    
     if not args.no_json:
         args.args_file = args.final_output_path+"/json/"+args.final_output_name+"_s"+str(seed).zfill(seed_num_padding)+".json"
         args.args_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.args_file) # add suffix if filename already exists
@@ -345,38 +353,38 @@ def save_sample(sample, args):
     return
     
 def save_samples_grid(samples, args):
+    global CLI_SETTINGS
     assert(len(samples)> 1)
     grid_layout = get_grid_layout(len(samples))
     grid_image = get_image_grid(samples, grid_layout)
-    output_file = args.final_output_path+"/grid_"+args.final_output_name+".jpg"
+    filename = "grid_" + args.final_output_name + ".jpg"
+    output_file = args.final_output_path+"/" + filename
     output_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, output_file)
 
-    pathlib.Path(DEFAULT_PATHS.outputs+"/"+args.final_output_path).mkdir(exist_ok=True, parents=True)
-    cv2.imwrite(DEFAULT_PATHS.outputs+"/"+output_file, grid_image)
-    print("Saved grid " + str(DEFAULT_PATHS.outputs+"/"+output_file))
-    if args.show: os.system(DEFAULT_PATHS.outputs+"/"+output_file)
+    final_path = DEFAULT_PATHS.outputs+"/"+output_file
+    save_image(grid_image, final_path)
+    print("Saved grid " + final_path)
+    if args.show and False:
+        if CLI_SETTINGS.image_viewer_path:
+            run_string(CLI_SETTINGS.image_viewer_path+" "+output_file+" "+CLI_SETTINGS.image_viewer_options, cwd=DEFAULT_PATHS.outputs)
+        else:
+            os.system(final_path)
     return
 
 def start_grpc_server(args):
-    global DEFAULT_PATHS, GRPC_SERVER_SETTINGS, GRPC_SERVER_PROCESS
+    global DEFAULT_PATHS, GRPC_SERVER_SETTINGS, GRPC_SERVER_PROCESS, CLI_SETTINGS
     if args.debug: load_start_time = datetime.datetime.now()
     if DEFAULT_PATHS.grpc_log != DEFAULT_PATHS.root: log_path = DEFAULT_PATHS.grpc_log
     else: log_path = ""
     
-    """
-    from extensions import grpc_server
-    reloader = hupper.start_reloader('grpc_server.main', reload_interval=10)
-    with open(os.path.normpath(args.enginecfg), 'r') as cfg:
-        engines = yaml.load(cfg, Loader=Loader)
-        manager = EngineManager(engines, weight_root=args.weight_root, enable_mps=args.enable_mps, vram_optimisation_level=args.vram_optimisation_level, nsfw_behaviour=args.nsfw_behaviour)
-        start(manager, "*:5000" if args.listen_to_all else "localhost:5000")
-    """
+    if CLI_SETTINGS.disable_progress_bars: err_path = "sdgrpcserver_err.log"
+    else: err_path = None
 
     grpc_server_run_string = "python ./server.py"
     grpc_server_run_string += " --enginecfg "+DEFAULT_PATHS.root+"/g_diffuser_config_models.yaml" + " --weight_root "+DEFAULT_PATHS.models
     grpc_server_run_string += " --vram_optimisation_level " + str(GRPC_SERVER_SETTINGS.memory_optimization_level)
     if GRPC_SERVER_SETTINGS.enable_mps: grpc_server_run_string += " --enable_mps"
-    GRPC_SERVER_PROCESS = run_string(grpc_server_run_string, cwd=DEFAULT_PATHS.extensions+"/"+"stable-diffusion-grpcserver", log_path=log_path)
+    GRPC_SERVER_PROCESS = run_string(grpc_server_run_string, cwd=DEFAULT_PATHS.extensions+"/"+"stable-diffusion-grpcserver", log_path=log_path, err_path=err_path)
     if args.debug: print("sd_grpc_server start time : " + str(datetime.datetime.now() - load_start_time))
     return
     
@@ -433,10 +441,22 @@ def get_args_parser():
         help="falloff of shaped noise distribution for in/out-painting ( > 0), 1 is matched, lower values mean smaller features and higher means larger features",
     )
     parser.add_argument(
-        "--strength",
+        "--noise_start",
         type=float,
-        default=DEFAULT_SAMPLE_SETTINGS.strength,
-        help="overall amount of change for img2img",
+        default=DEFAULT_SAMPLE_SETTINGS.noise_start,
+        help="formerly known as strength, this is the overall amount of change for img2img",
+    )
+    parser.add_argument(
+        "--noise_end",
+        type=float,
+        default=DEFAULT_SAMPLE_SETTINGS.noise_end,
+        help="this param can influence in/out-painting quality",
+    )
+    parser.add_argument(
+        "--noise_eta",
+        type=float,
+        default=DEFAULT_SAMPLE_SETTINGS.noise_eta,
+        help="this param can influence in/out-painting quality",
     )
     parser.add_argument(
         "--n",
@@ -539,10 +559,10 @@ def build_grpc_request_dict(args, init_image, mask_image):
     return {
         "height": args.h,
         "width": args.w,
-        "start_schedule": args.strength, #args.start_schedule,
-        "end_schedule": args.strength,   #args.end_schedule,
+        "start_schedule": args.noise_start, #args.start_schedule,
+        "end_schedule": args.noise_end,     #args.end_schedule,
         "cfg_scale": args.scale,
-        "eta": 0., #args.eta,
+        "eta": args.noise_eta,
         "sampler": grpc_client.get_sampler_from_str(args.sampler),
         "steps": args.steps,
         "seed": seed,

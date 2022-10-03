@@ -31,7 +31,7 @@ import ntpath # these lines are inexplicably required for python to use long fil
 ntpath.realpath = ntpath.abspath
 
 import g_diffuser_lib as gdl
-from g_diffuser_config import DEFAULT_PATHS
+from g_diffuser_config import DEFAULT_PATHS, CLI_SETTINGS
 
 import os
 os.chdir(DEFAULT_PATHS.root)
@@ -77,7 +77,6 @@ compare("path1", "path2", "path3")          # make a comparison grid from all im
 compare("a", "b", mode="rows")              # arrange each output path's images into rows instead
 compare("a", "b", file="my_compare.jpg")    # the comparison image will be saved by default as ./outputs/compare.jpg
                                             # use 'file' to specify an alternate filename
-show("my_file.png", output_path="folder")   # open an output sample using your os default application
 
 run_script("demo")  # you can save cli scripts(.py) in ./inputs/scripts
 
@@ -389,12 +388,14 @@ def cli_save_comparison_grid(*paths, **kwargs):
     return
 
 def cli_show(file, output_path=""):
-    global DEFAULT_PATHS
+    assert(0)
+    global DEFAULT_PATHS, CLI_SETTINGS
     final_path = DEFAULT_PATHS.outputs+"/"+output_path+"/"+file
     if not os.path.exists(final_path):
         print("Error: Could not open file '" + final_path + "'")
         return
-    os.system(final_path)
+    gdl.run_string(CLI_SETTINGS.image_viewer_path+" "+file+" "+CLI_SETTINGS.image_viewer_options, cwd=DEFAULT_PATHS.outputs+"/"+output_path)
+
     return
 
 def cli_run_script(script_name):
@@ -402,7 +403,7 @@ def cli_run_script(script_name):
     global DEFAULT_PATHS, cli_locals
     script_path = DEFAULT_PATHS.inputs+"/scripts/"+script_name+".py"
     exec(open(script_path).read(), dict(globals(), **vars(cli_locals)))
-    return   
+    return
 
 
 if __name__ == "__main__":

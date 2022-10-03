@@ -10,6 +10,12 @@ CLI_SETTINGS = argparse.Namespace()
 # ******************** SETTINGS BEGIN ************************
 
 CLI_SETTINGS.disable_progress_bars = True
+# ****** todo *******
+#CLI_SETTINGS.image_viewer_path = "C:\Program Files\IrfanView\i_view64.exe"
+#CLI_SETTINGS.image_viewer_options = "/one /silent"
+# if you prefer your system default image viewer, use these lines instead
+#CLI_SETTINGS.image_viewer_path = ""
+#CLI_SETTINGS.image_viewer_options = ""
 
 # IMPORTANT - Change the default paths here if desired, these are relative to the root path
 DEFAULT_PATHS.models = "./models"
