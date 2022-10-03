@@ -336,7 +336,7 @@ def cli_exit():
     gdl._p_kill(gdl.GRPC_SERVER_PROCESS.pid)
     exit(0)
     
-def cli_save_comparison_grid(*paths, **kwargs):
+def cli_save_comparison_grid(file="", *paths, **kwargs):
     global DEFAULT_PATHS
     args = argparse.Namespace(**kwargs)
     if not "mode" in args: args.mode="columns"
