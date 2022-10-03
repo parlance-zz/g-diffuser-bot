@@ -8,7 +8,7 @@ dependencies:
   - cudatoolkit
   - pytorch
   - torchvision
-  - numpy
+  - numpy 
   - pip:
     - cv2
     - scikit-image
