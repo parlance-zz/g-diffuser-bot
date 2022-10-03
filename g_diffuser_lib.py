@@ -48,6 +48,7 @@ import socket
 
 import numpy as np
 import cv2
+import grpc
 
 #from extensions import grpc_server, grpc_client  # ideally we'd want to keep the server inside the first g-diffuser-lib frontend that is running on this machine
 from extensions import grpc_client
@@ -325,25 +326,25 @@ def get_samples(args, write=True):
 
 async def get_samples_async(args, write=True):
     global DEFAULT_PATHS, GRPC_SERVER_SETTINGS
-    assert((args.n > 0) or write) # repeating forever without writing to disk wouldn't make much sense
+    assert(args.n > 0) # in async mode all batches must have a definite number of samples until we have a way to cancel pipeline requests
     init_image, mask_image = build_sample_args(args)
 
     samples = []
-    stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.key, engine=args.model_name, verbose=False, async_mode=True)
+    stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.key, engine=args.model_name, verbose=False)
     while True: # watch out! a wild shrew!
         try:
             request_dict = build_grpc_request_dict(args, init_image, mask_image)
-            answers = stability_api.generate(args.prompt, **request_dict)
-            grpc_samples = grpc_client.process_artifacts_from_answers("", answers, write=False, verbose=False)
+            answers = stability_api.generate_async(args.prompt, **request_dict)
+            grpc_samples = grpc_client.process_artifacts_from_answers_async("", answers, write=False, verbose=False)
 
             start_time = datetime.datetime.now(); args.start_time = str(start_time)
-            for path, artifact in grpc_samples:
+            async for path, artifact in grpc_samples:
                 end_time = datetime.datetime.now(); args.end_time = str(end_time); args.elapsed_time = str(end_time-start_time)
                 args.status = 2; args.err_txt = "" # completed successfully
 
                 image = cv2.imdecode(np.fromstring(artifact.binary, dtype="uint8"), cv2.IMREAD_UNCHANGED)
                 samples.append(image)
-                
+
                 if write:
                     args.uuid_str = get_random_string(digits=16) # new uuid for new sample
                     save_sample(image, args)
@@ -361,7 +362,45 @@ async def get_samples_async(args, write=True):
             return samples
 
     if write and len(samples) > 1: save_samples_grid(samples, args) # if batch size > 1 and write to disk is enabled, save composite "grid image"
+    return samples    
+"""
+    global DEFAULT_PATHS, GRPC_SERVER_SETTINGS
+    assert(args.n > 0) # in async mode all batches must have a definite number of samples until we have a way to cancel pipeline requests
+    init_image, mask_image = build_sample_args(args)
+
+    samples = []
+    stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.key, engine=args.model_name, verbose=False, async_mode=True)
+    try:
+        request_dict = build_grpc_request_dict(args, init_image, mask_image)
+        answers = stability_api.generate(args.prompt, **request_dict)
+        response = None
+        while response != grpc.aio.EOF:
+            start_time = datetime.datetime.now(); args.start_time = str(start_time)
+            args.status = 1 # command in-progress         
+            
+            response = await answers.streaming_call.read()
+            path, artifact = grpc_client.process_artifacts_from_answers("", response, write=False, verbose=False)
+            end_time = datetime.datetime.now(); args.end_time = str(end_time); args.elapsed_time = str(end_time-start_time)
+            args.status = 2; args.err_txt = "" # completed successfully
+
+            image = cv2.imdecode(np.fromstring(artifact.binary, dtype="uint8"), cv2.IMREAD_UNCHANGED)
+            samples.append(image)
+            if write:
+                args.uuid_str = get_random_string(digits=16) # new uuid for new sample
+                save_sample(image, args)
+
+            if args.seed: args.seed += 1 # increment seed or random seed if none was given as we go through the batch
+            else: args.auto_seed += 1
+
+    except Exception as e:
+        if args.debug: raise
+        args.status = -1; args.err_txt = str(e) # error status
+        return samples
+
+    assert(len(samples) == args.n)
+    if write and len(samples) > 1: save_samples_grid(samples, args) # if batch size > 1 and write to disk is enabled, save composite "grid image"
     return samples
+"""
 
 def save_sample(sample, args):
     global DEFAULT_PATHS, CLI_SETTINGS

@@ -42,6 +42,7 @@ import code
 import glob
 import shutil
 import pathlib
+import asyncio
 
 import numpy as np
 import cv2
@@ -168,9 +169,10 @@ def cli_get_samples(prompt=None, **kwargs):
     if args.n <= 0: print("Repeating sample, press ctrl+c to stop...")
     
     args.init_time = str(datetime.datetime.now()) # time the command was created / queued
-    args_copy = argparse.Namespace(**vars(args)) # preserve args, if sampling is aborted part way through
-    try:                                         # anything could happen to the data
-        samples = gdl.get_samples(args)
+    args_copy = argparse.Namespace(**vars(args))  # preserve args, if sampling is aborted part way through
+    try:                                          # anything could happen to the data
+        #samples = gdl.get_samples(args)
+        asyncio.run(gdl.get_samples_async(args))
     except KeyboardInterrupt:           # if sampling is aborted with ctrl+c or an error, restore the args we started with
         args = args_copy
     except Exception as e:
