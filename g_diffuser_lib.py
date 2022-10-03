@@ -164,8 +164,10 @@ def strip_args(args, level=0): # remove args we wouldn't want to print or serial
     args_stripped = argparse.Namespace(**(vars(args).copy()))
     
     if level >=1: # keep just the basics for most printing
+        if "debug" in args_stripped:
+            if not args_stripped.debug: del args_stripped.debug
+
         if "command" in args_stripped: del args_stripped.command
-        if "debug" in args_stripped: del args_stripped.debug
         if "interactive" in args_stripped: del args_stripped.interactive
         if "load_args" in args_stripped: del args_stripped.load_args
         
@@ -237,7 +239,10 @@ def load_image(args):
     
     num_channels = init_image.shape[2]
     if num_channels == 4: # input image has an alpha channel, setup mask for in/out-painting
-        mask_image = init_image[:,:,3]
+        mask_image = init_image[:,:,3]*255.   # extract mask
+        init_image = init_image[:,:,0:3] # strip mask from init_img / convert to rgb
+        args.strength = 2.    # todo: possibly temporary, grpc server current expects start_schedule of 2. to trigger in/out-paint mode
+        #args.sampler = "ddim" # todo: possibly temporary, only the ddim sampler adds enough noise to be worth a damn for out-painting
     elif num_channels == 3: # rgb image, regular img2img without a mask
         mask_image = None
     else:
@@ -515,7 +520,17 @@ def build_grpc_request_dict(args, init_image, mask_image):
     if init_image is None: init_image_bytes = None
     else: init_image_bytes = np.array(cv2.imencode(".png", init_image)[1]).tobytes()
     if mask_image is None: mask_image_bytes = None
-    else: mask_image_bytes = np.array(cv2.imencode(".png", init_image)[1]).tobytes()
+    else: mask_image_bytes = np.array(cv2.imencode(".png", mask_image)[1]).tobytes()
+
+    #init_image_bytes.tofile("init_img.png")
+    #mask_image_bytes.tofile("mask_img.png")
+
+    """
+    if init_image is None: init_image_pil = None
+    else: init_image_pil = #np.array(cv2.imencode(".png", init_image)[0]).tobytes()
+    if mask_image is None: mask_image_bytes = None
+    else: mask_image_bytes = np.array(cv2.imencode(".png", init_image)[0]).tobytes()
+    """
 
     # if repeating just use the default batch size
     if args.n <= 0: n = int(1e10) #DEFAULT_SAMPLE_SETTINGS.batch_size
@@ -524,16 +539,15 @@ def build_grpc_request_dict(args, init_image, mask_image):
     return {
         "height": args.h,
         "width": args.w,
-        "start_schedule": None, #args.start_schedule,
-        "end_schedule": None,   #args.end_schedule,
+        "start_schedule": args.strength, #args.start_schedule,
+        "end_schedule": args.strength,   #args.end_schedule,
         "cfg_scale": args.scale,
-        "eta": 0.,              #args.eta,
+        "eta": 0., #args.eta,
         "sampler": grpc_client.get_sampler_from_str(args.sampler),
         "steps": args.steps,
         "seed": seed,
         "samples": n,
         "init_image": init_image_bytes,
         "mask_image": mask_image_bytes,
-        #"strength": args.strength,
         #"negative_prompt": args.negative_prompt
     }    
