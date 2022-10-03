@@ -171,8 +171,7 @@ def cli_get_samples(prompt=None, **kwargs):
     args.init_time = str(datetime.datetime.now()) # time the command was created / queued
     args_copy = argparse.Namespace(**vars(args))  # preserve args, if sampling is aborted part way through
     try:                                          # anything could happen to the data
-        #samples = gdl.get_samples(args)
-        asyncio.run(gdl.get_samples_async(args))
+        samples = gdl.get_samples(args)
     except KeyboardInterrupt:           # if sampling is aborted with ctrl+c or an error, restore the args we started with
         args = args_copy
     except Exception as e:
