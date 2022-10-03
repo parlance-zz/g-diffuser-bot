@@ -44,6 +44,7 @@ import re
 import subprocess
 import psutil
 import glob
+import socket
 
 import numpy as np
 import cv2
@@ -80,7 +81,17 @@ def run_string(run_string, cwd=".", log_path=None, err_path=None):  # run shell 
     process = subprocess.Popen(run_string, shell=False, cwd=cwd, stdin=subprocess.DEVNULL, stdout=log_file, stderr=err_file, encoding='ascii')
     assert(process)
     return process
-    
+
+def get_socket_listening_status(host_str):
+    _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        ip = socket.gethostbyname(host_str.split(":")[0])
+        port = int(host_str.split(":")[1])
+        _socket.connect((ip, port)); _socket.shutdown(socket.SHUT_RDWR)
+        return True
+    except:
+        return False
+
 def valid_resolution(width, height, init_image_dims):  # clip dimensions at max resolution, while keeping the correct resolution granularity,
                                                        # while roughly preserving aspect ratio. if width or height are None they are taken from the init_image
     global DEFAULT_SAMPLE_SETTINGS
@@ -276,7 +287,7 @@ def get_samples(args, write=True):
     global DEFAULT_PATHS, GRPC_SERVER_SETTINGS
     assert((args.n > 0) or write) # repeating forever without writing to disk wouldn't make much sense
     init_image, mask_image = build_sample_args(args)
-    stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.key, engine=args.model_name, verbose=False, async_mode=False)
+    stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.key, engine=args.model_name, verbose=False)
     samples = []
     while True: # watch out! a wild shrew!
         try:
@@ -337,12 +348,14 @@ def save_sample(sample, args):
     final_path = DEFAULT_PATHS.outputs+"/"+args.output_file
     save_image(sample, final_path)
     print("Saved " + final_path)
-    if args.show and args.n <= 1 and False:
+    """
+    if args.show and args.n <= 1:
         if CLI_SETTINGS.image_viewer_path:
             run_string(CLI_SETTINGS.image_viewer_path+" "+args.output_file+" "+CLI_SETTINGS.image_viewer_options, cwd=DEFAULT_PATHS.outputs)
         else:
             os.system(final_path)
-    
+    """
+
     if not args.no_json:
         args.args_file = args.final_output_path+"/json/"+args.final_output_name+"_s"+str(seed).zfill(seed_num_padding)+".json"
         args.args_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.args_file) # add suffix if filename already exists
@@ -362,16 +375,24 @@ def save_samples_grid(samples, args):
     final_path = DEFAULT_PATHS.outputs+"/"+output_file
     save_image(grid_image, final_path)
     print("Saved grid " + final_path)
-    if args.show and False:
+    """
+    if args.show:
         if CLI_SETTINGS.image_viewer_path:
             run_string(CLI_SETTINGS.image_viewer_path+" "+output_file+" "+CLI_SETTINGS.image_viewer_options, cwd=DEFAULT_PATHS.outputs)
         else:
             os.system(final_path)
+    """            
     return
 
 def start_grpc_server(args):
     global DEFAULT_PATHS, GRPC_SERVER_SETTINGS, GRPC_SERVER_PROCESS, CLI_SETTINGS
     if args.debug: load_start_time = datetime.datetime.now()
+
+    if get_socket_listening_status(GRPC_SERVER_SETTINGS.host):
+        print("Found running GRPC server listening on " + GRPC_SERVER_SETTINGS.host)
+    else:
+        print("Starting GRPC server...")
+
     if DEFAULT_PATHS.grpc_log != DEFAULT_PATHS.root: log_path = DEFAULT_PATHS.grpc_log
     else: log_path = ""
     
@@ -492,12 +513,14 @@ def get_args_parser():
         help="use a specified output file name instead of one based on the prompt",
         default="",
     )
+    """
     parser.add_argument(
         "--show",
         action='store_true',
         default=False,
         help="show the output after sample is completed",
-    )    
+    )  
+    """  
     parser.add_argument(
         "--interactive",
         action='store_true',

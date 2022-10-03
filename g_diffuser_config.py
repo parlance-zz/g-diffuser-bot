@@ -6,7 +6,6 @@ MODEL_DEFAULTS = argparse.Namespace()
 DISCORD_BOT_SETTINGS = argparse.Namespace()
 GRPC_SERVER_SETTINGS = argparse.Namespace()
 CLI_SETTINGS = argparse.Namespace()
-CMD_SERVER_SETTINGS = argparse.Namespace()
 
 # ******************** SETTINGS BEGIN ************************
 
@@ -56,8 +55,6 @@ GRPC_SERVER_SETTINGS.memory_optimization_level = 1  # 2 is maximum memory saving
                                                     # saving more memory generally means mildly decreased performance or output coherence
 GRPC_SERVER_SETTINGS.enable_mps = False
 
-CMD_SERVER_SETTINGS.http_port = 39132  # change port if needed
-
 # ******************** SETTINGS END ************************
 
 # make global default paths namespace
@@ -76,4 +73,4 @@ if __name__ == "__main__": # you can execute this file with python to see a summ
     print("\ngrpc server settings: ")
     print_namespace(GRPC_SERVER_SETTINGS, debug=True)
     print("\ncli settings: ")
-    print_namespace(CLI_SETTINGS, debug=True)    
+    print_namespace(CLI_SETTINGS, debug=True)
