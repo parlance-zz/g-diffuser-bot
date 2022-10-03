@@ -336,14 +336,20 @@ def cli_exit():
     gdl._p_kill(gdl.GRPC_SERVER_PROCESS.pid)
     exit(0)
     
-def cli_save_comparison_grid(file="", *paths, **kwargs):
+def cli_save_comparison_grid(*paths, **kwargs):
     global DEFAULT_PATHS
     args = argparse.Namespace(**kwargs)
     if not "mode" in args: args.mode="columns"
     else: args.mode = args.mode.lower()
     if not "file" in args: grid_filename = "compare.jpg"
     else: grid_filename = args.file
-    grid_filename = DEFAULT_PATHS.outputs+"/"+grid_filename
+    if "compare_output_path" in args:
+        if args.compare_output_path:
+            grid_filename = DEFAULT_PATHS.outputs+"/"+args.compare_output_path+"/"+grid_filename
+        else:
+            grid_filename = DEFAULT_PATHS.outputs+"/"+grid_filename
+    else:
+        grid_filename = DEFAULT_PATHS.outputs+"/"+grid_filename
 
     num_paths = len(paths)
     assert(num_paths > 1)

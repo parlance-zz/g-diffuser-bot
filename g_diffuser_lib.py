@@ -139,7 +139,7 @@ def get_default_output_name(args, truncate_length=70):
 
 def get_noclobber_checked_path(base_path, file_path):
     clobber_num_padding = 3
-    full_path = base_path+"/"+file_path    
+    full_path = base_path+"/"+file_path
     file_path_noext, file_path_ext = os.path.splitext(file_path)
     existing_count = len(glob.glob(base_path+"/"+file_path_noext+"*"+file_path_ext))
     return file_path_noext+"_x"+str(existing_count).zfill(clobber_num_padding)+file_path_ext
