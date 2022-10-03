@@ -43,9 +43,9 @@ kwargs = {
     'debug'       : 0,                  #set to 1 for a very verbose debug feedback in the console
 }
 
-##################
-#Do not edit below this line unless you want to alter the script's functionality
-##################
+################################################################################
+# Do not edit below this line unless you want to alter the script's functionality
+################################################################################
 
 if os.path.exists(DEFAULT_PATHS.outputs + "/" + folder_name):                           #check if the folder name already exists
     existing_count = len(glob.glob(DEFAULT_PATHS.outputs + "/" + folder_name + "*"))    #count how many folders currently exist which start with folder_name
