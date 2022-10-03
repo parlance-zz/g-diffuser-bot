@@ -287,51 +287,40 @@ def get_samples(args, write=True):
     global DEFAULT_PATHS, GRPC_SERVER_SETTINGS
     assert((args.n > 0) or write) # repeating forever without writing to disk wouldn't make much sense
     init_image, mask_image = build_sample_args(args)
-    stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.key, engine=args.model_name, verbose=False)
+
     samples = []
+    stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.key, engine=args.model_name, verbose=False)
     while True: # watch out! a wild shrew!
         try:
             request_dict = build_grpc_request_dict(args, init_image, mask_image)
             answers = stability_api.generate(args.prompt, **request_dict)
-            grpc_output_prefix = DEFAULT_PATHS.temp+"/s"
+            grpc_samples = grpc_client.process_artifacts_from_answers("", answers, write=False, verbose=False)
 
-            grpc_samples = grpc_client.process_artifacts_from_answers(grpc_output_prefix, answers, write=False, verbose=False)
-
-            start_time = datetime.datetime.now()
-            args.start_time = str(start_time)
+            start_time = datetime.datetime.now(); args.start_time = str(start_time)
             for path, artifact in grpc_samples:
-                end_time = datetime.datetime.now()
-                args.end_time = str(end_time)
-                args.elapsed_time = str(end_time-start_time)
-                args.status = 2 # completed successfully
-                args.err_txt = ""
+                end_time = datetime.datetime.now(); args.end_time = str(end_time); args.elapsed_time = str(end_time-start_time)
+                args.status = 2; args.err_txt = "" # completed successfully
 
-                image = np.fromstring(artifact.binary, dtype="uint8")
-                image = cv2.imdecode(image, cv2.IMREAD_UNCHANGED)
+                image = cv2.imdecode(np.fromstring(artifact.binary, dtype="uint8"), cv2.IMREAD_UNCHANGED)
                 samples.append(image)
 
-                if write: # save sample to disk if write=True
+                if write:
                     args.uuid_str = get_random_string(digits=16) # new uuid for new sample
                     save_sample(image, args)
 
                 if args.seed: args.seed += 1 # increment seed or random seed if none was given as we go through the batch
                 else: args.auto_seed += 1
-                if (len(samples) < args.n) or (args.n <= 0): # reset start time if we still have samples left to generate
-                    start_time = datetime.datetime.now()
-                    args.start_time = str(start_time)
+                if (len(samples) < args.n) or (args.n <= 0): # reset start time for next sample if we still have samples left
+                    start_time = datetime.datetime.now(); args.start_time = str(start_time)
 
             if args.n > 0: break # if we had a set number of samples then we are done
 
         except Exception as e:
             if args.debug: raise
-            args.status = -1 # error status
-            args.err_txt = str(e)
+            args.status = -1; args.err_txt = str(e) # error status
             return samples
 
-    if write and len(samples) > 1: # if batch size > 1 and write to disk is enabled, save composite "grid image"
-        args.uuid_str = get_random_string(digits=16) # new uuid for new "sample"
-        save_samples_grid(samples, args)
-
+    if write and len(samples) > 1: save_samples_grid(samples, args) # if batch size > 1 and write to disk is enabled, save composite "grid image"
     return samples
 
 def save_sample(sample, args):
