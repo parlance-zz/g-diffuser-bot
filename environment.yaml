@@ -11,9 +11,7 @@ dependencies:
   - numpy 
   - pip:
     - cv2
-    - scikit-image
     - psutil
-    - pytimeparse
     - transformers
     - discord
     - ftfy

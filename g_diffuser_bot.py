@@ -23,10 +23,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-g_diffuser_bot.py - discord bot interface for g-diffuser
+g_diffuser_bot.py - discord bot interface for g-diffuser-lib
 
 """
-
 
 import ntpath # these lines are inexplicably required for python to understand long file paths on Windows -_-
 ntpath.realpath = ntpath.abspath
@@ -36,8 +35,6 @@ from g_diffuser_config import DEFAULT_PATHS, DISCORD_BOT_SETTINGS
 
 import os; os.chdir(DEFAULT_PATHS.root)
 
-
-#import pytimeparse
 import pathlib
 import urllib
 import json
@@ -45,8 +42,6 @@ import json
 import glob
 import asyncio
 import aiohttp
-import shutil
-#import time
 import datetime
 import argparse
 
