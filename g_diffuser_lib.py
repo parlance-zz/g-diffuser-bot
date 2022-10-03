@@ -249,13 +249,9 @@ def load_image(args):
         return None, None
 
     return init_image, mask_image
-        
-def get_samples(args, write=True):
-    global DEFAULT_PATHS
-    global DEFAULT_SAMPLE_SETTINGS, GRPC_SERVER_SETTINGS
-    
-    assert((args.n > 0) or write) # repeating forever without writing to disk wouldn't make much sense
 
+def build_sample_args(args):
+    global DEFAULT_SAMPLE_SETTINGS
     if not args.output_name: args.final_output_name = get_default_output_name(args)
     else: args.final_output_name = args.output_name
     if not args.output_path: args.final_output_path = args.final_output_name
@@ -274,14 +270,20 @@ def get_samples(args, write=True):
         if not args.w: args.w = DEFAULT_SAMPLE_SETTINGS.resolution[0] # if we don't have an input image, it's size can't be used as the default resolution
         if not args.h: args.h = DEFAULT_SAMPLE_SETTINGS.resolution[1]
 
-    stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.key, engine=args.model_name, verbose=False)
+    return init_image, mask_image
 
+def get_samples(args, write=True):
+    global DEFAULT_PATHS, GRPC_SERVER_SETTINGS
+    assert((args.n > 0) or write) # repeating forever without writing to disk wouldn't make much sense
+    init_image, mask_image = build_sample_args(args)
+    stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.key, engine=args.model_name, verbose=False, async_mode=False)
     samples = []
     while True: # watch out! a wild shrew!
         try:
             request_dict = build_grpc_request_dict(args, init_image, mask_image)
             answers = stability_api.generate(args.prompt, **request_dict)
             grpc_output_prefix = DEFAULT_PATHS.temp+"/s"
+
             grpc_samples = grpc_client.process_artifacts_from_answers(grpc_output_prefix, answers, write=False, verbose=False)
 
             start_time = datetime.datetime.now()
