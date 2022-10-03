@@ -7,7 +7,7 @@
   class: "UnifiedPipeline"
   model: ""
   local_model: "./stable-diffusion-v1-4"
-  has_fp16: False
+  has_fp16: True
   use_auth_token: False
 - id: "waifu-diffusion"
   enabled: False
