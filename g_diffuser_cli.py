@@ -41,6 +41,7 @@ import argparse
 import code
 import glob
 import shutil
+import pathlib
 
 import numpy as np
 import cv2
@@ -382,6 +383,7 @@ def cli_save_comparison_grid(*paths, **kwargs):
                 paste_y = x * max_sample_height
             np_grid[paste_x:paste_x+max_sample_width, paste_y:paste_y+max_sample_height, :] = sample[:]
     
+    (pathlib.Path(grid_filename).parents[0]).mkdir(exist_ok=True, parents=True)
     cv2.imwrite(grid_filename, np_grid)
     print("Saved " + grid_filename)
     return
