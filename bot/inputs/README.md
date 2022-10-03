@@ -1,0 +1,2 @@
+- This folder is used for saved input images, argument files, and g-diffuser cli scripts used by the discord bot
+- All discord bot user paths are prefixed with the server/guild and the username

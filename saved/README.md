@@ -1,1 +1,1 @@
-- This folder is used for misc temp files
+- This folder is for sample or argument files that have been explicitly saved or preserved

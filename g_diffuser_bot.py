@@ -44,6 +44,7 @@ import asyncio
 import aiohttp
 import datetime
 import argparse
+import subprocess
 
 import discord
 from discord.ext import commands
@@ -521,82 +522,22 @@ def get_bot_args_parser():
     )
     return parser
     
-def bot_parse_args(ctx_msg): # takes a discord ctx.message
-    
-    msg = str(ctx_msg.content)
-    msg_tokens = msg.replace("\t"," ").strip().split(" ") # start by tokenizing the discord msg
-    try: command = (msg_tokens[0].lower())[len(DISCORD_BOT_SETTINGS.cmd_prefix):] # separate the command name as the first token minus cmd prefix
-    except: return "", argparse.Namespace() # this should be impossible
-    
-     # this map defines which args should be interpreted as discord bot args and which as standard args, as well as any name remapping to standard args
-    arg_map = { "str": "strength",
-                "scale": "scale",
-                "seed": "seed",
-                "steps": "steps",
-                "w": "w",
-                "h": "h",
-                "n": "n_samples",
-                "noise_q" : "noise_q",
-                "model": "model_name",
-                "args": ["load_args", "save_args"],
-    }
-    
-    discord_arg_tokens = []
-    standard_arg_tokens = []
-    last_arg_tokens = standard_arg_tokens # any non-argument tokens at the beginning of the msg string will be dumped into standard args to be used as the prompt
-    
-    for i in range(1,len(msg_tokens)):
-        msg_tokens[i] = msg_tokens[i].strip()
-        
-        if msg_tokens[i][:1] == "-": # if this token was intended to be an argument
-            stripped_token = (msg_tokens[i].lower())[1:]
-            if stripped_token in arg_map: # if the token is in the arg_map, it goes into standard args after name remapping
-                mapped_values = arg_map[stripped_token]
-                if type(mapped_values) == list:
-                    for value in mapped_values: standard_arg_tokens.append("--" + value) # support expanding to multiple arg names with same value
-                else: standard_arg_tokens.append("--" + mapped_values) # just a 1:1 map
-                last_arg_tokens = standard_arg_tokens
-            else:
-                discord_arg_tokens.append("--" + stripped_token)
-                last_arg_tokens = discord_arg_tokens
-                
-        else: # if this token wasn't an argument, put it in the token list that we last added an argument name to
-            last_arg_tokens.append(msg_tokens[i])
-
-    standard_args_string = "--prompt" + " ".join(standard_arg_tokens)
-    standard_args_parser = gdl.get_args_parser()
-    args = standard_args_parser.parse_args([standard_args_string])
-    args.interactive = True # commands run in a continuous session should use interactive = True
-    args.init_time = str(datetime.datetime.now()) # time the command was created / queued
-    
-    bot_args_string = " ".join(discord_arg_tokens)
-    bot_args_parser = get_bot_args_parser()
-    bot_args = bot_args_parser.parse_args([bot_args_string])
-    bot_args.status = 0  # 0 for waiting in queue, 1 for running, 2 for run successfully, 3 for cancelling, -1 for error
-    bot_args.init_user = str(ctx.message.author.name) # discord username that initiated the command
-    bot_args.message = msg      # the complete message string
-    bot_args.command = command  # first part of the message string minus cmd prefix
-    
-    args.bot_args = bot_args
-    return command, args
-
-    
 def get_file_extension_from_url(url):
     tokens = os.path.splitext(os.path.basename(urllib.parse.urlsplit(url).path))
-    if len(tokens) > 1:
-        return tokens[1]
-    return ""
+    if len(tokens) > 1: return tokens[1]
+    else: return ""
     
-async def download_attachment(url):
-
+async def download_attachment(url, user, attachment_name):
+    global DEFAULT_PATHS
     try:
-        tmp_file_path = _get_tmp_path(url_ext)
-        print("Downloading '" + url + "' to '" + tmp_file_path + "'...")
+        sanitized_username = gdl.get_default_output_name(user); sanitized_attachment_name = gdl.get_default_output_name(attachment_name)
+        download_path = DEFAULT_PATHS.inputs+"/"+sanitized_username+"/"+sanitized_attachment_name+get_file_extension_from_url(url)
+        print("Downloading '" + url + "' to '" + download_path + "'...")
         
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 if response.status == 200:
-                    with open(tmp_file_path, "wb") as out_file:
+                    with open(download_path, "wb") as out_file:
                         out_file.write(await response.read())
                         out_file.close()
                 else:
@@ -607,18 +548,13 @@ async def download_attachment(url):
         print("Error downloading url - " + str(e))
         return ""
         
-    return tmp_file_path
+    return download_path
     
 def _restart_program():
-    global ROOT_PATH
     global CMD_QUEUE
-    CMD_QUEUE.shutdown_command_server()
-    time.sleep(1)
-    
     SCRIPT_FILE_NAME = os.path.basename(__file__)
-    
     print("Restarting...")
-    run_string = 'python "' + ROOT_PATH + '/' + SCRIPT_FILE_NAME + '"'
+    run_string = 'python "'+ SCRIPT_FILE_NAME + '"'
     print(run_string)
     subprocess.Popen(run_string)
     exit(0)
@@ -655,8 +591,6 @@ def check_server_roles(ctx, role_name_list): # resolve and check the roles of a 
     for role in role_list:
         if role in ctx.message.author.roles: return True
     return False
-    
-
     
 async def _top(ctx):    # replies to a message with a sorted list of all users and their run-time
     global CMD_QUEUE

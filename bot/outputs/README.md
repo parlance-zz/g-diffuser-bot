@@ -1,0 +1,2 @@
+- This folder is used as the root path for all sample and argument output files used by the discord bot
+- All discord bot user paths are prefixed with the server/guild and the username

@@ -129,8 +129,8 @@ def print_namespace(namespace, debug=False, verbosity_level=0, indent=4):
         print(json.dumps(namespace_dict, indent=indent))
     return
 
-def get_default_output_name(args, truncate_length=70):
-    sanitized_name = re.sub(r'[\\/*?:"<>|]',"", args.prompt).replace(".","").replace("'","").replace('"',"").replace("\t"," ").replace(" ","_").strip()
+def get_default_output_name(name, truncate_length=70):
+    sanitized_name = re.sub(r'[\\/*?:"<>|]',"", name).replace(".","").replace("'","").replace('"',"").replace("\t"," ").replace(" ","_").strip()
     if (truncate_length > len(sanitized_name)) or (truncate_length==0): truncate_length = len(sanitized_name)
     if truncate_length < len(sanitized_name):  sanitized_name = sanitized_name[0:truncate_length]
     return sanitized_name
@@ -262,7 +262,7 @@ def load_image(args):
 
 def build_sample_args(args):
     global DEFAULT_SAMPLE_SETTINGS
-    if not args.output_name: args.final_output_name = get_default_output_name(args)
+    if not args.output_name: args.final_output_name = get_default_output_name(args.prompt)
     else: args.final_output_name = args.output_name
     if not args.output_path: args.final_output_path = args.final_output_name
     else: args.final_output_path = args.output_path
