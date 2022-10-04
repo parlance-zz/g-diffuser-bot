@@ -35,6 +35,7 @@ from g_diffuser_defaults import DEFAULT_SAMPLE_SETTINGS
 
 import os; os.chdir(DEFAULT_PATHS.root)
 
+import datetime
 import pathlib
 import urllib
 import json
@@ -188,10 +189,11 @@ async def dream(
     scale: Optional[app_commands.Range[float, 0.0, 100.0]] = DEFAULT_SAMPLE_SETTINGS.scale,
     seed: Optional[app_commands.Range[int, 1, 2000000000]] = 0,
     steps: Optional[app_commands.Range[int, 1, DISCORD_BOT_SETTINGS.max_steps_limit]] = DEFAULT_SAMPLE_SETTINGS.steps,
-    n: Optional[app_commands.Range[int, 1, DISCORD_BOT_SETTINGS.max_output_limit]] = DISCORD_BOT_SETTINGS.default_output_n,
+    n: Optional[app_commands.Range[int, DISCORD_BOT_SETTINGS.default_output_n, DISCORD_BOT_SETTINGS.max_output_limit]] = DISCORD_BOT_SETTINGS.default_output_n,
 ):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
-    await interaction.response.defer(thinking=True, ephemeral=False)
+    try: await interaction.response.defer(thinking=True, ephemeral=False)
+    except Exception as e: print("exception in await interaction - " + str(e))
     
     args = gdl.get_default_args()
     args.prompt = prompt
@@ -207,17 +209,15 @@ async def dream(
     args.n = n
     args.interactive = True
 
-    import datetime
     start_time = datetime.datetime.now()
-
     try:
         gdl.print_namespace(args)
         await gdl.get_samples_async(args)
     except Exception as e:
         print("error - " + str(e))
-        args.debug=1
         gdl.print_namespace(args, debug=1)
-        await interaction.followup.send(content="sorry, something went wrong :(")
+        try: await interaction.followup.send(content="sorry, something went wrong :(")
+        except Exception as e: print("exception in await interaction - " + str(e))
         return
 
     if "output_file" in args:
@@ -225,16 +225,18 @@ async def dream(
         sample_filename = DEFAULT_PATHS.outputs + "/" + output_file
         attachment_files = [discord.File(sample_filename)]
 
-        args_prompt = args.prompt; del args.prompt
-        if args.seed != 0: args_seed = args.seed-1
+        args_prompt = args.prompt; del args.prompt # extract and re-attach the prompt for formatting we can keep apostrophes and commas
+        if args.seed != 0: args_seed = args.seed-1 # only need to show the seed as seed for simplicity
         else: args_seed = args.auto_seed-1
         del args.seed
         if "auto_seed" in vars(args): del args.auto_seed
-        args_width = args.w; args_height = args.h
+
+        args_width = args.w; args_height = args.h # replace w and h with width and height for copy/paste and consistency
         del args.w; del args.h
         args.width = args_width
         args.height = args_height
 
+        # don't echo parameters if they have a default value
         if args.model_name == DEFAULT_SAMPLE_SETTINGS.model_name: del args.model_name
         if args.sampler == DEFAULT_SAMPLE_SETTINGS.sampler: del args.sampler
         if args.steps == DEFAULT_SAMPLE_SETTINGS.steps: del args.steps
@@ -242,21 +244,24 @@ async def dream(
         if args.n == DEFAULT_SAMPLE_SETTINGS.n: del args.n
         if args.width == DEFAULT_SAMPLE_SETTINGS.resolution[0]: del args.width
         if args.height == DEFAULT_SAMPLE_SETTINGS.resolution[1]: del args.height
-            
+        
+        # construct args string for echo / acknowledgement
         args_dict = vars(gdl.strip_args(args, level=1))
         args_str = str(args_dict).replace("{","").replace("}","").replace('"', "").replace("'", "").replace(",", " ")
         args_str = "prompt: " + args_prompt + "  " + args_str + "  seed: " + str(args_seed)
         message = "@" + interaction.user.display_name + " - "+ args_str
-        await interaction.followup.send(files=attachment_files, content=message)
+
+        try: await interaction.followup.send(files=attachment_files, content=message)
+        except Exception as e: print("exception in await interaction - " + str(e))
     else:
         print("error - " + args.err_txt)
         args.debug=1
         gdl.print_namespace(args, debug=1)
-        await interaction.followup.send(content="sorry, something went wrong :(")
+        try: await interaction.followup.send(content="sorry, something went wrong :(")
+        except Exception as e: print("exception in await interaction - " + str(e))
         return
 
-    print(str(datetime.datetime.now() - start_time))
-
+    print("elapsed time: " + str(datetime.datetime.now() - start_time) + "s")
     return
     
 def get_file_extension_from_url(url):
