@@ -184,7 +184,7 @@ if __name__ == "__main__":
 )
 async def dream(
     interaction: discord.Interaction,
-    prompt: str = DEFAULT_SAMPLE_SETTINGS.prompt,
+    prompt: str = "",#DEFAULT_SAMPLE_SETTINGS.prompt,
     model_name: Optional[app_commands.Choice[str]] = DEFAULT_SAMPLE_SETTINGS.model_name,
     sampler: Optional[app_commands.Choice[str]] = DEFAULT_SAMPLE_SETTINGS.sampler,
     width: Optional[app_commands.Range[int, 64, DEFAULT_SAMPLE_SETTINGS.max_resolution[0]]] = DEFAULT_SAMPLE_SETTINGS.resolution[0],
@@ -195,9 +195,15 @@ async def dream(
     n: Optional[app_commands.Range[int, DISCORD_BOT_SETTINGS.default_output_n, DISCORD_BOT_SETTINGS.max_output_limit]] = DISCORD_BOT_SETTINGS.default_output_n,
 ):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
+
     try: await interaction.response.defer(thinking=True, ephemeral=False) # start by requesting more time to respond
     except Exception as e: print("exception in await interaction - " + str(e))
     
+    if not prompt:
+        try: await interaction.followup.send(content="sorry @"+interaction.user.display_name+", please enter a prompt")
+        except Exception as e: print("exception in await interaction - " + str(e))
+        return
+
     # build sample args from app command params
     args = gdl.get_default_args()
     args.prompt = prompt
