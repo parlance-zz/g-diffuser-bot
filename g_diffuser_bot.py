@@ -191,7 +191,7 @@ async def dream(
     n: Optional[app_commands.Range[int, 1, DISCORD_BOT_SETTINGS.max_output_limit]] = DISCORD_BOT_SETTINGS.default_output_n,
 ):
     global DEFAULT_PATHS
-    await interaction.response.defer(thinking=False, ephemeral=True)
+    await interaction.response.defer(thinking=True, ephemeral=False)
 
     args = gdl.get_default_args()
     args.prompt = prompt
@@ -207,20 +207,27 @@ async def dream(
     args.n = n
 
     try:
+        gdl.print_namespace(args)
         await gdl.get_samples_async(args)
     except Exception as e:
         print("error - " + str(e))
         args.debug=1
         gdl.print_namespace(args, debug=1)
+        await interaction.followup.send(content="sorry, something went wrong :(")
+        return
 
-    if args.n == 1: output_file = args.output_file
-    else: output_file = args.grid_image
-    sample_filename = DEFAULT_PATHS.outputs + "/" + output_file
-    attachment_files = [discord.File(sample_filename)]
-
-    args_str = str(vars(gdl.strip_args(args, level=1))).replace("{","(").replace("}",")").replace("'", "")
-    message = "@" + interaction.user.display_name + ": "+ args_str
-    await interaction.channel.send(files=attachment_files, content=message)
+    if "output_file" in args:
+        output_file = args.output_file
+        sample_filename = DEFAULT_PATHS.outputs + "/" + output_file
+        attachment_files = [discord.File(sample_filename)]
+        args_str = str(vars(gdl.strip_args(args, level=1))).replace("{","(").replace("}",")").replace("'", "")
+        message = "@" + interaction.user.display_name + ": "+ args_str
+        await interaction.followup.send(files=attachment_files, content=message)
+    else:
+        print("error - " + args.err_txt)
+        args.debug=1
+        gdl.print_namespace(args, debug=1)
+        await interaction.followup.send(content="sorry, something went wrong :(")
 
     return
     
