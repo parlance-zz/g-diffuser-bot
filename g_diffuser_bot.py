@@ -218,7 +218,8 @@ async def dream(
     sample_filename = DEFAULT_PATHS.outputs + "/" + output_file
     attachment_files = [discord.File(sample_filename)]
 
-    message = "@" + interaction.user.display_name + ": "+ str(vars(gdl.strip_args(args, level=1))).replace("{","(").replace("}",")")
+    args_str = str(vars(gdl.strip_args(args, level=1))).replace("{","(").replace("}",")").replace("'", "")
+    message = "@" + interaction.user.display_name + ": "+ args_str
     await interaction.channel.send(files=attachment_files, content=message)
 
     return

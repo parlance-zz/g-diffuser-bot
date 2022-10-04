@@ -6,3 +6,5 @@ __pycache__/
 *.jpg
 *.jpeg
 *.log
+g_diffuser_config.py
+g_diffuser_config.py
