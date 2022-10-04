@@ -105,8 +105,8 @@ def validate_resolution(width, height, init_image_dims):  # clip output dimensio
         
     width = int(width / float(DEFAULT_SAMPLE_SETTINGS.resolution_granularity) + 0.5) * DEFAULT_SAMPLE_SETTINGS.resolution_granularity
     height = int(height / float(DEFAULT_SAMPLE_SETTINGS.resolution_granularity) + 0.5) * DEFAULT_SAMPLE_SETTINGS.resolution_granularity
-    width = np.maximum(width, DEFAULT_SAMPLE_SETTINGS.resolution_granularity)
-    height = np.maximum(height, DEFAULT_SAMPLE_SETTINGS.resolution_granularity)
+    width = np.clip(width, DEFAULT_SAMPLE_SETTINGS.resolution_granularity, DEFAULT_SAMPLE_SETTINGS.max_resolution[0])
+    height = np.clip(height, DEFAULT_SAMPLE_SETTINGS.resolution_granularity, DEFAULT_SAMPLE_SETTINGS.max_resolution[1])
 
     return int(width), int(height)
     
