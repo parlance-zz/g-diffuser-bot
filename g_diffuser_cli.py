@@ -403,11 +403,18 @@ def cli_show(file, output_path=""):
 
     return
 
-def cli_run_script(script_name):
+def cli_run_script(script_name, debug=False):
     assert(script_name)
     global DEFAULT_PATHS, cli_locals
     script_path = DEFAULT_PATHS.inputs+"/scripts/"+script_name+".py"
-    exec(open(script_path).read(), dict(globals(), **vars(cli_locals)))
+    try:
+        exec(open(script_path).read(), dict(globals(), **vars(cli_locals)))
+    except KeyboardInterrupt:
+        print("Okay, cancelling...")
+    except Exception as e:
+        print("Error running user script - " + str(e))
+        if debug: raise
+
     return
 
 
