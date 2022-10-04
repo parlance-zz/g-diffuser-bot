@@ -192,9 +192,10 @@ async def dream(
     n: Optional[app_commands.Range[int, DISCORD_BOT_SETTINGS.default_output_n, DISCORD_BOT_SETTINGS.max_output_limit]] = DISCORD_BOT_SETTINGS.default_output_n,
 ):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
-    try: await interaction.response.defer(thinking=True, ephemeral=False)
+    try: await interaction.response.defer(thinking=True, ephemeral=False) # start by requesting more time to respond
     except Exception as e: print("exception in await interaction - " + str(e))
     
+    # build sample args from app command params
     args = gdl.get_default_args()
     args.prompt = prompt
     if type(model_name) == str: args.model_name = model_name
@@ -211,11 +212,10 @@ async def dream(
 
     start_time = datetime.datetime.now()
     try:
-        gdl.print_namespace(args)
+        #gdl.print_namespace(args)
         await gdl.get_samples_async(args)
     except Exception as e:
-        print("error - " + str(e))
-        gdl.print_namespace(args, debug=1)
+        print("error - " + str(e)); gdl.print_namespace(args, debug=1)
         try: await interaction.followup.send(content="sorry, something went wrong :(")
         except Exception as e: print("exception in await interaction - " + str(e))
         return
