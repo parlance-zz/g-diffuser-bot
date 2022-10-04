@@ -5,7 +5,7 @@ import argparse
 DEFAULT_SAMPLE_SETTINGS = argparse.Namespace()
 DEFAULT_SAMPLE_SETTINGS.sampler = "k_euler"                  # default sampling mode (ddim, plms, k_euler, k_euler_ancestral, k_heun, k_dpm_2, k_dpm_2_ancestral, k_lms)
 DEFAULT_SAMPLE_SETTINGS.n = 1                                # number of samples to generate per sample command by default
-#DEFAULT_SAMPLE_SETTINGS.batch_size = 8                      # this batch size is only used when running a repeating command (n <= 0)
+DEFAULT_SAMPLE_SETTINGS.prompt = "something's wrong with the g-diffuser system"
 DEFAULT_SAMPLE_SETTINGS.resolution = (512,512)               # default resolution for img / video outputs
 DEFAULT_SAMPLE_SETTINGS.max_resolution = (1024,1024)         # if you run out of ram due to output resolution lower this to prevent exceeding your max memory
 DEFAULT_SAMPLE_SETTINGS.resolution_granularity = 64          # required by diffusers stable-diffusion for now due to latent space subsampling

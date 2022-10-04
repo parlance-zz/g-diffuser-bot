@@ -27,8 +27,7 @@ g_diffuser_lib.py - core diffuser / grpc client operations and lib utilities
 
 """
 
-import ntpath # these lines are inexplicably required for python to understand long file paths on Windows -_-
-ntpath.realpath = ntpath.abspath
+import ntpath; ntpath.realpath = ntpath.abspath # can help with long paths in certain python environments
 
 from g_diffuser_config import DEFAULT_PATHS, GRPC_SERVER_SETTINGS, CLI_SETTINGS
 from g_diffuser_defaults import DEFAULT_SAMPLE_SETTINGS
@@ -41,7 +40,6 @@ import pathlib
 import json
 import re
 import subprocess
-import psutil
 import glob
 import socket
 
@@ -57,14 +55,8 @@ from torch import autocast
 global GRPC_SERVER_PROCESS
 GRPC_SERVER_PROCESS = None
 
-def _p_kill(proc_pid):  # kill all child processes, recursively as well. its the only way to be sure
-    print("Killing process id " + str(proc_pid))
-    try:
-        process = psutil.Process(proc_pid)
-        for proc in process.children(recursive=True): proc.kill()
-        process.kill()
-    except Exception as e: print("Error killing process id " + str(proc_pid) + " - " + str(e))
-    return
+global SUPPORTED_SAMPLERS_LIST
+SUPPORTED_SAMPLERS_LIST = grpc_client.algorithms.keys()
     
 def run_string(run_string, cwd=".", log_path=None, err_path=None):  # run shell command asynchronously, return subprocess
     print(run_string + " (cwd="+str(cwd)+")")
@@ -187,6 +179,7 @@ def strip_args(args, level=0): # remove args we wouldn't want to print or serial
         if "final_output_name" in args_stripped: del args_stripped.final_output_name
         if "output_file" in args_stripped: del args_stripped.output_file
         if "output_file_type" in args_stripped: del args_stripped.output_file_type
+        if "grid_image" in args_stripped: del args_stripped.grid_image
         if "args_file" in args_stripped: del args_stripped.args_file
         if "no_json" in args_stripped: del args_stripped.no_json
 
@@ -281,6 +274,8 @@ def build_sample_args(args):
         if not args.w: args.w = DEFAULT_SAMPLE_SETTINGS.resolution[0] # if we don't have an input image, it's size can't be used as the default resolution
         if not args.h: args.h = DEFAULT_SAMPLE_SETTINGS.resolution[1]
 
+    if "grid_image" in args: del args.grid_image
+    
     return init_image, mask_image
 
 def get_samples(args, write=True):
@@ -404,6 +399,8 @@ def save_samples_grid(samples, args):
     final_path = DEFAULT_PATHS.outputs+"/"+output_file
     save_image(grid_image, final_path)
     print("Saved grid " + final_path)
+    args.grid_image = output_file
+
     """
     if args.show:
         if CLI_SETTINGS.image_viewer_path:
@@ -577,7 +574,7 @@ def get_args_parser():
     return parser
     
 def get_default_args():
-    return get_args_parser().parse_args()
+    return get_args_parser().parse_args([])
     
 def build_grpc_request_dict(args, init_image, mask_image):
     global DEFAULT_SAMPLE_SETTINGS

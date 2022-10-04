@@ -10,7 +10,7 @@
   has_fp16: True
   use_auth_token: False
 - id: "waifu-diffusion"
-  enabled: False
+  enabled: True
   visible: True
   name: "Waifu Diffusion V1.2"
   description: "Stable Diffusion using the Hakurei Waifu Diffusion model and our Unified pipeline"

@@ -27,8 +27,7 @@ g_diffuser_cli.py - command line interface for g-diffuser-lib with interactive m
 
 """
 
-import ntpath # these lines are inexplicably required for python to understand long file paths on Windows -_-
-ntpath.realpath = ntpath.abspath
+import ntpath; ntpath.realpath = ntpath.abspath # can help with long paths in certain python environments
 
 import g_diffuser_lib as gdl
 from g_diffuser_config import DEFAULT_PATHS, CLI_SETTINGS
@@ -41,7 +40,6 @@ import code
 import glob
 import shutil
 import pathlib
-import asyncio
 
 import numpy as np
 import cv2
@@ -152,7 +150,7 @@ def main():
         if not args.load_args: gdl.print_namespace(args, debug=args.debug, verbosity_level=1)
         
         args.init_time = str(datetime.datetime.now()) # time the command was created / queued
-        samples = gdl.get_samples(args)
+        gdl.get_samples(args)
 
         try: # try to save the used args in a last_args json file for convenience
             gdl.save_json(vars(gdl.strip_args(args)), LAST_ARGS_PATH)
@@ -170,7 +168,7 @@ def cli_get_samples(prompt=None, **kwargs):
     args.init_time = str(datetime.datetime.now()) # time the command was created / queued
     args_copy = argparse.Namespace(**vars(args))  # preserve args, if sampling is aborted part way through
     try:                                          # anything could happen to the data
-        samples = gdl.get_samples(args)
+        gdl.get_samples(args)
     except KeyboardInterrupt:           # if sampling is aborted with ctrl+c or an error, restore the args we started with
         args = args_copy
     except Exception as e:
