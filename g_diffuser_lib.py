@@ -129,8 +129,9 @@ def print_namespace(namespace, debug=False, verbosity_level=0, indent=4):
         print(json.dumps(namespace_dict, indent=indent))
     return
 
-def get_default_output_name(name, truncate_length=70):
-    sanitized_name = re.sub(r'[\\/*?:"<>|]',"", name).replace(".","").replace("'","").replace('"',"").replace("\t"," ").replace(" ","_").strip()
+def get_default_output_name(name, truncate_length=70, force_ascii=False):
+    if force_ascii: name = str(name.encode('utf-8').decode('ascii', 'ignore'))
+    sanitized_name = re.sub(r'[\\/*?:"<>|]',"", name).replace(".","").replace("'","").replace("\t"," ").replace(" ","_").strip()
     if (truncate_length > len(sanitized_name)) or (truncate_length==0): truncate_length = len(sanitized_name)
     if truncate_length < len(sanitized_name):  sanitized_name = sanitized_name[0:truncate_length]
     return sanitized_name
