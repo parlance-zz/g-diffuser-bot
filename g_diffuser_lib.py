@@ -324,7 +324,7 @@ def get_samples(args, write=True):
     if write and len(samples) > 1: save_samples_grid(samples, args) # if batch size > 1 and write to disk is enabled, save composite "grid image"
     return samples
 
-async def get_samples_async(args, write=True):
+async def get_samples_async(args, write=True, discord_interaction=None):
     global DEFAULT_PATHS, GRPC_SERVER_SETTINGS
     assert(args.n > 0) # in async mode all batches must have a definite number of samples until we have a way to cancel pipeline requests
     init_image, mask_image = build_sample_args(args)
@@ -339,6 +339,7 @@ async def get_samples_async(args, write=True):
 
             start_time = datetime.datetime.now(); args.start_time = str(start_time)
             async for path, artifact in grpc_samples:
+                #if discord_interaction: await discord_interaction.response.defer(thinking=True, ephemeral=False) # required to keep discord message pumps happy
                 end_time = datetime.datetime.now(); args.end_time = str(end_time); args.elapsed_time = str(end_time-start_time)
                 args.status = 2; args.err_txt = "" # completed successfully
 

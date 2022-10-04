@@ -190,9 +190,9 @@ async def dream(
     steps: Optional[app_commands.Range[int, 1, DISCORD_BOT_SETTINGS.max_steps_limit]] = DEFAULT_SAMPLE_SETTINGS.steps,
     n: Optional[app_commands.Range[int, 1, DISCORD_BOT_SETTINGS.max_output_limit]] = DISCORD_BOT_SETTINGS.default_output_n,
 ):
-    global DEFAULT_PATHS
+    global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
     await interaction.response.defer(thinking=True, ephemeral=False)
-
+    
     args = gdl.get_default_args()
     args.prompt = prompt
     if type(model_name) == str: args.model_name = model_name
@@ -212,7 +212,7 @@ async def dream(
 
     try:
         gdl.print_namespace(args)
-        await gdl.get_samples_async(args)
+        await gdl.get_samples_async(args, discord_interaction=interaction)
     except Exception as e:
         print("error - " + str(e))
         args.debug=1
@@ -224,8 +224,25 @@ async def dream(
         output_file = args.output_file
         sample_filename = DEFAULT_PATHS.outputs + "/" + output_file
         attachment_files = [discord.File(sample_filename)]
-        args_str = str(vars(gdl.strip_args(args, level=1))).replace("{","(").replace("}",")").replace('"', "")
-        message = "@" + interaction.user.display_name + ": "+ args_str
+
+        args_prompt = args.prompt; del args.prompt
+        if args.seed != 0: args_seed = args.seed-1
+        else: args_seed = args.auto_seed-1
+        del args.seed
+        if "auto_seed" in vars(args): del args.auto_seed
+
+        if args.model_name == DEFAULT_SAMPLE_SETTINGS.model_name: del args.model_name
+        if args.sampler == DEFAULT_SAMPLE_SETTINGS.sampler: del args.sampler
+        if args.steps == DEFAULT_SAMPLE_SETTINGS.steps: del args.steps
+        if args.scale == DEFAULT_SAMPLE_SETTINGS.scale: del args.scale
+        if args.n == DEFAULT_SAMPLE_SETTINGS.n: del args.n
+        if args.w == DEFAULT_SAMPLE_SETTINGS.resolution[0]: del args.w
+        if args.h == DEFAULT_SAMPLE_SETTINGS.resolution[1]: del args.h
+            
+        args_dict = vars(gdl.strip_args(args, level=1))
+        args_str = str(args_dict).replace("{","").replace("}","").replace('"', "").replace("'", "").replace(",", " ")
+        args_str = "prompt: " + args_prompt + "  " + args_str + "seed: " + str(args_seed)
+        message = "@" + interaction.user.display_name + " - "+ args_str
         await interaction.followup.send(files=attachment_files, content=message)
     else:
         print("error - " + args.err_txt)
