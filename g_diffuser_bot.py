@@ -221,7 +221,7 @@ async def dream(
         return
 
     if "output_file" in args:
-        output_file = args.output_file
+        output_file = args.output_file # todo: use bot-specific output path
         sample_filename = DEFAULT_PATHS.outputs + "/" + output_file
         attachment_files = [discord.File(sample_filename)]
 
@@ -254,9 +254,7 @@ async def dream(
         try: await interaction.followup.send(files=attachment_files, content=message)
         except Exception as e: print("exception in await interaction - " + str(e))
     else:
-        print("error - " + args.err_txt)
-        args.debug=1
-        gdl.print_namespace(args, debug=1)
+        print("error - " + args.err_txt); gdl.print_namespace(args, debug=1)
         try: await interaction.followup.send(content="sorry, something went wrong :(")
         except Exception as e: print("exception in await interaction - " + str(e))
         return
