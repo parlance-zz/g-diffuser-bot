@@ -230,14 +230,18 @@ async def dream(
         else: args_seed = args.auto_seed-1
         del args.seed
         if "auto_seed" in vars(args): del args.auto_seed
+        args_width = args.w; args_height = args.h
+        del args.w; del args.h
+        args.width = args_width
+        args.height = args_height
 
         if args.model_name == DEFAULT_SAMPLE_SETTINGS.model_name: del args.model_name
         if args.sampler == DEFAULT_SAMPLE_SETTINGS.sampler: del args.sampler
         if args.steps == DEFAULT_SAMPLE_SETTINGS.steps: del args.steps
         if args.scale == DEFAULT_SAMPLE_SETTINGS.scale: del args.scale
         if args.n == DEFAULT_SAMPLE_SETTINGS.n: del args.n
-        if args.w == DEFAULT_SAMPLE_SETTINGS.resolution[0]: del args.w
-        if args.h == DEFAULT_SAMPLE_SETTINGS.resolution[1]: del args.h
+        if args.width == DEFAULT_SAMPLE_SETTINGS.resolution[0]: del args.width
+        if args.height == DEFAULT_SAMPLE_SETTINGS.resolution[1]: del args.height
             
         args_dict = vars(gdl.strip_args(args, level=1))
         args_str = str(args_dict).replace("{","").replace("}","").replace('"', "").replace("'", "").replace(",", " ")
