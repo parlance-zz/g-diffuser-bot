@@ -44,7 +44,7 @@ import pathlib
 import numpy as np
 import cv2
 
-VERSION_STRING = "g-diffuser-cli v0.97b"
+VERSION_STRING = "g-diffuser-cli v0.98b"
 INTERACTIVE_MODE_BANNER_STRING = """
 Interactive mode:
     call sample() with keyword arguments and use the up/down arrow-keys to browse command history:
@@ -76,7 +76,8 @@ compare("a", "b", mode="rows")              # arrange each output path's images 
 compare("a", "b", file="my_compare.jpg")    # the comparison image will be saved by default as ./outputs/compare.jpg
                                             # use 'file' to specify an alternate filename
 
-run_script("demo")  # you can save cli scripts(.py) in ./inputs/scripts
+run_script("demo")                   # you can save cli scripts(.py) in ./inputs/scripts and run them in the cli
+run("my_script", my_custom_param=5)  # run is shorthand for run_script, you can pass custom arguments to user scripts
 
 clear()            # clear the command window history
 help()             # display this message
