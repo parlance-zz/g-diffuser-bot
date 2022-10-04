@@ -205,6 +205,10 @@ async def dream(
     args.seed = seed
     args.steps = steps
     args.n = n
+    args.interactive = True
+
+    import datetime
+    start_time = datetime.datetime.now()
 
     try:
         gdl.print_namespace(args)
@@ -220,7 +224,7 @@ async def dream(
         output_file = args.output_file
         sample_filename = DEFAULT_PATHS.outputs + "/" + output_file
         attachment_files = [discord.File(sample_filename)]
-        args_str = str(vars(gdl.strip_args(args, level=1))).replace("{","(").replace("}",")").replace("'", "")
+        args_str = str(vars(gdl.strip_args(args, level=1))).replace("{","(").replace("}",")").replace('"', "")
         message = "@" + interaction.user.display_name + ": "+ args_str
         await interaction.followup.send(files=attachment_files, content=message)
     else:
@@ -228,6 +232,9 @@ async def dream(
         args.debug=1
         gdl.print_namespace(args, debug=1)
         await interaction.followup.send(content="sorry, something went wrong :(")
+        return
+
+    print(str(datetime.datetime.now() - start_time))
 
     return
     

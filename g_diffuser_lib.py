@@ -165,6 +165,9 @@ def strip_args(args, level=0): # remove args we wouldn't want to print or serial
         if "debug" in args_stripped:
             if not args_stripped.debug: del args_stripped.debug
 
+        if "seed" in args_stripped:
+            if args_stripped.seed == 0: del args_stripped.seed
+
         if "command" in args_stripped: del args_stripped.command
         if "interactive" in args_stripped: del args_stripped.interactive
         if "load_args" in args_stripped: del args_stripped.load_args
@@ -195,6 +198,8 @@ def strip_args(args, level=0): # remove args we wouldn't want to print or serial
                 del args_stripped.init_img
                 if "noise_q" in args_stripped: del args_stripped.noise_q
                 if "noise_start" in args_stripped: del args_stripped.noise_start
+                if "noise_end" in args_stripped: del args_stripped.noise_end
+                if "noise_eta" in args_stripped: del args_stripped.noise_eta
 
     return args_stripped
     
