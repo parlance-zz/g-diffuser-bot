@@ -275,7 +275,7 @@ def build_sample_args(args):
         if not args.h: args.h = DEFAULT_SAMPLE_SETTINGS.resolution[1]
 
     if "grid_image" in args: del args.grid_image
-    
+
     return init_image, mask_image
 
 def get_samples(args, write=True):
@@ -416,6 +416,7 @@ def start_grpc_server(args):
 
     if get_socket_listening_status(GRPC_SERVER_SETTINGS.host):
         print("Found running GRPC server listening on " + GRPC_SERVER_SETTINGS.host)
+        return
     else:
         print("Starting GRPC server...")
 
