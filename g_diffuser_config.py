@@ -32,7 +32,7 @@ DEFAULT_PATHS.grpc_log = "./sdgrpcserver.log"
 #IMPORTANT - If you want to use the discord bot, use enter your access token below:
 # - Discord developers site: https://discordapp.com/developers/applications/
 # - Discord bot setup guide: https://www.writebots.com/discord-bot-token/
-DISCORD_BOT_SETTINGS.token = "MTAxMTcxNDAzMzMyMzM0Mzk4Mw.GK5nAT.sB-ddCfOf6bgZSPd82us2tJFO8UVu5wKaBcjYM" # YOUR_DISCORD_BOT_TOKEN_HERE
+DISCORD_BOT_SETTINGS.token = "YOUR_DISCORD_BOT_TOKEN_HERE"
 DISCORD_BOT_SETTINGS.guild = 1021168973582184548 # IMPORTANT - Enter your discord guild/server id here
 DISCORD_BOT_SETTINGS.data_root = "./bot" # all user input and output data for the bot will separated into ./bot
 DISCORD_BOT_SETTINGS.model_list = ["stable-diffusion-v1-4", "waifu-diffusion"] # IMPORTANT - model id's to be accessible from the discord bot (from g_diffuser_config_models.yaml)
