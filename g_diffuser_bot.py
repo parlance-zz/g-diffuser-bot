@@ -252,7 +252,7 @@ async def dream(
         args_dict = vars(gdl.strip_args(args, level=1))
         args_str = str(args_dict).replace("{","").replace("}","").replace('"', "").replace("'", "").replace(",", " ")
         args_str = "prompt: " + args_prompt + "  " + args_str + "  seed: " + str(args_seed)
-        message = "@" + interaction.user.display_name + " - "+ args_str
+        message = "@" + interaction.user.display_name + "   "+ args_str
 
         try: await interaction.followup.send(files=attachment_files, content=message)
         except Exception as e: print("exception in await interaction - " + str(e))
