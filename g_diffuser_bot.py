@@ -24,6 +24,9 @@ SOFTWARE.
 
 
 g_diffuser_bot.py - discord bot interface for g-diffuser-lib
+                  - Oct 2022 Update: I am in the process of rebuilding this bot from the ground up on top of the
+                  the new g-diffuser-lib code / framework. I intend to add all the CLI functions, img2img, outpainting,
+                  GUI buttons and much more but will need time to put it all back together. Thank you.
 
 """
 
