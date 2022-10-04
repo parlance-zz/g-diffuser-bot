@@ -20,6 +20,7 @@ Oct 2/2022 Update: The discord bot should be back on the main branch on Monday w
 
 ## Installation:
  1)  clone this repository to a folder of your choice (or click the green "code" button up top and click "download zip")
+     after this step you may need to also run "git submodule update --init --recursive" from the main folder.
  2)  download / install miniconda (https://docs.conda.io/en/latest/miniconda.html)
  3)  open a conda prompt (click on the start menu and look for "anaconda prompt"),
      then navigate to the folder where you cloned / downloaded this repository.

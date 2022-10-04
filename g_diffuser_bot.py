@@ -212,7 +212,7 @@ async def dream(
 
     try:
         gdl.print_namespace(args)
-        await gdl.get_samples_async(args, discord_interaction=interaction)
+        await gdl.get_samples_async(args)
     except Exception as e:
         print("error - " + str(e))
         args.debug=1
@@ -241,7 +241,7 @@ async def dream(
             
         args_dict = vars(gdl.strip_args(args, level=1))
         args_str = str(args_dict).replace("{","").replace("}","").replace('"', "").replace("'", "").replace(",", " ")
-        args_str = "prompt: " + args_prompt + "  " + args_str + "seed: " + str(args_seed)
+        args_str = "prompt: " + args_prompt + "  " + args_str + "  seed: " + str(args_seed)
         message = "@" + interaction.user.display_name + " - "+ args_str
         await interaction.followup.send(files=attachment_files, content=message)
     else:
