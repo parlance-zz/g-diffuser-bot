@@ -403,7 +403,7 @@ def cli_show(file, output_path=""):
 
     return
 
-def cli_run_script(script_name, debug=False):
+def cli_run_script(script_name, debug=False, **kwargs):
     assert(script_name)
     global DEFAULT_PATHS, cli_locals
     script_path = DEFAULT_PATHS.inputs+"/scripts/"+script_name+".py"
