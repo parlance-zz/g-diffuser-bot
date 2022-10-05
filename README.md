@@ -1,17 +1,17 @@
-##  g-diffuser-lib - Frontend, Discord bot, command server, and utilities for the diffusers library (stable-diffusion)
+##  g-diffuser-bot - Discord bot and utilities for the diffusers library (stable-diffusion)
 
 Oct 4/2022 Update: The discord bot is back! I'll be working to re-add features as I go, including gui buttons et al.
 
 ## Anaconda package
-- anaconda package for g-diffuser-lib will be published very soon!
+- anaconda package for g-diffuser-bot will be published very soon!
 
-## Vision for the g-diffuser-lib project:
+## Vision for the g-diffuser-bot project:
  - In the near future the diffusers library (https://github.com/huggingface/diffusers) being developed and promoted by stability.ai will expose multi-modality sampling abilities, meaning we will be able to arbitrarily mix and match input and output types. Tasks like txt2music, music2img, and everything in-between will be possible, and all of this will be coming very soon.
  - The goal of the project is to provide the best possible front-end, interface, and utilities for the diffusers library and to enable regular users to access these powerful abilities with a free and easy-to-use package that supports their local GPU and as many OS's / platforms as possible.
  - The current frontends include an (interactive) cli and a discord bot.
  - The current experimental extensions include g-diffuser fourier shaped noise out-painting
    - Fourier shaped noise has been integrated in haffried's unified diffusers pipeline and GRPC server development for it will continue there: https://github.com/hafriedlander/stable-diffusion-grpcserver
- - For more information on progress and upcoming features please see: https://github.com/parlance-zz/g-diffuser-lib/issues
+ - For more information on progress and upcoming features please see: https://github.com/parlance-zz/g-diffuser-bot/issues
  
 ## Development and funding:
  - Donations are greatly appreciated and will be directly used to fund further development.
@@ -26,7 +26,7 @@ Oct 4/2022 Update: The discord bot is back! I'll be working to re-add features a
      then navigate to the folder where you cloned / downloaded this repository.
  4)  run "conda env create -f environment.yaml"
  5)  place any pre-downloaded diffusers models into the ./models folder
-     for specific instructions on model download / installation please see models/README.md (https://github.com/parlance-zz/g-diffuser-lib/tree/main/models)
+     for specific instructions on model download / installation please see models/README.md (https://github.com/parlance-zz/g-diffuser-bot/tree/main/models)
  6)  If you are running Windows 10 you may need to turn on "developer mode". Look for "developer settings" in the start menu.
      
 Optional: edit g_diffuser_config_models.yaml, g_diffuser_config.py and g_diffuser_defaults.py as appropriate, save your changes
@@ -45,5 +45,6 @@ Optional: edit g_diffuser_config_models.yaml, g_diffuser_config.py and g_diffuse
  - Simply git pull or download and replace your files with those from this repository. You probably won't need to replace your g_diffuser_config.py or g_diffuser_defaults.py files, but you may need to merge changes.
 
 ## Troubleshooting:
- - If you have questions or problems running anything in g-diffuser-lib, please post as much detailed information as you can in (https://github.com/parlance-zz/g-diffuser-lib/discussions/categories/q-a), myself or someone in the community may be able to help you. Thank you for your patience.
+ - Better install instructions and an updated easy-to-isntall package are coming, but in the mean-time if you see any dependency errors you can try to fix them with "pip install xyz". Git really doesn't like to make downloading projects with submodules pain-free, so if you see errors related to the GRPC server please try "git submodule update --init --recursive".
+ - If you have questions or problems running anything in g-diffuser-bot, please post as much detailed information as you can in (https://github.com/parlance-zz/g-diffuser-bot/discussions/categories/q-a), myself or someone in the community may be able to help you. Thank you for your patience.
  - Improved usage guides and setup instructions are coming soon.
