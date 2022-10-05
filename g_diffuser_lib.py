@@ -57,7 +57,7 @@ GRPC_SERVER_PROCESS = None
 
 global SUPPORTED_SAMPLERS_LIST
 #SUPPORTED_SAMPLERS_LIST = grpc_client.algorithms.keys()
-SUPPORTED_SAMPLERS_LIST = ["ddim", "plms", "k_euler", "k_euler_ancestral", "k_lms"]
+SUPPORTED_SAMPLERS_LIST = ["ddim", "k_euler", "k_euler_ancestral", "k_lms"]
 
 def run_string(run_string, cwd=".", log_path=None, err_path=None):  # run shell command asynchronously, return subprocess
     print(run_string + " (cwd="+str(cwd)+")")
