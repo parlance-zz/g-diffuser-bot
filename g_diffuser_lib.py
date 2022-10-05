@@ -241,6 +241,42 @@ def get_image_grid(imgs, layout, mode="columns"): # make an image grid out of a 
 
     return np_grid
 
+def get_annotated_image(image, args):
+    if "annotation" not in args: return image
+    if not args.annotation: return image
+
+    annotation_font = cv2.FONT_HERSHEY_SIMPLEX
+    annotation_position = (8, 31) # todo: hard-coding top-left with small offset for now
+    annotation_scale = 7/8.
+    annotation_linetype = cv2.LINE_8 | cv2.LINE_AA
+    annotation_linethickness = 2
+    annotation_outline_radius = 4
+
+    image_copy = image.copy()
+    try:
+        annotation_color = (0,0,0)
+        for x in range(-annotation_outline_radius, annotation_outline_radius+1, annotation_linethickness):
+            for y in range(-annotation_outline_radius, annotation_outline_radius+1, annotation_linethickness):
+                cv2.putText(image_copy, args.annotation, 
+                    (annotation_position[0]+x, annotation_position[1]+y),
+                    annotation_font, 
+                    annotation_scale,
+                    (0,0,0),
+                    annotation_linethickness,
+                    annotation_linetype)
+        annotation_color = (175,175,175)
+        cv2.putText(image_copy, args.annotation, 
+            annotation_position,
+            annotation_font, 
+            annotation_scale,
+            (255,255,255),
+            annotation_linethickness,
+            annotation_linetype)
+    except Exception as e:
+        print("Error annotating sample - " + str(e))
+        return image
+    return image_copy
+
 def load_image(args):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
     assert(DEFAULT_PATHS.inputs)
@@ -261,10 +297,10 @@ def load_image(args):
         mask_image = init_image[:,:,3]   # extract mask
         init_image = init_image[:,:,0:3] # strip mask from init_img / convert to rgb
 
-        args.noise_start = 2.  # todo: possibly temporary, grpc server current expects start_schedule of 2. to trigger in/out-paint mode
+        args.noise_start += 1.  # todo: possibly temporary, grpc server current expects start_schedule of 2. to trigger in/out-paint mode
         if args.sampler == "k_euler": args.sampler = "k_euler_ancestral" # k_euler currently does not add noise during sampling
         elif args.sampler != "k_euler_ancestral": args.sampler = "ddim"  # and samplers that aren't k_euler_a or ddim are pretty awful
-
+        
     elif num_channels == 3: # rgb image, regular img2img without a mask
         mask_image = None
     else:
@@ -316,6 +352,7 @@ def get_samples(args, write=True):
                 args.status = 2; args.err_txt = "" # completed successfully
 
                 image = cv2.imdecode(np.fromstring(artifact.binary, dtype="uint8"), cv2.IMREAD_UNCHANGED)
+                if "annotation" in args: image = get_annotated_image(image, args)
                 samples.append(image)
 
                 if write:
@@ -357,6 +394,7 @@ async def get_samples_async(args, write=True):
                 args.status = 2; args.err_txt = "" # completed successfully
 
                 image = cv2.imdecode(np.fromstring(artifact.binary, dtype="uint8"), cv2.IMREAD_UNCHANGED)
+                if "annotation" in args: image = get_annotated_image(image, args)
                 samples.append(image)
 
                 if write:
