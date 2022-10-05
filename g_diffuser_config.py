@@ -26,15 +26,15 @@ DEFAULT_PATHS.saved = "./saved"
 DEFAULT_PATHS.temp = "./temp"
 DEFAULT_PATHS.debug = "./debug"
 DEFAULT_PATHS.extensions = "./extensions"
+DEFAULT_PATHS.bot = "./bot"
 DEFAULT_PATHS.model_cfg = "./g_diffuser_config_models.yaml"
 DEFAULT_PATHS.grpc_log = "./sdgrpcserver.log"
 
 #IMPORTANT - If you want to use the discord bot, use enter your access token below:
 # - Discord developers site: https://discordapp.com/developers/applications/
 # - Discord bot setup guide: https://www.writebots.com/discord-bot-token/
-DISCORD_BOT_SETTINGS.token = ""
+DISCORD_BOT_SETTINGS.token = "YOUR_DISCORD_BOT_TOKEN_HERE"
 DISCORD_BOT_SETTINGS.guild = 1021168973582184548 # IMPORTANT - Enter your discord guild/server id here
-DISCORD_BOT_SETTINGS.data_root = "./bot" # all user input and output data for the bot will separated into ./bot
 DISCORD_BOT_SETTINGS.model_list = ["stable-diffusion-v1-4", "waifu-diffusion"] # IMPORTANT - model id's to be accessible from the discord bot (from g_diffuser_config_models.yaml)
 DISCORD_BOT_SETTINGS.admin_role = "moderator"    # IMPORTANT - use your discord server / guild role names here accordingly, check the bot help text for associated command permissions
 DISCORD_BOT_SETTINGS.users_role = "everyone"     # if you want anyone to be able to use the bot, set this to "everyone"
@@ -43,7 +43,6 @@ DISCORD_BOT_SETTINGS.max_queue_print_items = 5   # max number of items to show f
 DISCORD_BOT_SETTINGS.default_output_n = 1        # default batch size to create images (n>1 will show a composite grid image)
 DISCORD_BOT_SETTINGS.max_output_limit = 10       # max number of samples to create simultaneously with -n param
 DISCORD_BOT_SETTINGS.max_steps_limit = 100       # max number of steps per sample command
-DISCORD_BOT_SETTINGS.default_n = 3               # default number of samples per command
 DISCORD_BOT_SETTINGS.accepted_attachments = [".png", ".jpg", ".jpeg"] # attachments in bot commands not matching this list will not be downloaded
 DISCORD_BOT_SETTINGS.state_file_path = "./g-diffuser-bot.json"        # relative to root path
 DISCORD_BOT_SETTINGS.activity = "/help, /about"
