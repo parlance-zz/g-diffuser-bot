@@ -301,28 +301,6 @@ async def download_attachment(url, user, attachment_name):
 if __name__ == "__main__":
     client.run(DISCORD_BOT_SETTINGS.token, reconnect=True)
 
-
-
-"""
-def get_cmd_summary_str(args):
-    summary = ""
-    
-    if "bot" in args:
-        if ("init_user" in args.bot) and ("message" in args.bot):
-            summary += "@" + args.bot.init_user + " " + args.bot.message
-    if "seed" in args:
-        summary += " [-seed " + str(args.seed) + "]"
-
-    if self.status == 0: summary += " (waiting)"
-    elif self.status == 1: summary += " (running)"
-    elif self.status == 2:
-        if "elapsed_time" in args_dict: summary += " (complete <" + str(self.args.elapsed_time) + "s>)"
-        else: summary += " (complete)"
-    elif self.status == 3: summary += " (cancelling)"
-    elif self.status == -1: summary += " (error)"
-    return summary
-"""    
-
 """
 def _restart_program():
     global CMD_QUEUE
@@ -332,20 +310,6 @@ def _restart_program():
     print(run_string)
     subprocess.Popen(run_string)
     exit(0)
-    
-def check_server_roles(ctx, role_name_list): # resolve and check the roles of a user against a list of role name strings
-    if ("everyone" in role_name_list): return True
-    role_list = []
-    for role_name in role_name_list:
-        try:
-            role = discord.utils.get(ctx.message.author.guild.roles, name=role_name)
-            role_list.append(role)
-        except:
-            continue
-    for role in role_list:
-        if role in ctx.message.author.roles: return True
-    return False
-
 
 async def _top(ctx):    # replies to a message with a sorted list of all users and their run-time
     global CMD_QUEUE
@@ -357,4 +321,3 @@ async def _top(ctx):    # replies to a message with a sorted list of all users a
     except Exception as e: print("Error sending !top acknowledgement - " + str(e))
     return
 """
-
