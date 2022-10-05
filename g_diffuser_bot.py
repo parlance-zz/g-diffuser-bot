@@ -42,7 +42,7 @@ import datetime
 import pathlib
 import urllib
 import json
-from typing import Any, Optional, Union
+from typing import Optional
 #import glob
 import aiohttp
 #import datetime
