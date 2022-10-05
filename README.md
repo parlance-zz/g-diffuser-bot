@@ -1,6 +1,6 @@
 ##  g-diffuser-lib - Frontend, Discord bot, command server, and utilities for the diffusers library (stable-diffusion)
 
-Oct 2/2022 Update: The discord bot should be back on the main branch on Monday with improved performance and new features.
+Oct 4/2022 Update: The discord bot is back! I'll be working to re-add features as I go, including gui buttons et al.
 
 ## Anaconda package
 - anaconda package for g-diffuser-lib will be published very soon!
