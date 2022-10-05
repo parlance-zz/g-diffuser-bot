@@ -197,7 +197,7 @@ async def dream(
     except Exception as e: print("exception in await interaction - " + str(e))
     
     if not prompt:
-        try: await interaction.followup.send(content="sorry @"+interaction.user.display_name+", please enter a prompt")
+        try: await interaction.followup.send(content="sorry @"+interaction.user.display_name+", please enter a prompt", ephemeral=True)
         except Exception as e: print("exception in await interaction - " + str(e))
         return
 
@@ -222,7 +222,7 @@ async def dream(
         await gdl.get_samples_async(args)
     except Exception as e:
         print("error - " + str(e)); gdl.print_namespace(args, debug=1)
-        try: await interaction.followup.send(content="sorry, something went wrong :(")
+        try: await interaction.followup.send(content="sorry, something went wrong :(", ephemeral=True)
         except Exception as e: print("exception in await interaction - " + str(e))
         return
 
@@ -255,13 +255,13 @@ async def dream(
         args_dict = vars(gdl.strip_args(args, level=1))
         args_str = str(args_dict).replace("{","").replace("}","").replace('"', "").replace("'", "").replace(",", " ")
         args_str = "prompt: " + args_prompt + "  " + args_str + "  seed: " + str(args_seed)
-        message = "@" + interaction.user.display_name + "   "+ args_str
+        message = "@" + interaction.user.display_name + ":  /dream "+ args_str
 
         try: await interaction.followup.send(files=attachment_files, content=message)
         except Exception as e: print("exception in await interaction - " + str(e))
     else:
         print("error - " + args.err_txt); gdl.print_namespace(args, debug=1)
-        try: await interaction.followup.send(content="sorry, something went wrong :(")
+        try: await interaction.followup.send(content="sorry, something went wrong :(", ephemeral=True)
         except Exception as e: print("exception in await interaction - " + str(e))
         return
 
