@@ -63,9 +63,7 @@ DEFAULT_PATHS.saved = DEFAULT_PATHS.bot+"/saved"
 # help and about strings, these must be 2000 characters or less
 ABOUT_TXT = """
 """
-HELP_TXT1 = """
-"""
-HELP_TXT2=""" 
+HELP_TXT = """
 """
 EXAMPLES_TXT = """
 """
@@ -102,7 +100,6 @@ class G_DiffuserBot(discord.Client):
             except Exception as e: print("Error loading '"+DISCORD_BOT_SETTINGS.state_file_path+"' - "+str(e))
 
         gdl.start_grpc_server(gdl.get_default_args())
-
         return
         
     async def setup_hook(self):
