@@ -42,11 +42,11 @@ import re
 import subprocess
 import glob
 import socket
+import aiofiles
 
 import numpy as np
 import cv2
 
-#from extensions import grpc_server, grpc_client  # ideally we'd want to keep the server inside the first g-diffuser-lib frontend that is running on this machine
 from extensions import grpc_client
 #from extensions import g_diffuser_utilities as gdl_utils
 
@@ -117,7 +117,8 @@ def get_random_string(digits=8):
 def print_namespace(namespace, debug=False, verbosity_level=0, indent=4):
     namespace_dict = vars(strip_args(namespace, level=verbosity_level))
     if debug:
-        for arg in namespace_dict: print(arg+"='"+str(namespace_dict[arg]) + "' "+str(type(namespace_dict[arg])))
+        for arg in namespace_dict:
+            print(arg+"='"+str(namespace_dict[arg]) + "' "+str(type(namespace_dict[arg])))
     else:
         print(json.dumps(namespace_dict, indent=indent))
     return
@@ -137,22 +138,34 @@ def get_noclobber_checked_path(base_path, file_path):
     return file_path_noext+"_x"+str(existing_count).zfill(clobber_num_padding)+file_path_ext
 
 def save_image(cv2_image, file_path):
-    assert(file_path); 
-    (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
+    assert(file_path); (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
     cv2.imwrite(file_path, cv2_image)
     return
 
+async def save_image_async(cv2_image, file_path):
+    assert(file_path); (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
+    img_bytes = np.array(cv2.imencode(".png", cv2_image)[1]).tobytes()
+    async with aiofiles.open(file_path, mode="wb") as out_file:
+        await out_file.write(img_bytes)
+        await out_file.close()
+    return
+
 def save_json(_dict, file_path):
-    assert(file_path); 
-    (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
+    assert(file_path); (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
     with open(file_path, "w") as file:
         json.dump(_dict, file, indent=4)
         file.close()
     return
     
+async def save_json_async(_dict, file_path):
+    assert(file_path); (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
+    async with aiofiles.open(file_path, "w") as file:
+        await file.write(json.dumps(_dict, indent=4))
+        await file.close()
+    return
+
 def load_json(file_path):
-    assert(file_path); 
-    (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
+    assert(file_path); (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
     with open(file_path, "r") as file:
         data = json.load(file)
         file.close()
@@ -160,7 +173,7 @@ def load_json(file_path):
     
 def strip_args(args, level=0): # remove args we wouldn't want to print or serialize, higher levels strip additional irrelevant fields
     args_stripped = argparse.Namespace(**(vars(args).copy()))
-    
+
     if level >=1: # keep just the basics for most printing
         if "debug" in args_stripped:
             if not args_stripped.debug: del args_stripped.debug
@@ -321,7 +334,8 @@ def get_samples(args, write=True):
             args.status = -1; args.err_txt = str(e) # error status
             return samples
 
-    if write and len(samples) > 1: save_samples_grid(samples, args) # if batch size > 1 and write to disk is enabled, save composite "grid image"
+    if write and len(samples) > 1:
+        save_samples_grid(samples, args) # if batch size > 1 and write to disk is enabled, save composite "grid image"
     return samples
 
 async def get_samples_async(args, write=True):
@@ -347,7 +361,7 @@ async def get_samples_async(args, write=True):
 
                 if write:
                     args.uuid_str = get_random_string(digits=16) # new uuid for new sample
-                    save_sample(image, args)
+                    await save_sample_async(image, args)
 
                 if args.seed: args.seed += 1 # increment seed or random seed if none was given as we go through the batch
                 else: args.auto_seed += 1
@@ -361,7 +375,8 @@ async def get_samples_async(args, write=True):
             args.status = -1; args.err_txt = str(e) # error status
             return samples
 
-    if write and len(samples) > 1: save_samples_grid(samples, args) # if batch size > 1 and write to disk is enabled, save composite "grid image"
+    if write and len(samples) > 1:
+        await save_samples_grid_async(samples, args) # if batch size > 1 and write to disk is enabled, save composite "grid image"
     return samples
 
 def save_sample(sample, args):
@@ -378,21 +393,34 @@ def save_sample(sample, args):
     final_path = DEFAULT_PATHS.outputs+"/"+args.output_file
     save_image(sample, final_path)
     print("Saved " + final_path)
-    """
-    if args.show and args.n <= 1:
-        if CLI_SETTINGS.image_viewer_path:
-            run_string(CLI_SETTINGS.image_viewer_path+" "+args.output_file+" "+CLI_SETTINGS.image_viewer_options, cwd=DEFAULT_PATHS.outputs)
-        else:
-            os.system(final_path)
-    """
 
     if not args.no_json:
         args.args_file = args.final_output_path+"/json/"+args.final_output_name+"_s"+str(seed).zfill(seed_num_padding)+".json"
         args.args_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.args_file) # add suffix if filename already exists
         save_json(vars(strip_args(args)), DEFAULT_PATHS.outputs+"/"+args.args_file)
-
     return
     
+async def save_sample_async(sample, args):
+    global DEFAULT_PATHS, CLI_SETTINGS
+    assert(DEFAULT_PATHS.outputs)
+    if args.seed: seed = args.seed
+    else: seed = args.auto_seed
+
+    seed_num_padding = 5
+    filename = args.final_output_name+"_s"+str(seed).zfill(seed_num_padding)+".png"
+    args.output_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.final_output_path+"/"+filename)
+    args.output_file_type = "img" # the future is coming, hold on to your butts
+
+    final_path = DEFAULT_PATHS.outputs+"/"+args.output_file
+    await save_image_async(sample, final_path)
+    print("Saved " + final_path)
+
+    if not args.no_json:
+        args.args_file = args.final_output_path+"/json/"+args.final_output_name+"_s"+str(seed).zfill(seed_num_padding)+".json"
+        args.args_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.args_file) # add suffix if filename already exists
+        await save_json_async(vars(strip_args(args)), DEFAULT_PATHS.outputs+"/"+args.args_file)
+    return
+
 def save_samples_grid(samples, args):
     global CLI_SETTINGS
     assert(len(samples)> 1)
@@ -406,14 +434,21 @@ def save_samples_grid(samples, args):
     save_image(grid_image, final_path)
     print("Saved grid " + final_path)
     args.output_file = output_file
+    return
 
-    """
-    if args.show:
-        if CLI_SETTINGS.image_viewer_path:
-            run_string(CLI_SETTINGS.image_viewer_path+" "+output_file+" "+CLI_SETTINGS.image_viewer_options, cwd=DEFAULT_PATHS.outputs)
-        else:
-            os.system(final_path)
-    """            
+async def save_samples_grid_async(samples, args):
+    global CLI_SETTINGS
+    assert(len(samples)> 1)
+    grid_layout = get_grid_layout(len(samples))
+    grid_image = get_image_grid(samples, grid_layout)
+    filename = "grid_" + args.final_output_name + ".jpg"
+    output_file = args.final_output_path+"/" + filename
+    output_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, output_file)
+
+    final_path = DEFAULT_PATHS.outputs+"/"+output_file
+    await save_image_async(grid_image, final_path)
+    print("Saved grid " + final_path)
+    args.output_file = output_file
     return
 
 def start_grpc_server(args):
