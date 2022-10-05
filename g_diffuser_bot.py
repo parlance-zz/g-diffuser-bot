@@ -54,6 +54,12 @@ import discord
 #from discord.ext import tasks
 from discord import app_commands
 
+# redirect default paths to designated bot root path
+DEFAULT_PATHS.inputs = DEFAULT_PATHS.bot+"/inputs"
+DEFAULT_PATHS.outputs = DEFAULT_PATHS.bot+"/outputs"
+DEFAULT_PATHS.backups = DEFAULT_PATHS.bot+"/backups"
+DEFAULT_PATHS.saved = DEFAULT_PATHS.bot+"/saved"
+
 # help and about strings, these must be 2000 characters or less
 ABOUT_TXT = """
 """
@@ -143,18 +149,9 @@ if __name__ == "__main__":
         default=DISCORD_BOT_SETTINGS.guild,
         help="if you want to override the guild id in g_diffuser_config.py you can supply an alternate here",
     )
-    parser.add_argument(
-        "--data_root",
-        type=str,
-        default=DISCORD_BOT_SETTINGS.data_root,
-        help="if you want to override the data root path in g_diffuser_config.py you can supply an alternate here",
-    )
     args = parser.parse_args()
     DISCORD_BOT_SETTINGS.token = args.token
     DISCORD_BOT_SETTINGS.guild = args.guild
-    DISCORD_BOT_SETTINGS.data_root = args.data_root
-    (pathlib.Path(DISCORD_BOT_SETTINGS.data_root).parents[0]).mkdir(exist_ok=True, parents=True)
-
     # if we don't have a valid discord bot token or guild id let's not go any further
     if (not DISCORD_BOT_SETTINGS.token) or (DISCORD_BOT_SETTINGS.token == "YOUR_DISCORD_BOT_TOKEN_HERE"):
         print("Fatal error: Cannot start discord bot with token '" + DISCORD_BOT_SETTINGS.token + "'")
