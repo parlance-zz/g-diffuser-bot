@@ -376,7 +376,7 @@ def cli_save_comparison_grid(*paths, **kwargs):
 
     if args.mode != "rows": layout = (max_path_samples, num_paths)
     else: layout = (num_paths, max_path_samples)
-    np_grid = np.zeros((layout[0] * max_sample_width, layout[1] * max_sample_height, 3), dtype="np.int8")
+    np_grid = np.zeros((layout[0] * max_sample_width, layout[1] * max_sample_height, 3), dtype="np.uint8")
 
     for x in range(len(path_samples)):
         for y in range(len(path_samples[x])):
