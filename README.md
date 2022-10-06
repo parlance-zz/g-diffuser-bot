@@ -10,7 +10,7 @@ Oct 4/2022 Update: The discord bot is back! I'll be working to re-add features a
  - The goal of the project is to provide the best possible front-end, interface, and utilities for the diffusers library and to enable regular users to access these powerful abilities with a free and easy-to-use package that supports their local GPU and as many OS's / platforms as possible.
  - The current frontends include an (interactive) cli and a discord bot.
  - The current experimental extensions include g-diffuser fourier shaped noise out-painting
-   - Fourier shaped noise has been integrated in haffried's unified diffusers pipeline and GRPC server development for it will continue there: https://github.com/hafriedlander/stable-diffusion-grpcserver
+   - Fourier shaped noise has been integrated into hafriedlander's unified diffusers pipeline and development will continue in his GRPC server project: https://github.com/hafriedlander/stable-diffusion-grpcserver
  - For more information on progress and upcoming features please see: https://github.com/parlance-zz/g-diffuser-bot/issues
  
 ## Development and funding:
