@@ -30,8 +30,6 @@ g_diffuser_bot.py - discord bot interface for g-diffuser-lib
 
 """
 
-import ntpath; ntpath.realpath = ntpath.abspath # can help with long paths in certain python environments
-
 import g_diffuser_lib as gdl
 from g_diffuser_config import DEFAULT_PATHS, DISCORD_BOT_SETTINGS
 from g_diffuser_defaults import DEFAULT_SAMPLE_SETTINGS

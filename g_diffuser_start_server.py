@@ -28,10 +28,6 @@ g_diffuser_start_server.py - start the GRPC server headless. useful for debuggin
 
 """
 
-import ntpath; ntpath.realpath = ntpath.abspath # can help with long paths in certain python environments
-
-from g_diffuser_config import DEFAULT_PATHS
-import os; os.chdir(DEFAULT_PATHS.root)
 import time
 
 import g_diffuser_lib as gdl

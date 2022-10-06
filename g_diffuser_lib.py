@@ -27,12 +27,15 @@ g_diffuser_lib.py - core diffuser / grpc client operations and lib utilities
 
 """
 
-import ntpath; ntpath.realpath = ntpath.abspath # can help with long paths in certain python environments
-
 from g_diffuser_config import DEFAULT_PATHS, GRPC_SERVER_SETTINGS, CLI_SETTINGS
 from g_diffuser_defaults import DEFAULT_SAMPLE_SETTINGS
 
 import os
+
+if os.name == "nt": # this kludge can help make long file paths on windows more reliable
+    import ntpath
+    ntpath.realpath = ntpath.abspath 
+
 import datetime
 import argparse
 import uuid
@@ -70,7 +73,8 @@ def run_string(run_string, cwd=".", log_path=None, err_path=None):  # run shell 
     #if log_path == None: log_file = subprocess.DEVNULL
     #if err_path == None: err_file = subprocess.DEVNULL
 
-    process = subprocess.Popen(run_string, shell=False, cwd=cwd, stdin=subprocess.DEVNULL, stdout=log_file, stderr=err_file, encoding='ascii')
+    process = subprocess.Popen(run_string, shell=True, cwd=cwd, stdin=subprocess.DEVNULL, stdout=log_file, stderr=err_file, encoding='ascii')
+
     assert(process)
     return process
 

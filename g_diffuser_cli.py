@@ -27,8 +27,6 @@ g_diffuser_cli.py - command line interface for g-diffuser-lib with interactive m
 
 """
 
-import ntpath; ntpath.realpath = ntpath.abspath # can help with long paths in certain python environments
-
 import g_diffuser_lib as gdl
 from g_diffuser_config import DEFAULT_PATHS, CLI_SETTINGS
 
