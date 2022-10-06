@@ -10,13 +10,15 @@ dependencies:
   - torchvision
   - numpy 
   - pip:
-    - grpc
     - opencv-python
     - aiofiles
     - transformers
     - discord
     - ftfy
     - twisted
+    - hupper
+    - wsgicors
+    - service_identity
     - grpcio
     - google-api-python-client
     - scikit-image
