@@ -10,9 +10,14 @@ dependencies:
   - torchvision
   - numpy 
   - pip:
-    - cv2
+    - grpc
+    - opencv-python
     - aiofiles
     - transformers
     - discord
     - ftfy
-    - git+https://github.com/huggingface/diffusers    
+    - twisted
+    - grpcio
+    - google-api-python-client
+    - scikit-image
+    - git+https://github.com/huggingface/diffusers.git    
