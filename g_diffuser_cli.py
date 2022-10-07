@@ -330,7 +330,7 @@ def cli_help():
     return
     
 def cli_exit():
-    gdl._p_kill(gdl.GRPC_SERVER_PROCESS.pid)
+    #gdl._p_kill(gdl.GRPC_SERVER_PROCESS.pid)
     exit(0)
     
 def cli_save_comparison_grid(*paths, **kwargs):
