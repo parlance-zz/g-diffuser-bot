@@ -321,7 +321,8 @@ def cli_resample(old_path, new_path, **kwargs):
     return
 
 def cli_clear():
-    os.system("cls")
+    if os.name == "nt": os.system("cls")
+    else: os.system("clear")
     return
     
 def cli_help():
