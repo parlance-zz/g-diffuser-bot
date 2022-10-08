@@ -35,6 +35,8 @@ import os
 if os.name == "nt": # this kludge can help make long file paths on windows more reliable
     import ntpath
     ntpath.realpath = ntpath.abspath 
+else:
+    import readline # required on linux for functional arrow keys in the python interactive interpreter =\
 
 import datetime
 import argparse
