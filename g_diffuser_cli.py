@@ -349,12 +349,12 @@ def cli_save_comparison_grid(*paths, **kwargs):
         grid_filename = DEFAULT_PATHS.outputs+"/"+grid_filename
 
     num_paths = len(paths)
-    assert(num_paths > 1)
     path_samples = []
 
     max_sample_width = 0  # keep track of the largest image in all the folders to make everything fit in the event of non-uniform size
     max_sample_height = 0
     for path in paths:
+        assert(type(path) == str)
         path_files = glob.glob(DEFAULT_PATHS.outputs+"/"+path+"/*.png")
         for file in path_files:
             if os.path.basename(file).startswith("grid_"): path_files.remove(file) # exclude grid images from comparison grids
