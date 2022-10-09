@@ -2,6 +2,10 @@
 
 ##  g-diffuser-bot - Discord bot and utilities for the diffusers library (stable-diffusion)
 
+Oct 9/2022 Update:  I'm recharging over thanksgiving and will working on the bot again starting Oct-11 2022.
+                    Please check out the other GRPC server interfaces available on: https://www.stablecabal.org/
+                    Thank you for your patience.
+
 Oct 4/2022 Update: The discord bot is back! I'll be working to re-add features as I go, including gui buttons et al.
 
 ## Anaconda package
