@@ -7,3 +7,4 @@ __pycache__/
 *.jpeg
 *.log
 g_diffuser_config.py
+!part_of_stable_cabal.png
