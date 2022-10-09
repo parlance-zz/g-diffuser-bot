@@ -300,10 +300,10 @@ def load_image(args):
     
     num_channels = init_image.shape[2]
     if num_channels == 4: # input image has an alpha channel, setup mask for in/out-painting
-        mask_image = 1.-init_image[:,:,3]   # extract mask
+        mask_image = init_image[:,:,3]   # extract mask
         init_image = init_image[:,:,0:3] # strip mask from init_img / convert to rgb
 
-        args.noise_start += 1.  # todo: possibly temporary, grpc server current expects start_schedule of 2. to trigger in/out-paint mode
+        #args.noise_start += 1.  # todo: possibly temporary, grpc server current expects start_schedule of 2. to trigger in/out-paint mode
         if args.sampler == "k_euler": args.sampler = "k_euler_ancestral" # k_euler currently does not add noise during sampling
         elif args.sampler != "k_euler_ancestral": args.sampler = "ddim"  # and samplers that aren't k_euler_a or ddim are pretty awful
         
