@@ -300,7 +300,7 @@ def load_image(args):
     
     num_channels = init_image.shape[2]
     if num_channels == 4: # input image has an alpha channel, setup mask for in/out-painting
-        mask_image = init_image[:,:,3]   # extract mask
+        mask_image = 1.-init_image[:,:,3]   # extract mask
         init_image = init_image[:,:,0:3] # strip mask from init_img / convert to rgb
 
         args.noise_start += 1.  # todo: possibly temporary, grpc server current expects start_schedule of 2. to trigger in/out-paint mode
