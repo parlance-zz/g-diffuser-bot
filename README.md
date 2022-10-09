@@ -1,4 +1,4 @@
-(![https://www.stablecabal.org](https://raw.githubusercontent.com/parlance-zz/g-diffuser-bot/dev/part_of_stable_cabal.png))
+![https://www.stablecabal.org](https://raw.githubusercontent.com/parlance-zz/g-diffuser-bot/dev/part_of_stable_cabal.png)
 
 ##  g-diffuser-bot - Discord bot and utilities for the diffusers library (stable-diffusion)
 
