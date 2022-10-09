@@ -1,3 +1,5 @@
+(![https://www.stablecabal.org](https://github.com/parlance_zz/g-diffuser-bot/blob/dev/part_of_stable_cabal.png?raw=true))
+
 ##  g-diffuser-bot - Discord bot and utilities for the diffusers library (stable-diffusion)
 
 Oct 4/2022 Update: The discord bot is back! I'll be working to re-add features as I go, including gui buttons et al.
