@@ -495,7 +495,7 @@ async def save_samples_grid_async(samples, args):
     args.output_file = output_file
     return
 
-def start_grpc_server(args):
+def start_grpc_server(args, no_log=False):
     global DEFAULT_PATHS, GRPC_SERVER_SETTINGS, GRPC_SERVER_PROCESS, CLI_SETTINGS
     if args.debug: load_start_time = datetime.datetime.now()
 
@@ -505,10 +505,12 @@ def start_grpc_server(args):
     else:
         print("Starting GRPC server...")
 
-    if DEFAULT_PATHS.grpc_log != DEFAULT_PATHS.root: log_path = DEFAULT_PATHS.grpc_log
-    else: log_path = ""
+    if (DEFAULT_PATHS.grpc_log != DEFAULT_PATHS.root) and (no_log==False):
+        log_path = DEFAULT_PATHS.grpc_log
+    else:
+        log_path = ""
     
-    if CLI_SETTINGS.disable_progress_bars: err_path = "sdgrpcserver_err.log"
+    if CLI_SETTINGS.disable_progress_bars and (no_log==False): err_path = "sdgrpcserver_err.log"
     else: err_path = None
 
     grpc_server_run_string = "python ./server.py"
