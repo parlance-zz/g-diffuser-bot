@@ -42,7 +42,7 @@ import pathlib
 import numpy as np
 import cv2
 
-VERSION_STRING = "g-diffuser-cli v0.98b"
+VERSION_STRING = "g-diffuser-cli v0.99c"
 INTERACTIVE_MODE_BANNER_STRING = """
 Interactive mode:
     call sample() with keyword arguments and use the up/down arrow-keys to browse command history:
@@ -54,10 +54,11 @@ sample("something's wrong with the g-diffuser", sampler="k_euler")   # uses the 
 sample() # arguments can be omitted to use your last args instead
 s()      # some commands have shortcuts / aliases
 
-reset_args()  # reset your arguments back to defaults
-show_args()   # shows your *basic* input arguments
-show_args(0)  # shows *all* your input arguments
-load_args()   # load and use your last arguments (from auto-saved file in ./inputs/json)
+show_samplers() # show all available sampler names
+reset_args()    # reset your arguments back to defaults
+show_args()     # shows your *basic* input arguments
+show_args(0)    # shows *all* your input arguments
+load_args()     # load and use your last arguments (from auto-saved file in ./inputs/json)
 save_args("my_fav_args")  # you can save your arguments in ./inputs/json
 load_args("my_fav_args")  # you can load those saved arguments by name
 
@@ -137,6 +138,7 @@ def main():
         cli_locals.show = cli_show
         cli_locals.run_script = cli_run_script
         cli_locals.run = cli_run_script
+        cli_locals.show_samplers = cli_show_samplers
         cli_locals.clear = cli_clear
         cli_locals.cls = cli_clear
         cli_locals.help = cli_help
@@ -415,6 +417,11 @@ def cli_run_script(script_name, debug=False, **kwargs):
         print("Error running user script - " + str(e))
         if debug: raise
 
+    return
+
+def cli_show_samplers():
+    for sampler in gdl.SUPPORTED_SAMPLERS_LIST:
+        print("sampler='"+sampler+"'")
     return
 
 if __name__ == "__main__":
