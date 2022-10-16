@@ -8,8 +8,8 @@ Oct 9/2022 Update:  I'm recharging over thanksgiving and will working on the bot
 
 Oct 4/2022 Update: The discord bot is back! I'll be working to re-add features as I go, including gui buttons et al.
 
-## Docker File
-- docker image and other simplified installation options for g-diffuser-bot will be published very soon!
+## Docker Image
+- a docker image and other simplified installation options for g-diffuser-bot will be published very soon!
 
 ## Vision for the g-diffuser-bot project:
  - In the near future the diffusers library (https://github.com/huggingface/diffusers) being developed and promoted by stability.ai will expose multi-modality sampling abilities, meaning we will be able to arbitrarily mix and match input and output types. Tasks like txt2music, music2img, and everything in-between will be possible, and all of this will be coming very soon.
