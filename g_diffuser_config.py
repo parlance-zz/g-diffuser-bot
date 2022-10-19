@@ -35,7 +35,7 @@ DEFAULT_PATHS.grpc_log = "./sdgrpcserver.log"
 # - Discord bot setup guide: https://www.writebots.com/discord-bot-token/
 DISCORD_BOT_SETTINGS.token = "YOUR_DISCORD_BOT_TOKEN_HERE"
 DISCORD_BOT_SETTINGS.guild = 1021168973582184548 # IMPORTANT - Enter your discord guild/server id here
-DISCORD_BOT_SETTINGS.model_list = ["stable-diffusion-v1-4", "waifu-diffusion"] # IMPORTANT - model id's to be accessible from the discord bot (from g_diffuser_config_models.yaml)
+DISCORD_BOT_SETTINGS.model_list = ["stable-diffusion-v1-4", "waifu-diffusion-v1-2"] # IMPORTANT - model id's to be accessible from the discord bot (from g_diffuser_config_models.yaml)
 DISCORD_BOT_SETTINGS.admin_role = "moderator"    # IMPORTANT - use your discord server / guild role names here accordingly, check the bot help text for associated command permissions
 DISCORD_BOT_SETTINGS.users_role = "everyone"     # if you want anyone to be able to use the bot, set this to "everyone"
 DISCORD_BOT_SETTINGS.max_queue_length = 1000     # beyond this limit additional commands will be rejected
