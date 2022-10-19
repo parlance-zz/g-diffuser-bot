@@ -95,7 +95,9 @@ class G_DiffuserBot(discord.Client):
         self.saved_state.users_total_elapsed_time = {}
         if DISCORD_BOT_SETTINGS.state_file_path: # load existing data if we have state file path
             try: self.load_state()
-            except Exception as e: print("Error loading '"+DISCORD_BOT_SETTINGS.state_file_path+"' - "+str(e))
+            except Exception as e:
+                #print("Error loading '"+DISCORD_BOT_SETTINGS.state_file_path+"' - "+str(e))
+                pass
 
         gdl.start_grpc_server(gdl.get_default_args())
         return
