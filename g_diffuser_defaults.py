@@ -21,7 +21,7 @@ DEFAULT_SAMPLE_SETTINGS.model_name = "stable-diffusion-v1-4" # default model id 
 # ******************** SETTINGS END ************************
 
 if __name__ == "__main__": # you can execute this file with python to see a summary of your defaults
-    from g_diffuser_lib import print_namespace, get_args_parser
+    from extensions.g_diffuser_lib import print_namespace, get_args_parser
     print("\ndefault sample settings: ")
     print_namespace(DEFAULT_SAMPLE_SETTINGS, debug=True)
     

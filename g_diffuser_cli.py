@@ -27,7 +27,7 @@ g_diffuser_cli.py - command line interface for g-diffuser-lib with interactive m
 
 """
 
-import g_diffuser_lib as gdl
+import extensions.g_diffuser_lib as gdl
 from g_diffuser_config import DEFAULT_PATHS, CLI_SETTINGS
 
 import os; os.chdir(DEFAULT_PATHS.root)

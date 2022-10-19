@@ -30,7 +30,7 @@ g_diffuser_bot.py - discord bot interface for g-diffuser-lib
 
 """
 
-import g_diffuser_lib as gdl
+import extensions.g_diffuser_lib as gdl
 from g_diffuser_config import DEFAULT_PATHS, DISCORD_BOT_SETTINGS
 from g_diffuser_defaults import DEFAULT_SAMPLE_SETTINGS
 
