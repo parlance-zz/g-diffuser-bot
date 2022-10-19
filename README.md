@@ -2,11 +2,7 @@
 
 ##  g-diffuser-bot - Discord bot and utilities for the diffusers library (stable-diffusion)
 
-Oct 9/2022 Update:  I'm recharging over thanksgiving and will working on the bot again starting Oct-11 2022.
-                    Please check out the other GRPC server interfaces available on: https://www.stablecabal.org/
-                    Thank you for your patience.
-
-Oct 4/2022 Update: The discord bot is back! I'll be working to re-add features as I go, including gui buttons et al.
+The discord bot is back! I'll be working to re-add features as I go, including gui buttons et al.
 
 ## Docker Image
 - a docker image and other simplified installation options for g-diffuser-bot will be published very soon!
@@ -34,6 +30,7 @@ Oct 4/2022 Update: The discord bot is back! I'll be working to re-add features a
  5)  place any pre-downloaded diffusers models into the ./models folder
      for specific instructions on model download / installation please see models/README.md (https://github.com/parlance-zz/g-diffuser-bot/tree/main/models)
  6)  If you are running Windows 10 you may need to turn on "developer mode". Look for "developer settings" in the start menu.
+     If you are running Windows 10 or Windows Server you will need to reboot before running g-diffuser (due to pytorch installation requirements on Windows, sorry)
      
 Optional: edit g_diffuser_config_models.yaml, g_diffuser_config.py and g_diffuser_defaults.py as appropriate, save your changes
  
