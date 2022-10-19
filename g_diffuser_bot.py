@@ -191,11 +191,11 @@ async def dream(
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
 
     try: await interaction.response.defer(thinking=True, ephemeral=False) # start by requesting more time to respond
-    except Exception as e: print("exception in await interaction - " + str(e))
+    except Exception as e: pass #print("exception in await interaction - " + str(e))
     
     if not prompt:
         try: await interaction.followup.send(content="sorry @"+interaction.user.display_name+", please enter a prompt", ephemeral=True)
-        except Exception as e: print("exception in await interaction - " + str(e))
+        except Exception as e: pass #print("exception in await interaction - " + str(e))
         return
 
     # build sample args from app command params
@@ -212,6 +212,7 @@ async def dream(
     args.steps = steps
     args.n = n
     args.interactive = True
+    gdl.print_namespace(args, debug=0, verbosity_level=1)
 
     start_time = datetime.datetime.now()
     try:
@@ -255,11 +256,11 @@ async def dream(
         message = "@" + interaction.user.display_name + ":  /dream "+ args_str
 
         try: await interaction.followup.send(files=attachment_files, content=message)
-        except Exception as e: print("exception in await interaction - " + str(e))
+        except Exception as e: pass # print("exception in await interaction - " + str(e))
     else:
         print("error - " + args.err_txt); gdl.print_namespace(args, debug=1)
         try: await interaction.followup.send(content="sorry, something went wrong :(", ephemeral=True)
-        except Exception as e: print("exception in await interaction - " + str(e))
+        except Exception as e: pass # print("exception in await interaction - " + str(e))
         return
 
     print("elapsed time: " + str(datetime.datetime.now() - start_time) + "s")
