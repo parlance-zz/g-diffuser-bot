@@ -346,7 +346,7 @@ def get_samples(args, write=True):
     init_image, mask_image = build_sample_args(args)
 
     samples = []
-    stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.key, engine=args.model_name, verbose=False)
+    stability_api = grpc_client.StabilityInference("localhost:50051", None, engine=args.model_name, verbose=False)
     while True: # watch out! a wild shrew!
         try:
             request_dict = build_grpc_request_dict(args, init_image, mask_image)
@@ -388,7 +388,7 @@ async def get_samples_async(args, write=True):
     init_image, mask_image = build_sample_args(args)
 
     samples = []
-    stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.key, engine=args.model_name, verbose=False)
+    stability_api = grpc_client.StabilityInference("localhost:50051", None, engine=args.model_name, verbose=False)
     while True: # watch out! a wild shrew!
         try:
             request_dict = build_grpc_request_dict(args, init_image, mask_image)
@@ -496,24 +496,30 @@ async def save_samples_grid_async(samples, args):
     args.output_file = output_file
     return
 
-def start_grpc_server(args, no_log=False):
+def start_grpc_server(args):
     global DEFAULT_PATHS, GRPC_SERVER_SETTINGS, GRPC_SERVER_PROCESS, CLI_SETTINGS
     if args.debug: load_start_time = datetime.datetime.now()
 
-    if get_socket_listening_status(GRPC_SERVER_SETTINGS.host):
-        print("Found running GRPC server listening on " + GRPC_SERVER_SETTINGS.host)
+    host = "localhost:50051"
+    if get_socket_listening_status(host):
+        print("Found running GRPC server listening on " + host)
         return
     else:
         print("Starting GRPC server...")
 
-    if (DEFAULT_PATHS.grpc_log != DEFAULT_PATHS.root) and (no_log==False):
-        log_path = DEFAULT_PATHS.grpc_log
-    else:
-        log_path = ""
+    #docker run --gpus all -it -p 50051:50051 -e HF_API_TOKEN=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 -e SD_LISTEN_TO_ALL=1 -e SD_ENGINECFG=/weights/models.yaml -e SD_NSFW_BEHAVIOUR=flag -e SD_VRAM_OPTIMISATION_LEVEL=2 -v ${pwd}/models:/huggingface -v ${pwd}/models:/weights hafriedlander/stable-diffusion-grpcserver:xformers-latest
+    grpc_server_run_string = "docker run --gpus all -p 50051:50051 -e HF_API_TOKEN="+GRPC_SERVER_SETTINGS.hf_token
+    if GRPC_SERVER_SETTINGS.enable_local_network_access: grpc_server_run_string += " -e SD_LISTEN_TO_ALL=1"
+    if GRPC_SERVER_SETTINGS.enable_mps: grpc_server_run_string += " -e SD_ENABLE_MPS=1"
+    grpc_server_run_string += " -e SD_ENGINECFG=/weights/models.yaml -e SD_NSFW_BEHAVIOUR="+GRPC_SERVER_SETTINGS.nsfw_behaviour
+    grpc_server_run_string += " -e SD_VRAM_OPTIMISATION_LEVEL="+str(GRPC_SERVER_SETTINGS.memory_optimization_level)
+    grpc_server_run_string += ' -v "'+DEFAULT_PATHS.models+'":/huggingface -v "'+DEFAULT_PATHS.models+'":/weights hafriedlander/stable-diffusion-grpcserver:xformers-latest'
     
-    if CLI_SETTINGS.disable_progress_bars and (no_log==False): err_path = "sdgrpcserver_err.log"
-    else: err_path = None
+    GRPC_SERVER_PROCESS = run_string(grpc_server_run_string)
+    if args.debug: print("sd_grpc_server start time : " + str(datetime.datetime.now() - load_start_time))
+    return
 
+    """
     grpc_server_run_string = "python ./server.py"
     grpc_server_run_string += " --enginecfg "+DEFAULT_PATHS.root+"/g_diffuser_config_models.yaml" + " --weight_root "+DEFAULT_PATHS.models
     grpc_server_run_string += " --vram_optimisation_level " + str(GRPC_SERVER_SETTINGS.memory_optimization_level)
@@ -521,7 +527,7 @@ def start_grpc_server(args, no_log=False):
     GRPC_SERVER_PROCESS = run_string(grpc_server_run_string, cwd=DEFAULT_PATHS.extensions+"/"+"stable-diffusion-grpcserver", log_path=log_path, err_path=err_path)
     if args.debug: print("sd_grpc_server start time : " + str(datetime.datetime.now() - load_start_time))
     return
-    
+    """
 def get_args_parser():
     global DEFAULT_SAMPLE_SETTINGS
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)

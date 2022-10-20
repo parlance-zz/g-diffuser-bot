@@ -31,6 +31,6 @@ g_diffuser_start_server.py - start the GRPC server headless. useful for debuggin
 import time
 
 import extensions.g_diffuser_lib as gdl
-gdl.start_grpc_server(gdl.get_default_args(), no_log=True)
+gdl.start_grpc_server(gdl.get_default_args())
 while True:
     time.sleep(10)

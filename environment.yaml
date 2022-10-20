@@ -3,7 +3,7 @@ channels:
   - pytorch
   - defaults
 dependencies:
-  - python
+  - python=3.10
   - pip
   - cudatoolkit
   - pytorch
@@ -13,14 +13,9 @@ dependencies:
     - pyyaml
     - opencv-python
     - aiofiles
-    - transformers
     - discord
-    - ftfy
-    - twisted
-    - hupper
     - wsgicors
     - service_identity
     - grpcio
     - google-api-python-client
-    - scikit-image
-    - git+https://github.com/huggingface/diffusers.git    
+    - git+https://github.com/huggingface/diffusers.git

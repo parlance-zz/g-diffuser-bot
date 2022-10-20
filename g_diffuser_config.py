@@ -27,8 +27,6 @@ DEFAULT_PATHS.temp = "./temp"
 DEFAULT_PATHS.debug = "./debug"
 DEFAULT_PATHS.extensions = "./extensions"
 DEFAULT_PATHS.bot = "./bot"
-DEFAULT_PATHS.model_cfg = "./g_diffuser_config_models.yaml"
-DEFAULT_PATHS.grpc_log = "./sdgrpcserver.log"
 
 #IMPORTANT - If you want to use the discord bot, use enter your access token below:
 # - Discord developers site: https://discordapp.com/developers/applications/
@@ -48,11 +46,12 @@ DISCORD_BOT_SETTINGS.state_file_path = "./g-diffuser-bot.json"        # relative
 DISCORD_BOT_SETTINGS.activity = "/help, /about"
 
 #IMPORTANT - GRPC server settings (you probably won't need to adjust these settings unless you are an advanced user)
-GRPC_SERVER_SETTINGS.host = "localhost:50051"
-GRPC_SERVER_SETTINGS.key = ""
+GRPC_SERVER_SETTINGS.enable_local_network_access = True
 GRPC_SERVER_SETTINGS.memory_optimization_level = 2  # 2 is maximum memory savings, 1 is less, and 0 is off
                                                     # 1 should be the best setting for most users
 GRPC_SERVER_SETTINGS.enable_mps = False
+GRPC_SERVER_SETTINGS.nsfw_behaviour="flag" #"block"
+GRPC_SERVER_SETTINGS.hf_token = "YOUR_HUGGINGFACE_ACCESS_TOKEN_HERE"
 
 # ******************** SETTINGS END ************************
 
