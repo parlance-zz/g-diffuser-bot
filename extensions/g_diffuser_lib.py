@@ -503,12 +503,12 @@ def start_grpc_server(args):
     host = "localhost:50051"
     if get_socket_listening_status(host):
         print("Found running GRPC server listening on " + host)
-        return
+        return None
     else:
         print("Starting GRPC server...")
 
     #docker run --gpus all -it -p 50051:50051 -e HF_API_TOKEN=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 -e SD_LISTEN_TO_ALL=1 -e SD_ENGINECFG=/weights/models.yaml -e SD_NSFW_BEHAVIOUR=flag -e SD_VRAM_OPTIMISATION_LEVEL=2 -v ${pwd}/models:/huggingface -v ${pwd}/models:/weights hafriedlander/stable-diffusion-grpcserver:xformers-latest
-    grpc_server_run_string = "docker run --gpus all -p 50051:50051 -e HF_API_TOKEN="+GRPC_SERVER_SETTINGS.hf_token
+    grpc_server_run_string = "docker run --name sdgrpcserver --gpus all -p 50051:50051 -e HF_API_TOKEN="+GRPC_SERVER_SETTINGS.hf_token
     if GRPC_SERVER_SETTINGS.enable_local_network_access: grpc_server_run_string += " -e SD_LISTEN_TO_ALL=1"
     if GRPC_SERVER_SETTINGS.enable_mps: grpc_server_run_string += " -e SD_ENABLE_MPS=1"
     grpc_server_run_string += " -e SD_ENGINECFG=/weights/models.yaml -e SD_NSFW_BEHAVIOUR="+GRPC_SERVER_SETTINGS.nsfw_behaviour
@@ -517,17 +517,8 @@ def start_grpc_server(args):
     
     GRPC_SERVER_PROCESS = run_string(grpc_server_run_string)
     if args.debug: print("sd_grpc_server start time : " + str(datetime.datetime.now() - load_start_time))
-    return
+    return GRPC_SERVER_PROCESS
 
-    """
-    grpc_server_run_string = "python ./server.py"
-    grpc_server_run_string += " --enginecfg "+DEFAULT_PATHS.root+"/g_diffuser_config_models.yaml" + " --weight_root "+DEFAULT_PATHS.models
-    grpc_server_run_string += " --vram_optimisation_level " + str(GRPC_SERVER_SETTINGS.memory_optimization_level)
-    if GRPC_SERVER_SETTINGS.enable_mps: grpc_server_run_string += " --enable_mps"
-    GRPC_SERVER_PROCESS = run_string(grpc_server_run_string, cwd=DEFAULT_PATHS.extensions+"/"+"stable-diffusion-grpcserver", log_path=log_path, err_path=err_path)
-    if args.debug: print("sd_grpc_server start time : " + str(datetime.datetime.now() - load_start_time))
-    return
-    """
 def get_args_parser():
     global DEFAULT_SAMPLE_SETTINGS
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
