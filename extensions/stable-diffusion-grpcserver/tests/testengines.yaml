@@ -1,0 +1,10 @@
+- id: "stable-diffusion-v1-4"
+  default: True
+  enabled: True
+  visible: True
+  name: "Stable Diffusion V1.4"
+  description: "Stable Diffusion using the CompVis model and our Unified pipeline"
+  class: "UnifiedPipeline"
+  model: "CompVis/stable-diffusion-v1-4"
+  local_model: "./stable-diffusion-v1-4"
+  use_auth_token: True
