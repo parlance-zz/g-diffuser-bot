@@ -12,7 +12,7 @@
 - id: "waifu-diffusion"
   enabled: True
   visible: True
-  name: "Waifu Diffusion V1.2"
+  name: "Waifu Diffusion V1.3"
   description: "Stable Diffusion using the Hakurei Waifu Diffusion model and our Unified pipeline"
   class: "UnifiedPipeline"
   model: "hakurei/waifu-diffusion"
