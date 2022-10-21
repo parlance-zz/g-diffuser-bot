@@ -45,7 +45,8 @@ from typing import Optional
 import aiohttp
 #import datetime
 import argparse
-#import subprocess
+from threading import Thread
+import asyncio
 
 import discord
 #from discord.ext import commands
@@ -217,7 +218,14 @@ async def dream(
     start_time = datetime.datetime.now()
     try:
         #gdl.print_namespace(args)
-        await gdl.get_samples_async(args)
+        #gdl.get_samples_async(args)
+        thread = Thread(target = gdl.get_samples, args=[args], daemon=True)
+        thread.start()
+        while True:
+            thread.join(0.01)
+            if not thread.is_alive(): break
+            await asyncio.sleep(0.05)
+        thread.join()
     except Exception as e:
         print("error - " + str(e)); gdl.print_namespace(args, debug=1)
         try: await interaction.followup.send(content="sorry, something went wrong :(", ephemeral=True)

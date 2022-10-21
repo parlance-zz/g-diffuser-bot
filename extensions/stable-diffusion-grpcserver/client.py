@@ -15,6 +15,7 @@ import logging
 import time
 import mimetypes
 import signal
+import threading
 
 import grpc
 from argparse import ArgumentParser, Namespace
@@ -369,7 +370,8 @@ class StabilityInference:
             #sys.exit(0)
             raise Exception()
 
-        signal.signal(signal.SIGINT, cancel_request)
+        #if threading.main_thread():
+        #    signal.signal(signal.SIGINT, cancel_request)
         
         for answer in answers:
             duration = time.time() - start
@@ -509,7 +511,8 @@ class StabilityInference:
             #sys.exit(0)
             raise Exception()
 
-        signal.signal(signal.SIGINT, cancel_request)
+        #if threading.main_thread():
+        #    signal.signal(signal.SIGINT, cancel_request)
         
         for answer in answers:
             duration = time.time() - start
