@@ -150,7 +150,7 @@ def save_image(cv2_image, file_path):
 
 async def save_image_async(cv2_image, file_path):
     assert(file_path); (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
-    img_bytes = np.array(cv2.imencode(".png", cv2_image)[1]).tobytes()
+    img_bytes = np.array(cv2.imencode(os.path.splitext(file_path)[1], cv2_image)[1]).tobytes()
     async with aiofiles.open(file_path, mode="wb") as out_file:
         await out_file.write(img_bytes)
         await out_file.close()
@@ -391,12 +391,9 @@ async def get_samples_async(args, write=True):
     stability_api = grpc_client.StabilityInference("localhost:50051", None, engine=args.model_name, verbose=False)
     while True: # watch out! a wild shrew!
         try:
-            request_dict = build_grpc_request_dict(args, init_image, mask_image)
-            answers = stability_api.generate_async(args.prompt, **request_dict)
-            grpc_samples = grpc_client.process_artifacts_from_answers_async("", answers, write=False, verbose=False)
-
+            request_dict = build_grpc_request_dict(args, init_image, mask_image)            
             start_time = datetime.datetime.now(); args.start_time = str(start_time)
-            async for path, artifact in grpc_samples:
+            async for path, artifact in grpc_client.process_artifacts_from_answers_async("", stability_api.generate_async(args.prompt, **request_dict), write=False, verbose=False):
                 end_time = datetime.datetime.now(); args.end_time = str(end_time); args.elapsed_time = str(end_time-start_time)
                 args.status = 2; args.err_txt = "" # completed successfully
 
@@ -508,7 +505,7 @@ def start_grpc_server(args):
         print("Starting GRPC server...")
 
     #docker run --gpus all -it -p 50051:50051 -e HF_API_TOKEN=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 -e SD_LISTEN_TO_ALL=1 -e SD_ENGINECFG=/weights/models.yaml -e SD_NSFW_BEHAVIOUR=flag -e SD_VRAM_OPTIMISATION_LEVEL=2 -v ${pwd}/models:/huggingface -v ${pwd}/models:/weights hafriedlander/stable-diffusion-grpcserver:xformers-latest
-    grpc_server_run_string = "docker run --name sdgrpcserver --gpus all -p 50051:50051 -e HF_API_TOKEN="+GRPC_SERVER_SETTINGS.hf_token
+    grpc_server_run_string = "docker run --gpus all -p 50051:50051 -e HF_API_TOKEN="+GRPC_SERVER_SETTINGS.hf_token
     if GRPC_SERVER_SETTINGS.enable_local_network_access: grpc_server_run_string += " -e SD_LISTEN_TO_ALL=1"
     if GRPC_SERVER_SETTINGS.enable_mps: grpc_server_run_string += " -e SD_ENABLE_MPS=1"
     grpc_server_run_string += " -e SD_ENGINECFG=/weights/models.yaml -e SD_NSFW_BEHAVIOUR="+GRPC_SERVER_SETTINGS.nsfw_behaviour
