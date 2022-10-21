@@ -1,3 +1,13 @@
+- id: "stable-diffusion-v1-5"
+  default: True
+  enabled: True
+  visible: True
+  name: "Stable Diffusion V1.5"
+  description: "Stable Diffusion using the runwayML SD1.5 model"
+  class: "UnifiedPipeline"
+  model: "runwayml/stable-diffusion-v1-5"
+  local_model: "./stable-diffusion-v1-5"
+  use_auth_token: True
 - id: "stable-diffusion-v1-4-standard"
   enabled: False
   visible: True
@@ -17,7 +27,6 @@
   local_model: "./waifu-diffusion"
   use_auth_token: False
 - id: "stable-diffusion-v1-4"
-  default: True
   enabled: True
   visible: True
   name: "Stable Diffusion V1.4"

@@ -504,13 +504,13 @@ def start_grpc_server(args):
     else:
         print("Starting GRPC server...")
 
-    #docker run --gpus all -it -p 50051:50051 -e HF_API_TOKEN=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 -e SD_LISTEN_TO_ALL=1 -e SD_ENGINECFG=/weights/models.yaml -e SD_NSFW_BEHAVIOUR=flag -e SD_VRAM_OPTIMISATION_LEVEL=2 -v ${pwd}/models:/huggingface -v ${pwd}/models:/weights hafriedlander/stable-diffusion-grpcserver:xformers-latest
+    docker_name = "hafriedlander/stable-diffusion-grpcserver:xformers-latest"
     grpc_server_run_string = "docker run --gpus all -p 50051:50051 -e HF_API_TOKEN="+GRPC_SERVER_SETTINGS.hf_token
     if GRPC_SERVER_SETTINGS.enable_local_network_access: grpc_server_run_string += " -e SD_LISTEN_TO_ALL=1"
     if GRPC_SERVER_SETTINGS.enable_mps: grpc_server_run_string += " -e SD_ENABLE_MPS=1"
     grpc_server_run_string += " -e SD_ENGINECFG=/weights/models.yaml -e SD_NSFW_BEHAVIOUR="+GRPC_SERVER_SETTINGS.nsfw_behaviour
     grpc_server_run_string += " -e SD_VRAM_OPTIMISATION_LEVEL="+str(GRPC_SERVER_SETTINGS.memory_optimization_level)
-    grpc_server_run_string += ' -v "'+DEFAULT_PATHS.models+'":/huggingface -v "'+DEFAULT_PATHS.models+'":/weights hafriedlander/stable-diffusion-grpcserver:xformers-latest'
+    grpc_server_run_string += ' -v "'+DEFAULT_PATHS.models+'":/huggingface -v "'+DEFAULT_PATHS.models+'":/weights ' + docker_name
     
     GRPC_SERVER_PROCESS = run_string(grpc_server_run_string)
     if args.debug: print("sd_grpc_server start time : " + str(datetime.datetime.now() - load_start_time))

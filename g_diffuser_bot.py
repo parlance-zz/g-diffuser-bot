@@ -178,7 +178,7 @@ if __name__ == "__main__":
 )
 async def dream(
     interaction: discord.Interaction,
-    prompt: str = "",#DEFAULT_SAMPLE_SETTINGS.prompt,
+    prompt: str = DEFAULT_SAMPLE_SETTINGS.prompt,
     model_name: Optional[app_commands.Choice[str]] = DEFAULT_SAMPLE_SETTINGS.model_name,
     sampler: Optional[app_commands.Choice[str]] = DEFAULT_SAMPLE_SETTINGS.sampler,
     width: Optional[app_commands.Range[int, 64, DEFAULT_SAMPLE_SETTINGS.max_resolution[0]]] = DEFAULT_SAMPLE_SETTINGS.resolution[0],

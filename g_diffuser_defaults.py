@@ -5,7 +5,7 @@ import argparse
 DEFAULT_SAMPLE_SETTINGS = argparse.Namespace()
 DEFAULT_SAMPLE_SETTINGS.sampler = "k_euler"                  # default sampling mode (ddim, plms, k_euler, k_euler_ancestral, k_heun, k_dpm_2, k_dpm_2_ancestral, k_lms)
 DEFAULT_SAMPLE_SETTINGS.n = 1                                # number of samples to generate per sample command by default
-DEFAULT_SAMPLE_SETTINGS.prompt = "something's wrong with the g-diffuser system"
+DEFAULT_SAMPLE_SETTINGS.prompt = "machine shop in year 2100, robotic arms fixing a car, highly ornamented machines, artgem and Swarovski crystals, extreme wide angle, steam clouds, ant view, art by lisa frank"
 DEFAULT_SAMPLE_SETTINGS.resolution = (512,512)               # default resolution for img / video outputs
 DEFAULT_SAMPLE_SETTINGS.max_resolution = (1280,1280)         # if you run out of ram due to output resolution lower this to prevent exceeding your max memory
 DEFAULT_SAMPLE_SETTINGS.resolution_granularity = 64          # required by diffusers stable-diffusion for now due to latent space subsampling
@@ -16,7 +16,7 @@ DEFAULT_SAMPLE_SETTINGS.scale = 10.                           # default cfg scal
 DEFAULT_SAMPLE_SETTINGS.steps = 32                           # default number of sampling steps, lower to reduce sampling time
 DEFAULT_SAMPLE_SETTINGS.noise_q = 1.                         # fall-off of shaped noise distribution for in/out-painting
 DEFAULT_SAMPLE_SETTINGS.auto_seed_range = (10000,99999)      # automatic random seed range
-DEFAULT_SAMPLE_SETTINGS.model_name = "stable-diffusion-v1-4" # default model id to use, see g_diffuser_config_models.yaml for the list of models to be loaded by grpc server
+DEFAULT_SAMPLE_SETTINGS.model_name = "stable-diffusion-v1-5" # default model id to use, see g_diffuser_config_models.yaml for the list of models to be loaded by grpc server
 
 # ******************** SETTINGS END ************************
 
