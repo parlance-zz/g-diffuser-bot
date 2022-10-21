@@ -18,14 +18,17 @@ import signal
 
 import grpc
 from argparse import ArgumentParser, Namespace
-from typing import Dict, Generator, List, Union, Any, Sequence, Tuple
+
+from typing import Dict, Generator, AsyncGenerator, List, Union, Any, Sequence, Tuple
+
+
 #from dotenv import load_dotenv
 from google.protobuf.json_format import MessageToJson
 from PIL import Image
 
 #load_dotenv()
 
-thisPath = pathlib.Path(__file__).parent.absolute()
+thisPath = pathlib.Path(__file__).parent.resolve()
 genPath = thisPath / "sdgrpcserver/generated"
 sys.path.append(str(genPath))
 
@@ -90,7 +93,6 @@ def process_artifacts_from_answers(
     ],
     write: bool = True,
     verbose: bool = False,
-    async_mode: bool = False,
 ) -> Generator[Tuple[str, generation.Artifact], None, None]:
     """
     Process the Artifacts from the Answers.
@@ -137,8 +139,7 @@ async def process_artifacts_from_answers_async(
     ],
     write: bool = True,
     verbose: bool = False,
-    async_mode: bool = False,
-) -> Generator[Tuple[str, generation.Artifact], None, None]:
+) -> AsyncGenerator[Tuple[str, generation.Artifact], None]:
     """
     Process the Artifacts from the Answers.
 
@@ -409,7 +410,7 @@ class StabilityInference:
         samples: int = 1,
         safety: bool = True,
         classifiers: generation.ClassifierParameters = None,
-    ) -> Generator[generation.Answer, None, None]:
+    ) -> AsyncGenerator[generation.Answer, None]:
         """
         Generate images from a prompt.
 
