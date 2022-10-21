@@ -382,45 +382,6 @@ def get_samples(args, write=True):
         save_samples_grid(samples, args) # if batch size > 1 and write to disk is enabled, save composite "grid image"
     return samples
 
-async def get_samples_async(args, write=True):
-    global DEFAULT_PATHS, GRPC_SERVER_SETTINGS
-    assert(args.n > 0) # in async mode all batches must have a definite number of samples until we have a way to cancel pipeline requests
-    init_image, mask_image = build_sample_args(args)
-
-    samples = []
-    stability_api = grpc_client.StabilityInference("localhost:50051", None, engine=args.model_name, verbose=False)
-    while True: # watch out! a wild shrew!
-        try:
-            request_dict = build_grpc_request_dict(args, init_image, mask_image)            
-            start_time = datetime.datetime.now(); args.start_time = str(start_time)
-            async for path, artifact in grpc_client.process_artifacts_from_answers_async("", stability_api.generate_async(args.prompt, **request_dict), write=False, verbose=False):
-                end_time = datetime.datetime.now(); args.end_time = str(end_time); args.elapsed_time = str(end_time-start_time)
-                args.status = 2; args.err_txt = "" # completed successfully
-
-                image = cv2.imdecode(np.fromstring(artifact.binary, dtype="uint8"), cv2.IMREAD_UNCHANGED)
-                if "annotation" in args: image = get_annotated_image(image, args)
-                samples.append(image)
-
-                if write:
-                    args.uuid_str = get_random_string(digits=16) # new uuid for new sample
-                    await save_sample_async(image, args)
-
-                if args.seed: args.seed += 1 # increment seed or random seed if none was given as we go through the batch
-                else: args.auto_seed += 1
-                if (len(samples) < args.n) or (args.n <= 0): # reset start time for next sample if we still have samples left
-                    start_time = datetime.datetime.now(); args.start_time = str(start_time)
-
-            if args.n > 0: break # if we had a set number of samples then we are done
-
-        except Exception as e:
-            if args.debug: raise
-            args.status = -1; args.err_txt = str(e) # error status
-            return samples
-
-    if write and len(samples) > 1:
-        await save_samples_grid_async(samples, args) # if batch size > 1 and write to disk is enabled, save composite "grid image"
-    return samples
-
 def save_sample(sample, args):
     global DEFAULT_PATHS, CLI_SETTINGS
     assert(DEFAULT_PATHS.outputs)
@@ -441,27 +402,6 @@ def save_sample(sample, args):
         args.args_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.args_file) # add suffix if filename already exists
         save_json(vars(strip_args(args)), DEFAULT_PATHS.outputs+"/"+args.args_file)
     return
-    
-async def save_sample_async(sample, args):
-    global DEFAULT_PATHS, CLI_SETTINGS
-    assert(DEFAULT_PATHS.outputs)
-    if args.seed: seed = args.seed
-    else: seed = args.auto_seed
-
-    seed_num_padding = 5
-    filename = args.final_output_name+"_s"+str(seed).zfill(seed_num_padding)+".png"
-    args.output_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.final_output_path+"/"+filename)
-    args.output_file_type = "img" # the future is coming, hold on to your butts
-
-    final_path = DEFAULT_PATHS.outputs+"/"+args.output_file
-    await save_image_async(sample, final_path)
-    print("Saved " + final_path)
-
-    if not args.no_json:
-        args.args_file = args.final_output_path+"/json/"+args.final_output_name+"_s"+str(seed).zfill(seed_num_padding)+".json"
-        args.args_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.args_file) # add suffix if filename already exists
-        await save_json_async(vars(strip_args(args)), DEFAULT_PATHS.outputs+"/"+args.args_file)
-    return
 
 def save_samples_grid(samples, args):
     global CLI_SETTINGS
@@ -474,21 +414,6 @@ def save_samples_grid(samples, args):
 
     final_path = DEFAULT_PATHS.outputs+"/"+output_file
     save_image(grid_image, final_path)
-    print("Saved grid " + final_path)
-    args.output_file = output_file
-    return
-
-async def save_samples_grid_async(samples, args):
-    global CLI_SETTINGS
-    assert(len(samples)> 1)
-    grid_layout = get_grid_layout(len(samples))
-    grid_image = get_image_grid(samples, grid_layout)
-    filename = "grid_" + args.final_output_name + ".jpg"
-    output_file = args.final_output_path+"/" + filename
-    output_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, output_file)
-
-    final_path = DEFAULT_PATHS.outputs+"/"+output_file
-    await save_image_async(grid_image, final_path)
     print("Saved grid " + final_path)
     args.output_file = output_file
     return
