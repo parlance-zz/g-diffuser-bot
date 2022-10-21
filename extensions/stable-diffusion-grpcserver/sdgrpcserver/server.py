@@ -1,7 +1,6 @@
 import argparse, os, sys, threading, signal, time, shutil, re, secrets
 from concurrent import futures
 
-import signal
 import yaml
 try:
     from yaml import CLoader as Loader

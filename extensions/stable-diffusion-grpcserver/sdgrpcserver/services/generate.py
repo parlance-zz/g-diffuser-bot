@@ -164,7 +164,7 @@ class GenerationServiceServicer(generation_pb2_grpc.GenerationServiceServicer):
                 return
 
             stop_event = threading.Event()
-            #context.add_callback(lambda: stop_event.set()) #todo: add_callback causes an error with grpc-web, why?
+            context.add_callback(lambda: stop_event.set())
 
             ctr = 0
             last_seed = -1

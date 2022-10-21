@@ -302,10 +302,8 @@ class EngineManager(object):
         for engine in self.engines:
             if not engine.get("enabled", False): continue
 
-            print("Loading '" + str(engine.get("id", "")) + "'...")
             pipe=self.buildPipeline(engine)
-            print("Loaded model '" + str(pipe._id) + "'") # todo: ideally this would only be printed in debug mode, but the args.debug variable isn't available here
-            
+
             if pipe:
                 self._pipelines[pipe.id] = pipe
                 if engine.get("default", False): self._default = pipe

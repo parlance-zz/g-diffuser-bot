@@ -534,8 +534,7 @@ class UnifiedPipeline(DynamicModuleDiffusionPipeline):
             new_config = dict(scheduler.config)
             new_config["steps_offset"] = 1
             scheduler._internal_dict = FrozenDict(new_config)
-        
-        """
+
         self.register_modules(
             vae=vae,
             text_encoder=text_encoder,
@@ -545,17 +544,6 @@ class UnifiedPipeline(DynamicModuleDiffusionPipeline):
             safety_checker=safety_checker,
             feature_extractor=feature_extractor,
         )
-        """
-        self.register_modules(
-            vae=vae,
-            text_encoder=text_encoder,
-            tokenizer=tokenizer,
-            unet=unet,
-            scheduler=scheduler,
-            #safety_checker=safety_checker,       # sorry, we need all the memory we can get
-            #feature_extractor=feature_extractor, # budget cuts and all that
-        )
-        
 
     def enable_attention_slicing(self, slice_size: Optional[Union[str, int]] = "auto"):
         r"""
@@ -603,7 +591,7 @@ class UnifiedPipeline(DynamicModuleDiffusionPipeline):
         latents: Optional[torch.FloatTensor] = None,
         output_type: Optional[str] = "pil",
         return_dict: bool = True,
-        run_safety_checker: bool = False,
+        run_safety_checker: bool = True,
         callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
         callback_steps: Optional[int] = 1,
         **kwargs,

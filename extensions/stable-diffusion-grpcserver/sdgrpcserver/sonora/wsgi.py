@@ -359,8 +359,9 @@ class ServicerContext(grpc.ServicerContext):
     def auth_context(self):
         raise NotImplementedError()
 
-    def add_callback(self):
-        raise NotImplementedError()
+    def add_callback(self, callback):
+        print("Warning - cancellation not currrently supported over GRPC-WEB")
+        #raise NotImplementedError()
 
     def cancel(self):
         raise NotImplementedError()
