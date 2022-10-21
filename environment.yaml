@@ -10,6 +10,7 @@ dependencies:
   - torchvision
   - numpy 
   - pip:
+    - docker
     - pyyaml
     - opencv-python
     - aiofiles
