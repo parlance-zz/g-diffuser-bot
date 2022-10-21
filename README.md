@@ -2,14 +2,10 @@
 
 ##  g-diffuser-bot - Discord bot and utilities for the diffusers library (stable-diffusion)
 
-The discord bot is back! I'll be working to re-add features as I go, including gui buttons et al.
-
-## Docker Image
-- a docker image and other simplified installation options for g-diffuser-bot will be published very soon!
+Oct 21-2022 Update: The GRPC server implementation used in g-diffuser is now using the docker image directly from hafriedlander's main sdgrpcserver repository. The install instructions and requirements have changed, but this change offers a number of benefits; notably more reliable grpc server setup and built-in xformers support (on both Windows on Linux).
 
 ## Vision for the g-diffuser-bot project:
- - In the near future the diffusers library (https://github.com/huggingface/diffusers) being developed and promoted by stability.ai will expose multi-modality sampling abilities, meaning we will be able to arbitrarily mix and match input and output types. Tasks like txt2music, music2img, and everything in-between will be possible, and all of this will be coming very soon.
- - The goal of the project is to provide the best possible front-end, interface, and utilities for the diffusers library and to enable regular users to access these powerful abilities with a free and easy-to-use package that supports their local GPU and as many OS's / platforms as possible.
+ - The goal of the project is to provide the best possible front-end, interface, and utilities for the diffusers library and to enable regular users to access these powerful abilities with a free and easy-to-use package that supports their local GPU and as many OS's / platforms as possible. A core focus of the library will be on multi-modality generation tasks and other media types such as music.
  - The current frontends include an (interactive) cli and a discord bot.
  - The current experimental extensions include g-diffuser fourier shaped noise out-painting
    - Fourier shaped noise has been integrated into hafriedlander's unified diffusers pipeline and development will continue in his GRPC server project: https://github.com/hafriedlander/stable-diffusion-grpcserver
@@ -21,18 +17,17 @@ The discord bot is back! I'll be working to re-add features as I go, including g
  - ETH to 0x8e4BbD53bfF9C0765eE1859C590A5334722F2086
 
 ## Installation:
- 1)  clone this repository to a folder of your choice (or click the green "code" button up top and click "download zip")
-     after this step you may need to also run "git submodule update --init --recursive" from the main folder.
+ 1)  git clone this repository to a folder of your choice (or click the green "code" button up top and click "download zip")
  2)  download / install miniconda (https://docs.conda.io/en/latest/miniconda.html)
  3)  open a conda prompt (click on the start menu and look for "anaconda prompt"),
      then navigate to the folder where you cloned / downloaded this repository.
  4)  run "conda env create -f environment.yaml"
- 5)  place any pre-downloaded diffusers models into the ./models folder
-     for specific instructions on model download / installation please see models/README.md (https://github.com/parlance-zz/g-diffuser-bot/tree/main/models)
- 6)  If you are running Windows 10 you may need to turn on "developer mode". Look for "developer settings" in the start menu.
-     If you are running Windows 10 or Windows Server you will need to reboot before running g-diffuser (due to pytorch installation requirements on Windows, sorry)
-     
-Optional: edit g_diffuser_config_models.yaml, g_diffuser_config.py and g_diffuser_defaults.py as appropriate, save your changes
+ 5)  If you are running Windows 10 you may need to turn on "developer mode". Look for "developer settings" in the start menu.
+ 6)  Install Docker Desktop:
+         On Windows: https://docs.docker.com/desktop/install/windows-install/
+         On Linux: sudo apt install docker-desktop
+
+Optional: edit g_diffuser_config.py and g_diffuser_defaults.py as appropriate, save your changes
  
 ## Running:
  1)  open a conda prompt (click on the start menu and look for "anaconda prompt"), then navigate to the g-diffuser folder
@@ -41,13 +36,11 @@ Optional: edit g_diffuser_config_models.yaml, g_diffuser_config.py and g_diffuse
        - alternatively, run the CLI interface with: "python g_diffuser_cli.py"
        - You can use the CLI interface interactively with: "python g_diffuser_cli.py --interactive"
        - On Windows you can open start_interactive_cli.bat to open the interactive cli directly in one step instead of the above
-       - If you see an out of memory error check the settings and config files for low-memory options
-       - Verify your configuration by running: "python g_diffuser_config.py" or: "python g_diffuser_defaults.py"
 
 ## Updating:
  - Simply git pull or download and replace your files with those from this repository. You probably won't need to replace your g_diffuser_config.py or g_diffuser_defaults.py files, but you may need to merge changes.
 
 ## Troubleshooting:
- - Better install instructions and an updated easy-to-isntall package are coming, but in the mean-time if you see any dependency errors you can try to fix them with "pip install xyz". Git really doesn't like to make downloading projects with submodules pain-free, so if you see errors related to the GRPC server please try "git submodule update --init --recursive".
+ - Better install instructions are (always) coming
+ - Docker Desktop has a helpful GUI that you can use to keep track of the gRPC server and it's Docker "container". You can view the server parameters it was launched with, restart it or shut it down, and view the console output to track down any errors from the grpc server side.
  - If you have questions or problems running anything in g-diffuser-bot, please post as much detailed information as you can in (https://github.com/parlance-zz/g-diffuser-bot/discussions/categories/q-a), myself or someone in the community may be able to help you. Thank you for your patience.
- - Improved usage guides and setup instructions are coming soon.
