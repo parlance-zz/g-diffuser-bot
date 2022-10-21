@@ -27,9 +27,13 @@ Oct 21-2022 Update: The GRPC server implementation used in g-diffuser is now usi
          On Windows: https://docs.docker.com/desktop/install/windows-install/
          On Linux: sudo apt install docker-desktop
  7)  Sign up for an account at https://huggingface.co/
+
          - Accept the terms of use for the models that you wish to use (https://huggingface.co/CompVis/stable-diffusion-v1-4, https://huggingface.co/hakurei/waifu-diffusion)
+
          - Go to https://huggingface.co/settings/tokens and create a new access token.
+
          - Open g_diffuser_config.py and find line 54 (GRPC_SERVER_SETTINGS.hf_token = "YOUR_HUGGINGFACE_ACCESS_TOKEN_HERE"); replace this placeholder text with the access token you just generated and save the file.
+         
          - If you wish to use the Discord bot, this file is also where you should enter your Discord bot token and guild id.
 
 Optional: edit g_diffuser_config.py and g_diffuser_defaults.py to change default settings
