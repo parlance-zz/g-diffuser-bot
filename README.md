@@ -17,16 +17,16 @@ Oct 21-2022 Update: The GRPC server implementation used in g-diffuser is now usi
  - ETH to 0x8e4BbD53bfF9C0765eE1859C590A5334722F2086
 
 ## Installation:
+ - If you are running Windows 10 you may need to turn on "developer mode". Look for "developer settings" in the start menu.
+ 
  1)  git clone this repository to a folder of your choice (or click the green "code" button up top and click "download zip")
  2)  download / install miniconda (https://docs.conda.io/en/latest/miniconda.html)
- 3)  open a conda prompt (click on the start menu and look for "anaconda prompt"),
-     then navigate to the folder where you cloned / downloaded this repository.
+ 3)  open a conda prompt (click on the start menu and look for "anaconda prompt"), then navigate to the folder where you cloned or downloaded this repository.
  4)  run "conda env create -f environment.yaml"
- 5)  If you are running Windows 10 you may need to turn on "developer mode". Look for "developer settings" in the start menu.
- 6)  Install Docker Desktop:
+ 5)  Install Docker Desktop:
          On Windows: https://docs.docker.com/desktop/install/windows-install/
          On Linux: sudo apt install docker-desktop
- 7)  Sign up for an account at https://huggingface.co/
+ 6)  Sign up for an account at https://huggingface.co/
 
          - Accept the terms of use for the models that you wish to use (https://huggingface.co/CompVis/stable-diffusion-v1-4, https://huggingface.co/hakurei/waifu-diffusion)
 
