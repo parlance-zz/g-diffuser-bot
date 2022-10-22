@@ -199,7 +199,7 @@ async def dream(
         try: await interaction.followup.send(content="sorry @"+interaction.user.display_name+", please enter a prompt", ephemeral=True)
         except Exception as e: pass #print("exception in await interaction - " + str(e))
         return
-
+    
     # build sample args from app command params
     args = gdl.get_default_args()
     args.prompt = prompt
@@ -241,8 +241,8 @@ async def dream(
         attachment_files = [discord.File(sample_filename)]
 
         args_prompt = args.prompt; del args.prompt # extract and re-attach the prompt for formatting we can keep apostrophes and commas
-        if args.seed != 0: args_seed = args.seed-1 # only need to show the seed as seed for simplicity
-        else: args_seed = args.auto_seed-1
+        if args.seed != 0: args_seed = args.seed-args.n # only need to show the seed as seed for simplicity
+        else: args_seed = args.auto_seed-args.n
         del args.seed
         if "auto_seed" in vars(args): del args.auto_seed
 
