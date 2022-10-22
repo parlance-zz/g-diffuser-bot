@@ -2,7 +2,7 @@
 
 ##  g-diffuser-bot - Discord bot and utilities for the diffusers library (stable-diffusion)
 
-Oct 22-2022 Update: Most of the annoying bugs in the Discord bot have now been fixed. The gRPC server now uses a Docker image and the install instructions have changed accordingly, please find the changes below:
+Oct 22-2022 Update: Most of the annoying bugs in the Discord bot have now been fixed. The gRPC server now uses a Docker image which includes xformers support (large speed boost) as well as support for stable-diffusion-v1-5 (which is the new default). The install instructions have changed accordingly, please find the changes below:
 
 ## Vision for the g-diffuser-bot project:
  - The goal of the project is to provide the best possible front-end, interface, and utilities for the diffusers library and to enable regular users to access these powerful abilities with a free and easy-to-use package that supports their local GPU and as many OS's / platforms as possible. A core focus of the library will be on multi-modality generation tasks and other media types such as music.
