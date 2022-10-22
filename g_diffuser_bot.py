@@ -186,7 +186,7 @@ async def dream(
     scale: Optional[app_commands.Range[float, 0.0, 100.0]] = DEFAULT_SAMPLE_SETTINGS.scale,
     seed: Optional[app_commands.Range[int, 1, 2000000000]] = 0,
     steps: Optional[app_commands.Range[int, 1, DISCORD_BOT_SETTINGS.max_steps_limit]] = DEFAULT_SAMPLE_SETTINGS.steps,
-    n: Optional[app_commands.Range[int, DISCORD_BOT_SETTINGS.default_output_n, DISCORD_BOT_SETTINGS.max_output_limit]] = DISCORD_BOT_SETTINGS.default_output_n,
+    n: Optional[app_commands.Range[int, 1, DISCORD_BOT_SETTINGS.max_output_limit]] = DISCORD_BOT_SETTINGS.default_output_n,
 ):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
 
