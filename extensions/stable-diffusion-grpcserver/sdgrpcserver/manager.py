@@ -14,6 +14,7 @@ if has_xformers(): attention.CrossAttention = MemoryEfficientCrossAttention
 from diffusers import StableDiffusionPipeline, LMSDiscreteScheduler, PNDMScheduler
 from diffusers.configuration_utils import FrozenDict
 from diffusers.utils import deprecate
+from diffusers.models import AutoencoderKL
 
 import generation_pb2
 
@@ -288,12 +289,15 @@ class EngineManager(object):
                 )
             )
         elif engine["class"] == "UnifiedPipeline":
+            vae_extra_kwargs = {}
+            if self.mode.fp16: vae_extra_kwargs["torch_dtype"]=torch.float16
             return PipelineWrapper(
                 id=engine["id"],
                 mode=self._mode,
                 pipeline=UnifiedPipeline.from_pretrained(
                     weight_path, 
                     use_auth_token=use_auth_token,
+                    vae=AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-ema", **vae_extra_kwargs),
                     **extra_kwargs                        
                 )
             )
