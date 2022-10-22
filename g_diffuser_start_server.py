@@ -29,10 +29,26 @@ g_diffuser_start_server.py - start the GRPC server headless. useful for debuggin
 """
 
 import time
+import docker
 
+from g_diffuser_config import GRPC_SERVER_SETTINGS
 import extensions.g_diffuser_lib as gdl
-server_process = gdl.start_grpc_server(gdl.get_default_args())
-if not server_process:
-    gdl.run_string("docker attach sdgrpcserver")
-while True:
-    time.sleep(10)
+
+def attach_to_docker_image(image_name):
+    docker_client = docker.from_env()
+    for container in docker_client.containers.list():
+        for tag in container.image.tags:
+            if tag == image_name:
+                return container.logs(stream=True)
+                
+    return None
+
+if __name__ == "__main__":    
+    server_process = gdl.start_grpc_server(gdl.get_default_args())
+    if not server_process: # there is already a running grpc server, attach console to docker container
+        logs = attach_to_docker_image(GRPC_SERVER_SETTINGS.docker_image_name)
+        for line in logs: print(line.decode('utf-8')[:-1])
+    else:
+        while True: time.sleep(10)
+
+    exit(0)

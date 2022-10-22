@@ -33,7 +33,7 @@ DEFAULT_PATHS.bot = "./bot"
 # - Discord bot setup guide: https://www.writebots.com/discord-bot-token/
 DISCORD_BOT_SETTINGS.token = "YOUR_DISCORD_BOT_TOKEN_HERE"
 DISCORD_BOT_SETTINGS.guild = 1021168973582184548 # IMPORTANT - Enter your discord guild/server id here
-DISCORD_BOT_SETTINGS.model_list = ["stable-diffusion-v1-4", "stable-diffusion-v1-5"] # IMPORTANT - model id's to be accessible from the discord bot (from g_diffuser_config_models.yaml)
+DISCORD_BOT_SETTINGS.model_list = ["stable-diffusion-v1-5", "stable-diffusion-v1-4"] # IMPORTANT - model id's to be accessible from the discord bot (from g_diffuser_config_models.yaml)
 DISCORD_BOT_SETTINGS.admin_role = "moderator"    # IMPORTANT - use your discord server / guild role names here accordingly, check the bot help text for associated command permissions
 DISCORD_BOT_SETTINGS.users_role = "everyone"     # if you want anyone to be able to use the bot, set this to "everyone"
 DISCORD_BOT_SETTINGS.max_queue_length = 1000     # beyond this limit additional commands will be rejected
@@ -52,6 +52,7 @@ GRPC_SERVER_SETTINGS.memory_optimization_level = 2  # 2 is maximum memory saving
 GRPC_SERVER_SETTINGS.enable_mps = False
 GRPC_SERVER_SETTINGS.nsfw_behaviour="flag" #"block"
 GRPC_SERVER_SETTINGS.hf_token = "YOUR_HUGGINGFACE_ACCESS_TOKEN_HERE"
+GRPC_SERVER_SETTINGS.docker_image_name = "hafriedlander/stable-diffusion-grpcserver:xformers-latest"
 
 # ******************** SETTINGS END ************************
 

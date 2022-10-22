@@ -133,7 +133,6 @@ class G_DiffuserBot(discord.Client):
         return
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         "--token",
@@ -160,7 +159,7 @@ if __name__ == "__main__":
     
 @client.tree.command(
     name="dream",
-    description="create something"
+    description="create something",
 )
 @app_commands.describe(
     prompt='what do you want to create today?',
@@ -217,15 +216,13 @@ async def dream(
 
     start_time = datetime.datetime.now()
     try:
-        #gdl.print_namespace(args)
-        #gdl.get_samples_async(args)
         thread = Thread(target = gdl.get_samples, args=[args], daemon=True)
         thread.start()
         while True:
-            thread.join(0.01)
+            thread.join(0.0001)
             if not thread.is_alive(): break
             await asyncio.sleep(0.05)
-        thread.join()
+        thread.join() # it's the only way to be sure
     except Exception as e:
         print("error - " + str(e)); gdl.print_namespace(args, debug=1)
         try: await interaction.followup.send(content="sorry, something went wrong :(", ephemeral=True)
