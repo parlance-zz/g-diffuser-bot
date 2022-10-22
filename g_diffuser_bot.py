@@ -75,6 +75,8 @@ MODEL_CHOICES = []
 for model in DISCORD_BOT_SETTINGS.model_list:
     MODEL_CHOICES.append(app_commands.Choice(name=model, value=model))
 
+GRPC_SERVER_LOCK = asyncio.Lock()
+
 class G_DiffuserBot(discord.Client):
     def __init__(self):
         global DISCORD_BOT_SETTINGS
@@ -188,7 +190,7 @@ async def dream(
     steps: Optional[app_commands.Range[int, 1, DISCORD_BOT_SETTINGS.max_steps_limit]] = DEFAULT_SAMPLE_SETTINGS.steps,
     n: Optional[app_commands.Range[int, 1, DISCORD_BOT_SETTINGS.max_output_limit]] = DISCORD_BOT_SETTINGS.default_output_n,
 ):
-    global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
+    global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS, GRPC_SERVER_LOCK
 
     try: await interaction.response.defer(thinking=True, ephemeral=False) # start by requesting more time to respond
     except Exception as e: pass #print("exception in await interaction - " + str(e))
@@ -215,7 +217,9 @@ async def dream(
     gdl.print_namespace(args, debug=0, verbosity_level=1)
 
     start_time = datetime.datetime.now()
+    
     try:
+        await GRPC_SERVER_LOCK.acquire()
         thread = Thread(target = gdl.get_samples, args=[args], daemon=True)
         thread.start()
         while True:
@@ -228,6 +232,8 @@ async def dream(
         try: await interaction.followup.send(content="sorry, something went wrong :(", ephemeral=True)
         except Exception as e: print("exception in await interaction - " + str(e))
         return
+    finally:
+        GRPC_SERVER_LOCK.release()
 
     if "output_file" in args:
         output_file = args.output_file # todo: use bot-specific output path
