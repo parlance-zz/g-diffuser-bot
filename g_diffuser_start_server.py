@@ -47,7 +47,12 @@ if __name__ == "__main__":
     server_process = gdl.start_grpc_server(gdl.get_default_args())
     if not server_process: # there is already a running grpc server, attach console to docker container
         logs = attach_to_docker_image(GRPC_SERVER_SETTINGS.docker_image_name)
-        for line in logs: print(line.decode('utf-8')[:-1])
+        if not logs:
+            print("Error - docker image'"+GRPC_SERVER_SETTINGS.docker_image_name+"' not found")
+            exit(1)
+        else:
+            for line in logs:
+                print(line.decode('utf-8')[:-1])
     else:
         while True: time.sleep(10)
 
