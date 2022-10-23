@@ -1,6 +1,6 @@
-import skimage
-from skimage.exposure import match_histograms
-from skimage import color, transform
+#import skimage
+#from skimage.exposure import match_histograms
+#from skimage import color, transform
 
 import numpy as np
 
