@@ -30,8 +30,10 @@ g_diffuser_bot.py - discord bot interface for g-diffuser-lib
 
 """
 
+from tkinter import X
+import xdrlib
 import extensions.g_diffuser_lib as gdl
-from g_diffuser_config import DEFAULT_PATHS, DISCORD_BOT_SETTINGS
+from g_diffuser_config import DEFAULT_PATHS, DISCORD_BOT_SETTINGS, GRPC_SERVER_SETTINGS
 from g_diffuser_defaults import DEFAULT_SAMPLE_SETTINGS
 
 import os; os.chdir(DEFAULT_PATHS.root)
@@ -104,11 +106,17 @@ class G_DiffuserBot(discord.Client):
 
         gdl.start_grpc_server(gdl.get_default_args())
         return
-        
+
     async def setup_hook(self):
-        guild = discord.Object(self.settings.guild)
-        self.tree.copy_global_to(guild=guild)
-        await self.tree.sync(guild=guild)
+        for command in self.tree.get_commands():
+            command.guild_only = True
+            #await app_commands.AppCommand.edit(command, dm_permission=True)
+        
+        bot_guilds = [discord.Object(guild) for guild in self.settings.guilds]
+        for guild in bot_guilds:
+            self.tree.copy_global_to(guild=guild)
+            await self.tree.sync(guild=guild)
+        return
 
     def load_state(self):
         with open(self.settings.state_file_path, 'r') as dfile:
@@ -143,14 +151,15 @@ if __name__ == "__main__":
         help="if you want to override the discord bot token in g_diffuser_config.py you can supply an alternate here",
     )
     parser.add_argument(
-        "--guild",
-        type=str,
-        default=DISCORD_BOT_SETTINGS.guild,
-        help="if you want to override the guild id in g_diffuser_config.py you can supply an alternate here",
+        "--guilds",
+        type=int,
+        nargs="+",
+        default=DISCORD_BOT_SETTINGS.guilds,
+        help="if you want to override the guild id(s) in g_diffuser_config.py you can supply alternate(s) here",
     )
     args = parser.parse_args()
     DISCORD_BOT_SETTINGS.token = args.token
-    DISCORD_BOT_SETTINGS.guild = args.guild
+    DISCORD_BOT_SETTINGS.guilds = args.guilds
     # if we don't have a valid discord bot token or guild id let's not go any further
     if (not DISCORD_BOT_SETTINGS.token) or (DISCORD_BOT_SETTINGS.token == "YOUR_DISCORD_BOT_TOKEN_HERE"):
         print("Fatal error: Cannot start discord bot with token '" + DISCORD_BOT_SETTINGS.token + "'")
@@ -158,10 +167,11 @@ if __name__ == "__main__":
         exit(1)
     else:
         client = G_DiffuserBot()
-    
+
 @client.tree.command(
     name="dream",
     description="create something",
+    nsfw=(GRPC_SERVER_SETTINGS.nsfw_behaviour != "block"),
 )
 @app_commands.describe(
     prompt='what do you want to create today?',

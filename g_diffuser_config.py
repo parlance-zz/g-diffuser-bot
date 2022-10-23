@@ -32,7 +32,7 @@ DEFAULT_PATHS.bot = "./bot"
 # - Discord developers site: https://discordapp.com/developers/applications/
 # - Discord bot setup guide: https://www.writebots.com/discord-bot-token/
 DISCORD_BOT_SETTINGS.token = "YOUR_DISCORD_BOT_TOKEN_HERE"
-DISCORD_BOT_SETTINGS.guild = 1021168973582184548 # IMPORTANT - Enter your discord guild/server id here
+DISCORD_BOT_SETTINGS.guilds = [1021168973582184548] # IMPORTANT - Enter your discord guild/server id(s) here
 DISCORD_BOT_SETTINGS.model_list = ["stable-diffusion-v1-5", "stable-diffusion-v1-4"] # IMPORTANT - model id's to be accessible from the discord bot (from g_diffuser_config_models.yaml)
 DISCORD_BOT_SETTINGS.admin_role = "moderator"    # IMPORTANT - use your discord server / guild role names here accordingly, check the bot help text for associated command permissions
 DISCORD_BOT_SETTINGS.users_role = "everyone"     # if you want anyone to be able to use the bot, set this to "everyone"
