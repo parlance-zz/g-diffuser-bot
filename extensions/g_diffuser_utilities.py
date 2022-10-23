@@ -80,12 +80,13 @@ def np_img_grey_to_rgb(data):
     if data.ndim == 3: return data
     return np.expand_dims(data, 2) * np.ones((1, 1, 3))
 
+"""
 def np_img_rgb_to_hsv(data):
     return color.rgb2hsv(data)
 
 def np_img_hsv_to_rgb(data):
     return color.hsv2rgb(data)
-    
+
 def hsv_blend_image(image, match_to, hsv_mask=None):
     width = image.shape[0]
     height = image.shape[1]
@@ -96,4 +97,4 @@ def hsv_blend_image(image, match_to, hsv_mask=None):
     match_to_hsv = np_img_rgb_to_hsv(match_to)
     
     return np_img_hsv_to_rgb(image_hsv * (1.-hsv_mask) + hsv_mask * match_to_hsv)
-    
+"""
