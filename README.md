@@ -1,6 +1,6 @@
 ![https://www.stablecabal.org](https://raw.githubusercontent.com/parlance-zz/g-diffuser-bot/dev/part_of_stable_cabal.png) https://www.stablecabal.org
 
-##  g-diffuser-bot - Discord bot and utilities for the diffusers library (stable-diffusion)
+##  g-diffuser-bot - Discord bot, interface and utilities for the diffusers library (stable-diffusion)
 
 Oct 22-2022 Update: Most of the annoying bugs in the Discord bot have now been fixed. The gRPC server now uses a Docker image which includes xformers support (large speed boost) as well as support for **stable-diffusion-v1-5 (which is the new default)**. The install instructions have changed accordingly, please find the changes below:
 
