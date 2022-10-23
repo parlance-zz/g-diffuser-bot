@@ -108,10 +108,12 @@ class G_DiffuserBot(discord.Client):
         return
 
     async def setup_hook(self):
-        for command in self.tree.get_commands():
-            command.guild_only = True
-            #await app_commands.AppCommand.edit(command, dm_permission=True)
-        
+        # this is broken, for some reason fetch_commands() always returns nothing
+        #app_commands = await self.tree.fetch_commands()
+        #for app_command in app_commands:
+        #    await app_command.edit(dm_permission=True)
+
+        # explicitly sync all commands with all guilds
         bot_guilds = [discord.Object(guild) for guild in self.settings.guilds]
         for guild in bot_guilds:
             self.tree.copy_global_to(guild=guild)
@@ -139,7 +141,6 @@ class G_DiffuserBot(discord.Client):
     async def add_new(self, ctx): # add a new command to the queue
         rejected = (self.restart_now != None) or (self.shutdown_now != None)
         rejected |= (len(self.cmd_list) >= self.settings.max_queue_length)
-        
         return
 
 if __name__ == "__main__":
@@ -166,13 +167,20 @@ if __name__ == "__main__":
         print("Please update DISCORD_BOT_SETTINGS.token in g_diffuser_config.py and try again.")
         exit(1)
     else:
-        client = G_DiffuserBot()
+        if len(DISCORD_BOT_SETTINGS.guilds) < 1:
+            print("Fatal error: Cannot start discord bot with no guild ids")
+            print("Please update DISCORD_BOT_SETTINGS.guilds in g_diffuser_config.py and try again.")
+            exit(1)
+        else:
+            client = G_DiffuserBot()
 
 @client.tree.command(
     name="dream",
     description="create something",
     nsfw=(GRPC_SERVER_SETTINGS.nsfw_behaviour != "block"),
 )
+@app_commands.guild_only()
+@app_commands.guilds(*DISCORD_BOT_SETTINGS.guilds)
 @app_commands.describe(
     prompt='what do you want to create today?',
     model_name='which model to use',
