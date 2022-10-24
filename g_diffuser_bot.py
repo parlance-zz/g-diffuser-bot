@@ -114,9 +114,11 @@ class G_DiffuserBot(discord.Client):
 
         # explicitly sync all commands with all guilds
         bot_guilds = [discord.Object(guild) for guild in self.settings.guilds]
+        print("Synchronizing app commands with servers/guilds: " + str([vars(x) for x in bot_guilds]) + "...\n")
         for guild in bot_guilds:
             self.tree.copy_global_to(guild=guild)
             await self.tree.sync(guild=guild)
+        print("Bot app-command tree: " + str(vars(self.tree)) + "\n\n")
         return
 
     def load_state(self):
@@ -210,11 +212,11 @@ async def dream(
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS, GRPC_SERVER_LOCK
 
     try: await interaction.response.defer(thinking=True, ephemeral=False) # start by requesting more time to respond
-    except Exception as e: pass #print("exception in await interaction - " + str(e))
+    except Exception as e: print("exception in await interaction - " + str(e))
     
     if not prompt:
         try: await interaction.followup.send(content="sorry @"+interaction.user.display_name+", please enter a prompt", ephemeral=True)
-        except Exception as e: pass #print("exception in await interaction - " + str(e))
+        except Exception as e: print("exception in await interaction - " + str(e))
         return
     
     # build sample args from app command params
@@ -236,14 +238,13 @@ async def dream(
     try:
         await GRPC_SERVER_LOCK.acquire()
         start_time = datetime.datetime.now()
-        #thread = Thread(target = gdl.get_samples, args=[args],  kwargs={'no_grid': True}, daemon=True)
+
         def get_samples_wrapper(args):
             samples, sample_files = gdl.get_samples(args, no_grid=True)
             threading.current_thread().sample_files = sample_files
             return
 
         sample_thread = Thread(target = get_samples_wrapper, args=[args], daemon=True)
-        
         sample_thread.start()
         while True:
             sample_thread.join(0.0001)
@@ -291,11 +292,11 @@ async def dream(
         message = "@" + interaction.user.display_name + ":  /dream "+ args_str
 
         try: await interaction.followup.send(files=attachment_files, content=message)
-        except Exception as e: pass # print("exception in await interaction - " + str(e))
+        except Exception as e: print("exception in await interaction - " + str(e))
     else:
         print("error - " + args.err_txt); gdl.print_namespace(args, debug=1)
         try: await interaction.followup.send(content="sorry, something went wrong :(", ephemeral=True)
-        except Exception as e: pass # print("exception in await interaction - " + str(e))
+        except Exception as e: print("exception in await interaction - " + str(e))
         return
 
     print("elapsed time: " + str(datetime.datetime.now() - start_time) + "s")
