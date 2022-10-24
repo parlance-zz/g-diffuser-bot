@@ -240,8 +240,12 @@ async def dream(
         start_time = datetime.datetime.now()
 
         def get_samples_wrapper(args):
-            samples, sample_files = gdl.get_samples(args, no_grid=True)
-            threading.current_thread().sample_files = sample_files
+            try:
+                samples, sample_files = gdl.get_samples(args, no_grid=True)
+                threading.current_thread().sample_files = sample_files
+            except Exception as e:
+                threading.current_thread().sample_files = []
+                threading.current_thread().err_txt = str(e)
             return
 
         sample_thread = Thread(target = get_samples_wrapper, args=[args], daemon=True)
