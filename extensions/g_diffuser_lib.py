@@ -340,12 +340,12 @@ def build_sample_args(args):
 
     return init_image, mask_image
 
-def get_samples(args, write=True):
+def get_samples(args, write=True, no_grid=False):
     global DEFAULT_PATHS, GRPC_SERVER_SETTINGS
     assert((args.n > 0) or write) # repeating forever without writing to disk wouldn't make much sense
     init_image, mask_image = build_sample_args(args)
 
-    samples = []
+    samples = []; sample_files = []
     stability_api = grpc_client.StabilityInference("localhost:50051", None, engine=args.model_name, verbose=False)
     while True: # watch out! a wild shrew!
         try:
@@ -364,7 +364,7 @@ def get_samples(args, write=True):
 
                 if write:
                     args.uuid_str = get_random_string(digits=16) # new uuid for new sample
-                    save_sample(image, args)
+                    sample_files.append(save_sample(image, args))
 
                 if args.seed: args.seed += 1 # increment seed or random seed if none was given as we go through the batch
                 else: args.auto_seed += 1
@@ -378,9 +378,9 @@ def get_samples(args, write=True):
             args.status = -1; args.err_txt = str(e) # error status
             return samples
 
-    if write and len(samples) > 1:
+    if write and len(samples) > 1 and (not no_grid):
         save_samples_grid(samples, args) # if batch size > 1 and write to disk is enabled, save composite "grid image"
-    return samples
+    return samples, sample_files
 
 def save_sample(sample, args):
     global DEFAULT_PATHS, CLI_SETTINGS
@@ -401,7 +401,7 @@ def save_sample(sample, args):
         args.args_file = args.final_output_path+"/json/"+args.final_output_name+"_s"+str(seed).zfill(seed_num_padding)+".json"
         args.args_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.args_file) # add suffix if filename already exists
         save_json(vars(strip_args(args)), DEFAULT_PATHS.outputs+"/"+args.args_file)
-    return
+    return args.output_file
 
 def save_samples_grid(samples, args):
     global CLI_SETTINGS
@@ -416,7 +416,7 @@ def save_samples_grid(samples, args):
     save_image(grid_image, final_path)
     print("Saved grid " + final_path)
     args.output_file = output_file
-    return
+    return args.output_file
 
 def start_grpc_server(args):
     global DEFAULT_PATHS, GRPC_SERVER_SETTINGS, GRPC_SERVER_PROCESS, CLI_SETTINGS
@@ -429,12 +429,17 @@ def start_grpc_server(args):
     else:
         print("Starting GRPC server...")
 
-    grpc_server_run_string = "docker run --gpus all -p 50051:50051 -e HF_API_TOKEN="+GRPC_SERVER_SETTINGS.hf_token
+    print(DEFAULT_PATHS.sdgrpcserver_docker_volume)
+
+    #grpc_server_run_string = "docker run --gpus all -p 50051:50051 -e HF_API_TOKEN="+GRPC_SERVER_SETTINGS.hf_token
+    grpc_server_run_string = "docker run --pull always --gpus all -p 50051:50051 -e HF_API_TOKEN="+GRPC_SERVER_SETTINGS.hf_token
     if GRPC_SERVER_SETTINGS.enable_local_network_access: grpc_server_run_string += " -e SD_LISTEN_TO_ALL=1"
     if GRPC_SERVER_SETTINGS.enable_mps: grpc_server_run_string += " -e SD_ENABLE_MPS=1"
     grpc_server_run_string += " -e SD_ENGINECFG=/weights/models.yaml -e SD_NSFW_BEHAVIOUR="+GRPC_SERVER_SETTINGS.nsfw_behaviour
     grpc_server_run_string += " -e SD_VRAM_OPTIMISATION_LEVEL="+str(GRPC_SERVER_SETTINGS.memory_optimization_level)
-    grpc_server_run_string += ' -v "'+DEFAULT_PATHS.models+'":/huggingface -v "'+DEFAULT_PATHS.models+'":/weights ' + GRPC_SERVER_SETTINGS.docker_image_name
+    grpc_server_run_string += ' -v "'+DEFAULT_PATHS.models+'":/huggingface -v "'+DEFAULT_PATHS.models+'":/weights'
+    grpc_server_run_string += ' -v "'+DEFAULT_PATHS.sdgrpcserver_docker_volume+'":/sdgrpcserver'
+    grpc_server_run_string += " " + GRPC_SERVER_SETTINGS.docker_image_name
     
     GRPC_SERVER_PROCESS = run_string(grpc_server_run_string)
     if args.debug: print("sd_grpc_server start time : " + str(datetime.datetime.now() - load_start_time))
