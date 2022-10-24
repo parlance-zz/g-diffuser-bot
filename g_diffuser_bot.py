@@ -234,10 +234,9 @@ async def dream(
     args.interactive = True
     gdl.print_namespace(args, debug=0, verbosity_level=1)
 
-    start_time = datetime.datetime.now()
-    
     try:
         await GRPC_SERVER_LOCK.acquire()
+        start_time = datetime.datetime.now()
         thread = Thread(target = gdl.get_samples, args=[args], daemon=True)
         thread.start()
         while True:
