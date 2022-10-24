@@ -30,8 +30,6 @@ g_diffuser_bot.py - discord bot interface for g-diffuser-lib
 
 """
 
-from tkinter import X
-import xdrlib
 import extensions.g_diffuser_lib as gdl
 from g_diffuser_config import DEFAULT_PATHS, DISCORD_BOT_SETTINGS, GRPC_SERVER_SETTINGS
 from g_diffuser_defaults import DEFAULT_SAMPLE_SETTINGS
@@ -47,6 +45,7 @@ from typing import Optional
 import aiohttp
 #import datetime
 import argparse
+import threading
 from threading import Thread
 import asyncio
 
@@ -237,13 +236,20 @@ async def dream(
     try:
         await GRPC_SERVER_LOCK.acquire()
         start_time = datetime.datetime.now()
-        thread = Thread(target = gdl.get_samples, args=[args], daemon=True)
-        thread.start()
+        #thread = Thread(target = gdl.get_samples, args=[args],  kwargs={'no_grid': True}, daemon=True)
+        def get_samples_wrapper(args):
+            samples, sample_files = gdl.get_samples(args, no_grid=True)
+            threading.current_thread().sample_files = sample_files
+            return
+
+        sample_thread = Thread(target = get_samples_wrapper, args=[args], daemon=True)
+        
+        sample_thread.start()
         while True:
-            thread.join(0.0001)
-            if not thread.is_alive(): break
+            sample_thread.join(0.0001)
+            if not sample_thread.is_alive(): break
             await asyncio.sleep(0.05)
-        thread.join() # it's the only way to be sure
+        sample_thread.join() # it's the only way to be sure
     except Exception as e:
         print("error - " + str(e)); gdl.print_namespace(args, debug=1)
         try: await interaction.followup.send(content="sorry, something went wrong :(", ephemeral=True)
@@ -253,9 +259,10 @@ async def dream(
         GRPC_SERVER_LOCK.release()
 
     if "output_file" in args:
-        output_file = args.output_file # todo: use bot-specific output path
-        sample_filename = DEFAULT_PATHS.outputs + "/" + output_file
-        attachment_files = [discord.File(sample_filename)]
+        attachment_files = []
+        for sample_file in sample_thread.sample_files:
+            sample_filename = DEFAULT_PATHS.outputs + "/" + sample_file
+            attachment_files.append(discord.File(sample_filename))
 
         args_prompt = args.prompt; del args.prompt # extract and re-attach the prompt for formatting we can keep apostrophes and commas
         if args.seed != 0: args_seed = args.seed-args.n # only need to show the seed as seed for simplicity
