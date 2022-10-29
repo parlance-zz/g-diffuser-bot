@@ -27,7 +27,7 @@ DEFAULT_PATHS.temp = "./temp"
 DEFAULT_PATHS.debug = "./debug"
 DEFAULT_PATHS.extensions = "./extensions"
 DEFAULT_PATHS.bot = "./bot"
-DEFAULT_PATHS.sdgrpcserver_docker_volume = "D:/stable-diffusion-grpcserver/sdgrpcserver"
+DEFAULT_PATHS.sdgrpcserver_docker_volume = "./sdgrpcserver"
 
 #IMPORTANT - If you want to use the discord bot, use enter your access token below:
 # - Discord developers site: https://discordapp.com/developers/applications/
@@ -40,7 +40,7 @@ DISCORD_BOT_SETTINGS.users_role = "everyone"     # if you want anyone to be able
 DISCORD_BOT_SETTINGS.max_queue_length = 1000     # beyond this limit additional commands will be rejected
 DISCORD_BOT_SETTINGS.max_queue_print_items = 5   # max number of items to show for !queue command (up to discord message length limit)
 DISCORD_BOT_SETTINGS.default_output_n = 1        # default batch size to create images (n>1 will show a composite grid image)
-DISCORD_BOT_SETTINGS.max_output_limit = 5        # max number of samples to create simultaneously with -n param
+DISCORD_BOT_SETTINGS.max_output_limit = 3        # max number of samples to create simultaneously with -n param
 DISCORD_BOT_SETTINGS.max_steps_limit = 100       # max number of steps per sample command
 DISCORD_BOT_SETTINGS.accepted_attachments = [".png", ".jpg", ".jpeg"] # attachments in bot commands not matching this list will not be downloaded
 DISCORD_BOT_SETTINGS.state_file_path = "./g-diffuser-bot.json"        # relative to root path
@@ -54,7 +54,6 @@ GRPC_SERVER_SETTINGS.enable_mps = False
 GRPC_SERVER_SETTINGS.nsfw_behaviour="ignore" #"flag" #"block"
 GRPC_SERVER_SETTINGS.hf_token = "YOUR_HUGGINGFACE_ACCESS_TOKEN_HERE"
 GRPC_SERVER_SETTINGS.docker_image_name = "hafriedlander/stable-diffusion-grpcserver:xformers-latest"
-#GRPC_SERVER_SETTINGS.docker_image_name = "hafriedlander/stable-diffusion-grpcserver:cuda118-xformers-0.0.2"
 
 # ******************** SETTINGS END ************************
 
