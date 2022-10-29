@@ -28,7 +28,7 @@
   model: "hakurei/waifu-diffusion"
   local_model: "./waifu-diffusion-v1-3"
   local_model_fp16: "./waifu-diffusion-v1-3-fp16"
-  use_auth_token: False
+  use_auth_token: True
   overrides:
     vae: 
       model: "stabilityai/sd-vae-ft-ema"
