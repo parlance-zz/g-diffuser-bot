@@ -18,15 +18,12 @@ import signal
 
 import grpc
 from argparse import ArgumentParser, Namespace
-
 from typing import Dict, Generator, List, Union, Any, Sequence, Tuple
-
-
-#from dotenv import load_dotenv
+from dotenv import load_dotenv
 from google.protobuf.json_format import MessageToJson
 from PIL import Image
 
-#load_dotenv()
+load_dotenv()
 
 thisPath = pathlib.Path(__file__).parent.resolve()
 genPath = thisPath / "sdgrpcserver/generated"
@@ -131,6 +128,7 @@ def process_artifacts_from_answers(
 
             yield [out_p, artifact]
             idx += 1
+
 
 def open_images(
     images: Union[
@@ -345,6 +343,7 @@ class StabilityInference:
 
             yield answer
             start = time.time()
+
 
 def build_request_dict(cli_args: Namespace) -> Dict[str, Any]:
     """

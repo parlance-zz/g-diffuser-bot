@@ -165,6 +165,7 @@ class HeunDiscreteScheduler(OldSchedulerMixin, ConfigMixin):
 
             if noise_predictor:
                 model_output_2 = noise_predictor(sample_2, timestep + 1, self.timesteps[timestep + 1])
+                if isinstance(model_output_2, tuple): model_output_2, sample_2 = model_output_2
                 pred_original_sample_2 = sample_2 - self.sigmas[timestep + 1] * model_output_2
             else:
                 pred_original_sample_2 = sample_2 - self.sigmas[timestep + 1] * model_output

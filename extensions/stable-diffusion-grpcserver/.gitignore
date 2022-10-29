@@ -1,4 +1,4 @@
-# Initially taken from GitHub's Python gitignore file
+# Initially taken from Github's Python gitignore file
 
 _*
 weights/*

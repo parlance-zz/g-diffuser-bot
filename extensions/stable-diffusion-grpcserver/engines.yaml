@@ -1,23 +1,76 @@
-- id: "stable-diffusion-v1-4-standard"
-  enabled: False
-  visible: True
-  name: "Stable Diffusion V1.4 standard"
-  description: "Stable Diffusion using the original Stability.AI model and Diffusers pipeline"
-  class: "StableDiffusionPipeline"
-  model: "CompVis/stable-diffusion-v1-4"
-  local_model: "./stable-diffusion-v1-4"
-  use_auth_token: True
-- id: "waifu-diffusion-v1-2-standard"
-  enabled: False
-  visible: True
-  name: "Waifu Diffusion V1.2 standard"
-  description: "Stable Diffusion using Hakurei Waitfu Diffusion model and the original Diffusers pipeline"
-  class: "StableDiffusionPipeline"
-  model: "hakurei/waifu-diffusion"
-  local_model: "./waifu-diffusion"
-  use_auth_token: False
-- id: "stable-diffusion-v1-4"
+- id: "stable-diffusion-v1-5"
   default: True
+  enabled: True
+  visible: True
+  name: "Stable Diffusion V1.5"
+  description: "Stable Diffusion using the RunwayML model and our Unified pipeline"
+  class: "UnifiedPipeline"
+  model: "runwayml/stable-diffusion-v1-5"
+  local_model: "./stable-diffusion-v1-5"
+  local_model_fp16: "./stable-diffusion-v1-5-fp16"
+  use_auth_token: True
+  overrides:
+    inpaint_unet:
+      model: "runwayml/stable-diffusion-inpainting"
+      local_model: "./stable-diffusion-inpainting"
+      local_model_fp16: "./stable-diffusion-inpainting-fp16"
+      use_auth_token: True
+    vae: 
+      model: "stabilityai/sd-vae-ft-ema"
+      local_model: "./sd-vae-ft-ema"
+      has_fp16: False
+- id: "stable-diffusion-v1-5-clip"
+  enabled: True
+  visible: True
+  name: "Stable Diffusion V1.5 CLIP guided"
+  description: "Stable Diffusion using the RunwayML model, CLIP guidance and our Unified pipeline"
+  class: "UnifiedPipeline"
+  model: "runwayml/stable-diffusion-v1-5"
+  local_model: "./stable-diffusion-v1-5"
+  local_model_fp16: "./stable-diffusion-v1-5-fp16"
+  use_auth_token: True
+  # It's important CLIP guided models don't borrow unet or vae from anyone
+  borrow:
+    "stable-diffusion-v1-5": [ "feature_extractor", "safety_checker", "scheduler", "text_encoder", "tokenizer", "inpaint_unet"]
+  overrides:
+    clip_model:
+      model: "laion/CLIP-ViT-B-32-laion2B-s34B-b79K"
+      #model: "laion/CLIP-ViT-L-14-laion2B-s32B-b82K"
+      #model: "laion/CLIP-ViT-H-14-laion2B-s32B-b79K"
+      has_fp16: False
+    vae: 
+      model: "stabilityai/sd-vae-ft-ema"
+      local_model: "./sd-vae-ft-ema"
+      has_fp16: False
+- id: "waifu-diffusion-v1-3"
+  enabled: True
+  visible: True
+  name: "Waifu Diffusion V1.3"
+  description: "Stable Diffusion using the Hakurei Waitfu Diffusion model and our Unified pipeline"
+  class: "UnifiedPipeline"
+  model: "hakurei/waifu-diffusion"
+  local_model: "./waifu-diffusion-v1-3"
+  local_model_fp16: "./waifu-diffusion-v1-3-fp16"
+  use_auth_token: False
+  borrow:
+    "stable-diffusion-v1-5": [ "feature_extractor", "safety_checker", "scheduler", "text_encoder", "tokenizer", "vae"]
+- id: "waifu-diffusion-v1-3-grafted"
+  enabled: True
+  visible: True
+  name: "Waifu Diffusion V1.3 Grafted"
+  description: "Waifu Diffusion with grafted inpainting"
+  class: "UnifiedPipeline"
+  options:
+    grafted_inpaint: True
+    graft_factor: 0.8
+  model: "hakurei/waifu-diffusion"
+  local_model: "./waifu-diffusion-v1-3"
+  local_model_fp16: "./waifu-diffusion-v1-3-fp16"
+  use_auth_token: False
+  borrow:
+    "waifu-diffusion-v1-3": [ "feature_extractor", "safety_checker", "scheduler", "text_encoder", "tokenizer", "unet", "vae" ]
+    "stable-diffusion-v1-5": [ "inpaint_unet" ]
+- id: "stable-diffusion-v1-4"
   enabled: True
   visible: True
   name: "Stable Diffusion V1.4"
@@ -25,17 +78,7 @@
   class: "UnifiedPipeline"
   model: "CompVis/stable-diffusion-v1-4"
   local_model: "./stable-diffusion-v1-4"
+  local_model_fp16: "./stable-diffusion-v1-4-fp16"
   use_auth_token: True
-- id: "waifu-diffusion-v1-2"
-  enabled: True
-  visible: True
-  name: "Waifu Diffusion V1.2"
-  description: "Stable Diffusion using the Hakurei Waitfu Diffusion model and our Unified pipeline"
-  class: "UnifiedPipeline"
-  model: "hakurei/waifu-diffusion"
-  local_model: "./waifu-diffusion"
-  use_auth_token: False
-
-
-
-
+  borrow:
+    "stable-diffusion-v1-5": [ "feature_extractor", "safety_checker", "scheduler", "text_encoder", "tokenizer", "vae"]
