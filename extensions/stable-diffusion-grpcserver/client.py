@@ -19,11 +19,11 @@ import signal
 import grpc
 from argparse import ArgumentParser, Namespace
 from typing import Dict, Generator, List, Union, Any, Sequence, Tuple
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 from google.protobuf.json_format import MessageToJson
 from PIL import Image
 
-load_dotenv()
+#load_dotenv()
 
 thisPath = pathlib.Path(__file__).parent.resolve()
 genPath = thisPath / "sdgrpcserver/generated"
