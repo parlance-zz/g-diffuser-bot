@@ -13,9 +13,6 @@ CLI_SETTINGS.disable_progress_bars = True
 # ****** todo *******
 #CLI_SETTINGS.image_viewer_path = "C:\Program Files\IrfanView\i_view64.exe"
 #CLI_SETTINGS.image_viewer_options = "/one /silent"
-# if you prefer your system default image viewer, use these lines instead
-#CLI_SETTINGS.image_viewer_path = ""
-#CLI_SETTINGS.image_viewer_options = ""
 
 # IMPORTANT - Change the default paths here if desired, these are relative to the root path
 DEFAULT_PATHS.models = "./models"
@@ -27,7 +24,7 @@ DEFAULT_PATHS.temp = "./temp"
 DEFAULT_PATHS.debug = "./debug"
 DEFAULT_PATHS.extensions = "./extensions"
 DEFAULT_PATHS.bot = "./bot"
-DEFAULT_PATHS.sdgrpcserver_docker_volume = "./sdgrpcserver"
+#DEFAULT_PATHS.sdgrpcserver_docker_volume = "./sdgrpcserver"
 
 #IMPORTANT - If you want to use the discord bot, use enter your access token below:
 # - Discord developers site: https://discordapp.com/developers/applications/
@@ -51,10 +48,10 @@ GRPC_SERVER_SETTINGS.enable_local_network_access = True
 GRPC_SERVER_SETTINGS.memory_optimization_level = 2  # 2 is maximum memory savings, 1 is less, and 0 is off
                                                     # 1 should be the best setting for most users
 GRPC_SERVER_SETTINGS.enable_mps = False
-GRPC_SERVER_SETTINGS.nsfw_behaviour= "block" #"ignore" #"flag"
+GRPC_SERVER_SETTINGS.nsfw_behaviour="flag" #"block" #"ignore"
 GRPC_SERVER_SETTINGS.hf_token = "YOUR_HUGGINGFACE_ACCESS_TOKEN_HERE"
-#GRPC_SERVER_SETTINGS.docker_image_name = "hafriedlander/stable-diffusion-grpcserver:xformers-latest"
-GRPC_SERVER_SETTINGS.docker_image_name = "hafriedlander/stable-diffusion-grpcserver:cuda118-xformers-0.0.2"
+GRPC_SERVER_SETTINGS.docker_image_name = "hafriedlander/stable-diffusion-grpcserver:xformers-latest"
+#GRPC_SERVER_SETTINGS.docker_image_name = "hafriedlander/stable-diffusion-grpcserver:cuda118-xformers-0.0.2"
 
 # ******************** SETTINGS END ************************
 
