@@ -180,8 +180,6 @@ if __name__ == "__main__":
     description="create something",
     nsfw=(GRPC_SERVER_SETTINGS.nsfw_behaviour != "block"),
 )
-@app_commands.guild_only()
-@app_commands.guilds(*DISCORD_BOT_SETTINGS.guilds)
 @app_commands.describe(
     prompt='what do you want to create today?',
     model_name='which model to use',
