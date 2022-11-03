@@ -300,13 +300,11 @@ def load_image(args):
     
     num_channels = init_image.shape[2]
     if num_channels == 4: # input image has an alpha channel, setup mask for in/out-painting
-        err_txt = "Error: input image has an alpha channel, in/out-painting is temporarily bugged and disabled until it can be fixed"
-        print(err_txt); raise(err_txt)
-        mask_image = 1.-init_image[:,:,3]   # extract mask
-        init_image = init_image[:,:,0:3] # strip mask from init_img / convert to rgb
-        #args.noise_start += 1.  # todo: possibly temporary, grpc server current expects start_schedule of 2. to trigger in/out-paint mode
-        if args.sampler == "k_euler": args.sampler = "k_euler_ancestral" # k_euler currently does not add noise during sampling
-        elif args.sampler != "k_euler_ancestral": args.sampler = "ddim"  # and samplers that aren't k_euler_a or ddim are pretty awful
+        mask_image = 255. - init_image[:,:,3] # extract mask from alpha channel and invert
+        init_image = init_image[:,:,0:3]      # strip mask from init_img / convert to rgb
+        if args.sampler == "k_euler":
+            print("Warning: k_euler is not currently supported for in-painting, switching to sampler=k_euler_ancestral")
+            args.sampler = "k_euler_ancestral" # k_euler currently does not add noise during sampling
         
     elif num_channels == 3: # rgb image, regular img2img without a mask
         mask_image = None
