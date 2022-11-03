@@ -2,11 +2,13 @@
 
 ##  g-diffuser-bot - Discord bot and Interactive CLI for stable-diffusion-grpcserver
 
+Nov 02-2022 Update: In/out-painting bugs are now fixed, and the interactive CLI now prints proper error messages.
+
 Oct 22-2022 Update: Most of the annoying bugs in the Discord bot have now been fixed. The gRPC server now uses a Docker image which includes xformers support (large speed boost) as well as support for **stable-diffusion-v1-5 (which is the new default)**. The install instructions have changed accordingly, please find the changes below:
 
 ## Vision for the g-diffuser-bot project:
  - ~~The goal of the project is to provide the best possible front-end, interface, and utilities for the diffusers library and to enable regular users to access these powerful abilities with a free and easy-to-use package that supports their local GPU and as many OS's / platforms as possible. A core focus of the library will be on multi-modality generation tasks and other media types such as music.~~
- - Oct 11-2022: There are now many mature and rapidly evolving easy-to-use frontends and discord bots for Stable Diffusion. As a lone developer I do not have the time or resources to keep pace with these developments. I will do my best to continue to maintain the project, and may occasionally add new features, but this project is no longer my primary focus.
+ - Nov 01-2022: There are now many mature and rapidly evolving easy-to-use frontends and discord bots for Stable Diffusion. As a lone developer I do not have the time or resources to keep pace with these developments. I will do my best to continue to maintain the project, and may occasionally add new features, but this project is no longer my primary focus.
 
 ## Installation:
  - If you are running Windows 10 you may need to turn on "developer mode". Look for "developer settings" in the start menu.
