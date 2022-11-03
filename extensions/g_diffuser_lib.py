@@ -372,8 +372,9 @@ def get_samples(args, write=True, no_grid=False):
             if args.n > 0: break # if we had a set number of samples then we are done
 
         except Exception as e:
-            if args.debug: raise
             args.status = -1; args.err_txt = str(e) # error status
+            if args.debug: raise
+            else: print("Error: " + args.err_txt)
             return samples
 
     if write and len(samples) > 1 and (not no_grid):
