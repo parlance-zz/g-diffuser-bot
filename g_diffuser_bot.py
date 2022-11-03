@@ -178,7 +178,7 @@ if __name__ == "__main__":
 @client.tree.command(
     name="dream",
     description="create something",
-    nsfw=(GRPC_SERVER_SETTINGS.nsfw_behaviour != "block"),
+#    nsfw=(GRPC_SERVER_SETTINGS.nsfw_behaviour != "block"),
 )
 @app_commands.describe(
     prompt='what do you want to create today?',
