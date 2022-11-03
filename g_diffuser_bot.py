@@ -108,9 +108,9 @@ class G_DiffuserBot(discord.Client):
 
     async def setup_hook(self):
         # this is broken, for some reason fetch_commands() always returns nothing
-        #app_commands = await self.tree.fetch_commands()
-        #for app_command in app_commands:
-        #    await app_command.edit(dm_permission=True)
+        app_commands = await self.tree.fetch_commands()
+        for app_command in app_commands:
+            await app_command.edit(dm_permission=True)
 
         # explicitly sync all commands with all guilds
         bot_guilds = [discord.Object(guild) for guild in self.settings.guilds]
