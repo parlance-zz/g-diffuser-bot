@@ -2,9 +2,13 @@
 # https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
 
 $errorActionPreference = "SilentlyContinue"
-$existing_conda_command = Get-Command conda  # test if there is an available conda command on the PATH
+Start-Transcript -Path ($env:TEMP+"/g_diffuser_installer.log") -Append -Force
+Write-Host "Installer Custom Action - Setup Conda"
 $errorActionPreference = "Stop"
 
+$errorActionPreference = "SilentlyContinue"
+$existing_conda_command = Get-Command conda  # test if there is an available conda command on the PATH
+$errorActionPreference = "Stop"
 if ($existing_conda_command -eq $null)
 {
     # download installer from internet
@@ -24,7 +28,7 @@ if ($existing_conda_command -eq $null)
 
     # run (hopefully silent) installer for current user only
     Write-Host "Installing Miniconda3 for Windows..."
-    Start-Process $conda_installer_path -Wait -ArgumentList '/AddToPath=1','/RegisterPython=0', '/S'
+    Start-Process $conda_installer_path -Wait -ArgumentList '/AddToPath=1','/RegisterPython=0', '/S' -NoNewWindow
 
     # TODO: may need to manually refresh the PATH here (also confirms installation)
 }
@@ -37,3 +41,6 @@ Write-Host "Updating conda..."
 Start-Process "conda" -Wait -ArgumentList "update","conda","-y" -NoNewWindow # ensure conda is up to date
 Write-Host "Creating / Updating g_diffuser conda environment..."
 Start-Process "conda" -Wait -ArgumentList "env","update","-f","./environment.yaml" -WorkingDirectory ("$env:LOCALAPPDATA\g-diffuser-bot") -NoNewWindow  # finally, create / update the g-diffuser environment
+
+Stop-Transcript
+exit 0

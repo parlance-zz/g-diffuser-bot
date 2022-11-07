@@ -1,19 +1,26 @@
 # Install-Module PowerShellProTools
 # https://docs.poshtools.com/powershell-pro-tools-documentation/installers
 
-
 $root_path = "D:/g-diffuser-bot"
 
-$include_paths = @("*.py", "*.md", "*.yaml", "LICENSE", "*.bat")
+$include_paths = @("*.py", "*.md", "*.yaml", "LICENSE", "*.bat", "*.ps1")
 $exclude_paths = @(".gitattributes", ".gitignore", "*.sh", "*.txt", "*.png", "*.jpg", "*.json", "*.pyc", "*.bin")
 
 pushd $root_path
 
-New-Installer -ProductName "G_Diffuser Bot" -RequiresElevation -UpgradeCode '0a717b99-8de1-4ef6-92b8-dae69c81d62e' -HelpLink "https://github.com/parlance-zz/g-diffuser-bot/blob/dev/README.md" -Content {
+New-Installer -ProductName "G_Diffuser Bot" -RequiresElevation -UpgradeCode '0a717b99-8de1-4ef6-92b8-dae69c81d62e' -Content {
     New-InstallerDirectory -PredefinedDirectoryName LocalAppDataFolder -Content {
         New-InstallerDirectory -DirectoryName "g-diffuser-bot" -Content {
             # root folder content
             Get-ChildItem ($root_path+"/*") -File -Include $include_paths -Exclude $exclude_paths | New-InstallerFile
+
+            # installer subfolder (with installer custom action scripts for setup and uninstall)
+            New-InstallerDirectory -DirectoryName "installer" -Content {
+                New-InstallerFile -Source .\installer\setup_developer_mode.ps1 -Id 'SetupDeveloperMode'
+                New-InstallerFile -Source .\installer\setup_wsl.ps1 -Id 'SetupWSL'
+                New-InstallerFile -Source .\installer\setup_docker.ps1 -Id 'SetupDocker'
+                New-InstallerFile -Source .\installer\setup_conda.ps1 -Id 'SetupConda'
+            }
 
             # root path subfolders
             New-InstallerDirectory -DirectoryName "backups" -Content {
@@ -41,7 +48,7 @@ New-Installer -ProductName "G_Diffuser Bot" -RequiresElevation -UpgradeCode '0a7
                 Get-ChildItem ($root_path+"/temp/*") -File -Include $include_paths -Exclude $exclude_paths | New-InstallerFile
             }
 
-            # bot sub-folders
+            # discord bot sub-folders
             New-InstallerDirectory -DirectoryName "bot" -Content {
                 Get-ChildItem ($root_path+"/bot/*") -File -Include $include_paths -Exclude $exclude_paths | New-InstallerFile
                 New-InstallerDirectory -DirectoryName "backups" -Content {
@@ -76,6 +83,15 @@ New-Installer -ProductName "G_Diffuser Bot" -RequiresElevation -UpgradeCode '0a7
             }
         }
     }
- } -OutputDirectory (Join-Path $PSScriptRoot ".") -Platform x64 -AddRemoveProgramsIcon "installer/app_icon.ico" -Version 1.0
+ } -OutputDirectory (Join-Path $PSScriptRoot ".") -Verbose -Platform x64 -AddRemoveProgramsIcon "installer/app_icon.ico" `
+   -HelpLink "https://github.com/parlance-zz/g-diffuser-bot/blob/dev/README.md" `
+   -AboutLink "https://github.com/parlance-zz/g-diffuser-bot" `
+   -CustomAction @(
+                New-InstallerCustomAction -FileId 'SetupDeveloperMode' -RunOnInstall -CheckReturnValue
+                New-InstallerCustomAction -FileId 'SetupWSL' -RunOnInstall -CheckReturnValue
+                New-InstallerCustomAction -FileId 'SetupDocker' -RunOnInstall -CheckReturnValue
+                New-InstallerCustomAction -FileId 'SetupConda' -RunOnInstall -CheckReturnValue
+   ) `
+   -Version 1.0
 
  popd

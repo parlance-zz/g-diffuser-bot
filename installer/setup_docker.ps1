@@ -1,5 +1,14 @@
 # https://docs.docker.com/desktop/install/windows-install/
 
+#if ([Environment]::Is64BitProcess -eq $false)
+#{
+#    &"$env:WINDIR\sysnative\windowspowershell\v1.0\powershell.exe" -Non -NoP -NoL -file "$($myInvocation.InvocationName)" $args
+#    exit $LastExitCode
+#}
+
+$errorActionPreference = "SilentlyContinue"
+Start-Transcript -Path ($env:TEMP+"/g_diffuser_installer.log") -Append -Force
+Write-Host "Installer Custom Action - Setup Docker"
 $errorActionPreference = "Stop"
 
 $docker_install_reg_path = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Docker Desktop"
@@ -21,6 +30,7 @@ if (Test-Path $docker_install_reg_path)
         Start-Process $docker_desktop_path
     }
 
+    Stop-Transcript
     exit 0
 }
 else
@@ -42,7 +52,7 @@ else
     Write-Host "Found Docker Desktop installer already downloaded at '$docker_installer_path'..."
 }
 Write-Host "Installing Docker Desktop for Windows..."
-Start-Process $docker_installer_path -Wait -ArgumentList 'install','--quiet','--accept-license'
+Start-Process $docker_installer_path -Wait -ArgumentList 'install','--quiet','--accept-license' -NoNewWindow
 
 if (Test-Path $docker_install_reg_path)
 {
@@ -53,4 +63,9 @@ if (Test-Path $docker_install_reg_path)
 else
 {
     Write-Error "Error Installing Docker Desktop for Windows."
+    Stop-Transcript
+    exit 1
 }
+
+Stop-Transcript
+exit 0
