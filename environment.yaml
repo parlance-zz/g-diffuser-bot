@@ -19,4 +19,4 @@ dependencies:
     - service_identity
     - grpcio
     - google-api-python-client
-    - git+https://github.com/huggingface/diffusers.git
+    - diffusers
