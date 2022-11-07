@@ -428,12 +428,13 @@ def start_grpc_server(args):
     else:
         print("Starting GRPC server...")
 
-    #grpc_server_run_string = "docker run --gpus all -p 50051:50051 -e HF_API_TOKEN="+GRPC_SERVER_SETTINGS.hf_token
-    grpc_server_run_string = "docker run --pull always --gpus all -p 50051:50051 -e HF_API_TOKEN="+GRPC_SERVER_SETTINGS.hf_token
+    #grpc_server_run_string = "docker run --pull always --gpus all -p 50051:50051 -e HF_API_TOKEN="+GRPC_SERVER_SETTINGS.hf_token
+    grpc_server_run_string = "docker run --gpus all -p 50051:50051 -e HF_API_TOKEN="+GRPC_SERVER_SETTINGS.hf_token
     if GRPC_SERVER_SETTINGS.enable_local_network_access: grpc_server_run_string += " -e SD_LISTEN_TO_ALL=1"
     if GRPC_SERVER_SETTINGS.enable_mps: grpc_server_run_string += " -e SD_ENABLE_MPS=1"
     grpc_server_run_string += " -e SD_ENGINECFG=/weights/models.yaml -e SD_NSFW_BEHAVIOUR="+GRPC_SERVER_SETTINGS.nsfw_behaviour
     grpc_server_run_string += " -e SD_VRAM_OPTIMISATION_LEVEL="+str(GRPC_SERVER_SETTINGS.memory_optimization_level)
+    grpc_server_run_string += " -e SD_REFRESH_MODELS=*"
     grpc_server_run_string += ' -v "'+DEFAULT_PATHS.models+'":/huggingface -v "'+DEFAULT_PATHS.models+'":/weights'
     #grpc_server_run_string += ' -v "'+DEFAULT_PATHS.sdgrpcserver_docker_volume+'":/sdgrpcserver'
     grpc_server_run_string += " " + GRPC_SERVER_SETTINGS.docker_image_name
