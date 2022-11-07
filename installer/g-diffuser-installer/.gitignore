@@ -1,0 +1,8 @@
+# Ignore everything in this directory
+*
+# Except this file
+!.gitignore
+!README.md
+!g-diffuser-installer.ism
+!license_agreement.rtf
+!setupicon.ico

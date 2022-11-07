@@ -1,7 +1,0 @@
-# Ignore everything in this directory
-*
-# except
-!.gitignore
-!README.md
-!*.ps1
-!*.ico
