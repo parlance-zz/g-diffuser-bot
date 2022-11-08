@@ -61,8 +61,7 @@ global GRPC_SERVER_PROCESS
 GRPC_SERVER_PROCESS = None
 
 global SUPPORTED_SAMPLERS_LIST
-SUPPORTED_SAMPLERS_LIST = list(grpc_client.algorithms.keys())
-#SUPPORTED_SAMPLERS_LIST = ["ddim", "k_euler", "k_euler_ancestral", "k_lms"]
+SUPPORTED_SAMPLERS_LIST = list(grpc_client.SAMPLERS.keys())
 
 def run_string(run_string, cwd=".", log_path=None, err_path=None):  # run shell command asynchronously, return subprocess
     print(run_string + " (cwd="+str(cwd)+")")
@@ -348,7 +347,7 @@ def get_samples(args, write=True, no_grid=False):
     while True: # watch out! a wild shrew!
         try:
             request_dict = build_grpc_request_dict(args, init_image, mask_image)
-            answers = stability_api.generate(args.prompt, **request_dict)
+            answers = stability_api.generate(**request_dict)
             grpc_samples = grpc_client.process_artifacts_from_answers("", answers, write=False, verbose=False)
 
             start_time = datetime.datetime.now(); args.start_time = str(start_time)
@@ -505,13 +504,25 @@ def get_args_parser():
         "--noise_end",
         type=float,
         default=DEFAULT_SAMPLE_SETTINGS.noise_end,
-        help="this param can influence in/out-painting quality",
+        help="this param affects the sampler noise schedule",
     )
     parser.add_argument(
         "--noise_eta",
         type=float,
         default=DEFAULT_SAMPLE_SETTINGS.noise_eta,
-        help="this param can influence in/out-painting quality",
+        help="this param affects the sampler noise schedule",
+    )
+    parser.add_argument(
+        "--negative_prompt",
+        type=str,
+        default=DEFAULT_SAMPLE_SETTINGS.negative_prompt,
+        help="the 'negative' prompt guides generation the same way prompt does, but with a weight of -1.",
+    )
+    parser.add_argument(
+        "--guidance_strength",
+        type=float,
+        default=DEFAULT_SAMPLE_SETTINGS.guidance_strength,
+        help="this param controls 'clip guided' generation models only",
     )
     parser.add_argument(
         "--n",
@@ -604,6 +615,7 @@ def build_grpc_request_dict(args, init_image, mask_image):
     else: n = args.n
 
     return {
+        "prompt": args.prompt,
         "height": args.h,
         "width": args.w,
         "start_schedule": args.noise_start,
@@ -616,5 +628,8 @@ def build_grpc_request_dict(args, init_image, mask_image):
         "samples": n,
         "init_image": init_image_bytes,
         "mask_image": mask_image_bytes,
-        #"negative_prompt": args.negative_prompt
+        "negative_prompt": args.negative_prompt,
+        "guidance_preset": grpc_client.generation.GUIDANCE_PRESET_SIMPLE if args.guidance_strength > 0. else grpc_client.generation.GUIDANCE_PRESET_NONE,
+        "guidance_strength": args.guidance_strength,
+        "guidance_prompt": args.prompt,   
     }    
