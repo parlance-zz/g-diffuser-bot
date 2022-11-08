@@ -35,6 +35,7 @@ import generation_pb2_grpc as generation_grpc
 logger = logging.getLogger(__name__)
 logger.setLevel(level=logging.INFO)
 
+"""
 algorithms: Dict[str, int] = {
     "ddim": generation.SAMPLER_DDIM,
     "plms": generation.SAMPLER_DDPM,
@@ -44,6 +45,20 @@ algorithms: Dict[str, int] = {
     "k_dpm_2": generation.SAMPLER_K_DPM_2,
     "k_dpm_2_ancestral": generation.SAMPLER_K_DPM_2_ANCESTRAL,
     "k_lms": generation.SAMPLER_K_LMS,
+}
+"""
+SAMPLERS: Dict[str, int] = {
+    "ddim": generation.SAMPLER_DDIM,
+    "plms": generation.SAMPLER_DDPM,
+    "k_euler": generation.SAMPLER_K_EULER,
+    "k_euler_ancestral": generation.SAMPLER_K_EULER_ANCESTRAL,
+    "k_heun": generation.SAMPLER_K_HEUN,
+    "k_dpm_2": generation.SAMPLER_K_DPM_2,
+    "k_dpm_2_ancestral": generation.SAMPLER_K_DPM_2_ANCESTRAL,
+    "k_lms": generation.SAMPLER_K_LMS,
+    "dpmspp_1": generation.SAMPLER_DPMSOLVERPP_1ORDER,
+    "dpmspp_2": generation.SAMPLER_DPMSOLVERPP_2ORDER,
+    "dpmspp_3": generation.SAMPLER_DPMSOLVERPP_3ORDER,
 }
 
 def image_to_prompt(im, init: bool = False, mask: bool = False) -> Tuple[str, generation.Prompt]:
