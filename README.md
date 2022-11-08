@@ -2,7 +2,7 @@
 
 ##  g-diffuser-bot - Discord bot and Interactive CLI for stable-diffusion-grpcserver
 
-Nov 07-2022 Update: This update adds support for clip guided models and new parameters to control them. For now clip guidance has a heavy performance penalty, but this will improve with optimization. This update also adds negative prompt support to both the CLI and discord bot, and changes the default loaded models to include SD1.5 and SD1.5 with (small) clip. This update also adds several new samplers (dpmspp_1, dpmspp_2, dpmspp_3).
+Nov 07-2022 Update: This update adds support for **clip guided models** and new parameters to control them. For now clip guidance has a heavy performance penalty, but this will improve with optimization. This update also adds **negative prompt support** to both the CLI and discord bot, and changes the default loaded models to include SD1.5 and SD1.5 with (small) clip. This update also adds several **new samplers (dpmspp_1, dpmspp_2, dpmspp_3)**.
 
 Nov 02-2022 Update: In/out-painting bugs are now fixed, and the interactive CLI now prints proper error messages.
 
@@ -13,39 +13,31 @@ Oct 22-2022 Update: Most of the annoying bugs in the Discord bot have now been f
  - Nov 01-2022: There are now many mature and rapidly evolving easy-to-use frontends and discord bots for Stable Diffusion. As a lone developer I do not have the time or resources to keep pace with these developments. I will do my best to continue to maintain the project, and may occasionally add new features, but this project is no longer my primary focus.
 
 ## Installation:
- - If you are running Windows 10 you may need to turn on "developer mode". Look for "developer settings" in the start menu.
+ - If you are running Windows 10 you may need to turn on "developer mode" before beginning the install instructions. Look for "developer settings" in the start menu.
  
  1)  git clone this repository to a folder of your choice (or click the green "code" button up top and click "download zip")
  2)  download / install miniconda (https://docs.conda.io/en/latest/miniconda.html)
  3)  open a conda prompt (click on the start menu and look for "anaconda prompt"), then navigate to the folder where you cloned or downloaded this repository.
  4)  run "conda env create -f environment.yaml"
  5)  Install Docker Desktop:
-         On Windows: https://docs.docker.com/desktop/install/windows-install/
-         On Linux: sudo apt install docker-desktop
+         - On Windows: https://docs.docker.com/desktop/install/windows-install/
+         - On Linux: sudo apt install docker-desktop
  6)  Sign up for an account at https://huggingface.co/
-
-         - Accept the terms of use for the models that you wish to use (https://huggingface.co/CompVis/stable-diffusion-v1-4, https://huggingface.co/hakurei/waifu-diffusion)
-
+         - Accept the terms of use for the models that you wish to use (e.g. https://huggingface.co/runwayml/stable-diffusion-v1-5)
          - Go to https://huggingface.co/settings/tokens and create a new access token.
+         - Open g_diffuser_config.py and find GRPC_SERVER_SETTINGS.hf_token = "YOUR_HUGGINGFACE_ACCESS_TOKEN_HERE"; replace this placeholder text with the access token you generated above and save the file.
+         - If you wish to use the Discord bot, this file is also where you should enter your Discord bot token and guild id. (https://discordapp.com/developers/applications/, https://www.writebots.com/discord-bot-token/)
 
-         - Open g_diffuser_config.py and find line 54 (GRPC_SERVER_SETTINGS.hf_token = "YOUR_HUGGINGFACE_ACCESS_TOKEN_HERE"); replace this placeholder text with the access token you just generated and save the file.
-         
-         - If you wish to use the Discord bot, this file is also where you should enter your Discord bot token and guild id.
-
-Optional: edit g_diffuser_config.py and g_diffuser_defaults.py to change default settings
+Optional: edit g_diffuser_config.py and g_diffuser_defaults.py to change any other default settings of interest
  
 ## Running:
- 1)  open a conda prompt (click on the start menu and look for "anaconda prompt"), then navigate to the g-diffuser folder
- 2)  run "conda activate g_diffuser" (OPTIONAL: on Windows you can open start_prompt.bat to do these 2 steps automatically)
- 3)  run the discord bot with: "python g_diffuser_bot.py"
-       - alternatively, run the CLI interface with: "python g_diffuser_cli.py"
-       - You can use the CLI interface interactively with: "python g_diffuser_cli.py --interactive"
-       - On Windows you can open start_interactive_cli.bat to open the interactive cli directly in one step instead of the above
+ 1)  Run the discord bot by using "start_discord_bot.bat"
+ 2)  Run the interactive CLI by using "start_interactive_cli.bat"
 
 ## Updating:
  - Simply git pull or download and replace your files with those from this repository. You probably won't need to replace your g_diffuser_config.py or g_diffuser_defaults.py files, but you may need to merge changes.
 
 ## Troubleshooting:
  - Better install instructions are (always) coming
- - Docker Desktop has a helpful GUI that you can use to keep track of the gRPC server and it's Docker "container". You can view the server parameters it was launched with, restart it or shut it down, and view the console output to track down any errors from the grpc server side.
- - If you have questions or problems running anything in g-diffuser-bot, please post as much detailed information as you can in (https://github.com/parlance-zz/g-diffuser-bot/discussions/categories/q-a), myself or someone in the community may be able to help you. Thank you for your patience.
+ - Docker Desktop has a helpful GUI that you can use to keep track of the gRPC server and it's Docker "container". You can view the server parameters it was launched with, restart it or shut it down, and view the console output to track down any errors from the grpc server side. In some rare cases (or when updating) you may need to delete the existing "image" from the docker images list.
+ - If you have questions or problems running g-diffuser-bot, please post as much detailed information as you can in (https://github.com/parlance-zz/g-diffuser-bot/discussions/categories/q-a), either myself or someone in the community may be able to help you. Thank you for your patience.
