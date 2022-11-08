@@ -209,15 +209,19 @@ def strip_args(args, level=0): # remove args we wouldn't want to print or serial
         if "status" in args_stripped: del args_stripped.status
         if "err_txt" in args_stripped: del args_stripped.err_txt
 
+        if "noise_q" in args_stripped: del args_stripped.noise_q
         if "noise_end" in args_stripped: del args_stripped.noise_end
-        if "noise_eta" in args_stripped: del args_stripped.noise_start
+        if "noise_eta" in args_stripped: del args_stripped.noise_eta
+
         if "init_img" in args_stripped:
             if args_stripped.init_img == "": # if there was no input image these fields are not relevant
                 del args_stripped.init_img
-                if "noise_q" in args_stripped: del args_stripped.noise_q
                 if "noise_start" in args_stripped: del args_stripped.noise_start
-                if "noise_end" in args_stripped: del args_stripped.noise_end
-                if "noise_eta" in args_stripped: del args_stripped.noise_eta
+
+        if "model_name" in args_stripped:
+            if "clip" not in args_stripped.model_name:
+                if "guidance_strength" in args_stripped: del args_stripped.guidance_strength
+
 
     return args_stripped
     
@@ -289,16 +293,17 @@ def load_image(args):
     
     # load and resize input image to multiple of 8x8
     init_image = cv2.imread(final_init_img_path, cv2.IMREAD_UNCHANGED)
-    init_image_dims = (init_image.shape[0], init_image.shape[1])
+    init_image_dims = (init_image.shape[1], init_image.shape[0])
     width, height = validate_resolution(args.w, args.h, init_image_dims)
-    if (width, height) != (init_image.shape[0], init_image.shape[1]):
+    if (width, height) != (init_image.shape[1], init_image.shape[0]):
         if args.debug: print("Resizing input image to (" + str(width) + ", " + str(height) + ")")
         init_image = cv2.resize(init_image, (width, height), interpolation=cv2.INTER_LANCZOS4)
     args.w = width
     args.h = height
     
     num_channels = init_image.shape[2]
-    if num_channels == 4: # input image has an alpha channel, setup mask for in/out-painting
+    if num_channels == 4:     # input image has an alpha channel, setup mask for in/out-painting
+        args.noise_start = 1. # override img2img "strength", for in/out-painting this should always be maxed
         mask_image = 255. - init_image[:,:,3] # extract mask from alpha channel and invert
         init_image = init_image[:,:,0:3]      # strip mask from init_img / convert to rgb
         if args.sampler == "k_euler":
