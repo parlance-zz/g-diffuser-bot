@@ -189,6 +189,8 @@ if __name__ == "__main__":
     scale='conditional guidance scale',
     seed='seed for the random generator',
     steps='number of sampling steps',
+    negative_prompt='has the effect of an anti-prompt',
+    guidance_strength='clip guidance (only affects clip models)',
     n='number of images to generate at once',
 )
 @app_commands.choices(
@@ -205,6 +207,8 @@ async def dream(
     scale: Optional[app_commands.Range[float, 0.0, 100.0]] = DEFAULT_SAMPLE_SETTINGS.scale,
     seed: Optional[app_commands.Range[int, 1, 2000000000]] = 0,
     steps: Optional[app_commands.Range[int, 1, DISCORD_BOT_SETTINGS.max_steps_limit]] = DEFAULT_SAMPLE_SETTINGS.steps,
+    negative_prompt: Optional[str] = DEFAULT_SAMPLE_SETTINGS.negative_prompt,
+    guidance_strength: Optional[app_commands.Range[float, 0.0, 1.0]] = DEFAULT_SAMPLE_SETTINGS.guidance_strength,
     n: Optional[app_commands.Range[int, 1, DISCORD_BOT_SETTINGS.max_output_limit]] = DISCORD_BOT_SETTINGS.default_output_n,
 ):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS, GRPC_SERVER_LOCK
@@ -229,6 +233,8 @@ async def dream(
     args.scale = scale
     args.seed = seed
     args.steps = steps
+    args.negative_prompt = negative_prompt
+    args.guidance_strength = guidance_strength
     args.n = n
     args.interactive = True
     gdl.print_namespace(args, debug=0, verbosity_level=1)
@@ -286,7 +292,9 @@ async def dream(
         if args.n == DEFAULT_SAMPLE_SETTINGS.n: del args.n
         if args.width == DEFAULT_SAMPLE_SETTINGS.resolution[0]: del args.width
         if args.height == DEFAULT_SAMPLE_SETTINGS.resolution[1]: del args.height
-        
+        if args.negative_prompt == DEFAULT_SAMPLE_SETTINGS.negative_prompt: del args.negative_prompt
+        if args.guidance_strength == DEFAULT_SAMPLE_SETTINGS.guidance_strength: del args.guidance_strength
+
         # construct args string for echo / acknowledgement
         args_dict = vars(gdl.strip_args(args, level=1))
         args_str = str(args_dict).replace("{","").replace("}","").replace('"', "").replace("'", "").replace(",", " ")
