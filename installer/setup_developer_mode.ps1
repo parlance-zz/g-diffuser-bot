@@ -6,23 +6,22 @@ Write-Host "Installer Custom Action - Setup Developer Mode"
 $errorActionPreference = "Stop"
 
 # verify windows version at least supports WSL2
-$windows_version = [System.Environment]::OSVersion.Version
-if ($windows_version.Major -lt 10)
+$system_information = (Get-ComputerInfo)
+if ($system_information.OsVersion -lt 10)
 {
     $outdated_windows = $true
 }
 else
 {
-    if ($windows_version.Build -lt 18362)
+    if ($system_information.OsBuildNumber -lt 18362)
     {
         $outdated_windows = $true
     }
 }
-Write-Host "Found Windows version $windows_version..."
 if ($outdated_windows)
 {
-    
     Write-Error "Windows 10 (build 18362) or later is required to run G-Diffuser Bot"
+    $system_information
     Stop-Transcript
     exit 1
 }
