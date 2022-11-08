@@ -16,6 +16,8 @@ DEFAULT_SAMPLE_SETTINGS.steps = 50                           # default number of
 DEFAULT_SAMPLE_SETTINGS.noise_q = 1.                         # fall-off of shaped noise distribution for in/out-painting
 DEFAULT_SAMPLE_SETTINGS.auto_seed_range = (10000,99999)      # automatic random seed range
 DEFAULT_SAMPLE_SETTINGS.model_name = "stable-diffusion-v1-5" # default model id to use, see g_diffuser_config_models.yaml for the list of models to be loaded by grpc server
+DEFAULT_SAMPLE_SETTINGS.guidance_strength = 0.25             # default guidance strength (only affects 'clip guided' models)
+DEFAULT_SAMPLE_SETTINGS.negative_prompt = None               # default negative prompt string or None
 
 # ******************** SETTINGS END ************************
 
