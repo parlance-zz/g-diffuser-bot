@@ -1021,7 +1021,7 @@
 		<row><td>SetARPINSTALLLOCATION</td><td>51</td><td>ARPINSTALLLOCATION</td><td>[INSTALLDIR]</td><td/><td/></row>
 		<row><td>SetARPReadme</td><td>51</td><td>ARPREADME</td><td>https://github.com/parlance-zz/g-diffuser-bot/blob/dev/README.md</td><td/><td/></row>
 		<row><td>SetAllUsersProfileNT</td><td>51</td><td>ALLUSERSPROFILE</td><td>[%SystemRoot]\Profiles\All Users</td><td/><td/></row>
-		<row><td>SetupConda</td><td>1</td><td>NewCustomAction1.clr</td><td/><td/><td/></row>
+		<row><td>SetupConda</td><td>1</td><td>SetupConda.clr</td><td/><td/><td/></row>
 		<row><td>SetupDeveloperMode</td><td>1</td><td>SetupDeveloperMode.clr</td><td/><td/><td/></row>
 		<row><td>SetupDocker</td><td>1</td><td>SetupDocker.clr</td><td/><td/><td/></row>
 		<row><td>SetupWSL</td><td>1</td><td>SetupWSL.clr</td><td/><td/><td/></row>
@@ -2508,7 +2508,7 @@
 		<col def="S255">DotNetBuildConfiguration</col>
 		<col def="S255">MsiCommandLine</col>
 		<col def="I4">ISSetupPrerequisiteLocation</col>
-		<row><td>Release 1</td><td>Product Configuration 1</td><td>&lt;ISProjectDataFolder&gt;</td><td>PackageName</td><td>1</td><td>1033</td><td>2</td><td>2</td><td>Intel</td><td/><td>1033</td><td>0</td><td>0</td><td>0</td><td>0</td><td/><td>0</td><td/><td>MediaLocation</td><td/><td>http://</td><td/><td/><td/><td/><td>8464397</td><td/><td/><td/><td/></row>
+		<row><td>Release</td><td>Product Configuration 1</td><td>&lt;ISProjectDataFolder&gt;</td><td>PackageName</td><td>1</td><td>1033</td><td>2</td><td>2</td><td>Intel</td><td/><td>1033</td><td>0</td><td>0</td><td>0</td><td>0</td><td/><td>0</td><td/><td>MediaLocation</td><td/><td>http://</td><td/><td/><td/><td/><td>8464397</td><td/><td/><td/><td/></row>
 	</table>
 
 	<table name="ISReleaseASPublishInfo">
@@ -2549,7 +2549,7 @@
 		<col def="I4">MsiEngineVersion</col>
 		<col def="S255">WinMsi30Url</col>
 		<col def="S255">CertPassword</col>
-		<row><td>Release 1</td><td>Product Configuration 1</td><td>0</td><td>http://</td><td>0</td><td>install</td><td>install</td><td>[LocalAppDataFolder]Downloaded Installations</td><td>0</td><td>http://www.installengine.com/Msiengine20</td><td>http://www.installengine.com/Msiengine20</td><td/><td>http://www.installengine.com/cert05/isengine</td><td/><td/><td/><td/><td>3</td><td>http://www.installengine.com/cert05/dotnetfx</td><td>0</td><td>1033</td><td/><td/><td/><td/><td>1040</td><td>3</td><td>16</td><td>http://www.installengine.com/Msiengine30</td><td/></row>
+		<row><td>Release</td><td>Product Configuration 1</td><td>0</td><td>http://</td><td>0</td><td>install</td><td>install</td><td>[LocalAppDataFolder]Downloaded Installations</td><td>0</td><td>http://www.installengine.com/Msiengine20</td><td>http://www.installengine.com/Msiengine20</td><td/><td>http://www.installengine.com/cert05/isengine</td><td/><td/><td/><td/><td>3</td><td>http://www.installengine.com/cert05/dotnetfx</td><td>0</td><td>1033</td><td/><td/><td/><td/><td>1040</td><td>3</td><td>16</td><td>http://www.installengine.com/Msiengine30</td><td/></row>
 	</table>
 
 	<table name="ISReleaseProperty">
@@ -2557,7 +2557,7 @@
 		<col key="yes" def="s72">ISProductConfiguration_</col>
 		<col key="yes" def="s72">Name</col>
 		<col def="s0">Value</col>
-		<row><td>Release 1</td><td>Product Configuration 1</td><td>SetupIcon</td><td>&lt;PATH_TO_G-DIFFUSER-BOT_FILES&gt;\installer\app_icon.ico,0</td></row>
+		<row><td>Release</td><td>Product Configuration 1</td><td>SetupIcon</td><td>&lt;PATH_TO_G-DIFFUSER-BOT_FILES&gt;\installer\app_icon.ico,0</td></row>
 	</table>
 
 	<table name="ISReleasePublishInfo">
@@ -3994,8 +3994,9 @@
 		<col key="yes" def="s72">ISProductConfiguration_</col>
 		<col key="yes" def="s255">Name</col>
 		<col def="s255">Value</col>
-		<row><td>Release 1</td><td>Product Configuration 1</td><td>AppxTargetMSIXCoreMax</td><td>10.0.14393.0</td></row>
-		<row><td>Release 1</td><td>Product Configuration 1</td><td>AppxTargetMSIXCoreMin</td><td>6.1.7601.0</td></row>
+		<row><td>Release</td><td>Product Configuration 1</td><td>AppxTargetMSIXCoreMax</td><td>10.0.14393.0</td></row>
+		<row><td>Release</td><td>Product Configuration 1</td><td>AppxTargetMSIXCoreMin</td><td>6.1.7601.0</td></row>
+		<row><td>Release</td><td>Product Configuration 1</td><td>Provider</td><td>Appx</td></row>
 	</table>
 
 	<table name="ISVirtualShortcut">
@@ -4159,10 +4160,10 @@
 		<row><td>SetARPReadme</td><td/><td>1001</td><td/><td/></row>
 		<row><td>SetAllUsersProfileNT</td><td>VersionNT = 400</td><td>970</td><td/><td/></row>
 		<row><td>SetODBCFolders</td><td/><td>1200</td><td>SetODBCFolders</td><td/></row>
-		<row><td>SetupConda</td><td/><td>4550</td><td/><td/></row>
-		<row><td>SetupDeveloperMode</td><td/><td>4525</td><td/><td/></row>
-		<row><td>SetupDocker</td><td/><td>4587</td><td/><td/></row>
-		<row><td>SetupWSL</td><td/><td>4575</td><td/><td/></row>
+		<row><td>SetupConda</td><td>Not Installed</td><td>4550</td><td/><td/></row>
+		<row><td>SetupDeveloperMode</td><td>Not Installed</td><td>4525</td><td/><td/></row>
+		<row><td>SetupDocker</td><td>Not Installed</td><td>4587</td><td/><td/></row>
+		<row><td>SetupWSL</td><td>Not Installed</td><td>4575</td><td/><td/></row>
 		<row><td>StartServices</td><td>VersionNT</td><td>5900</td><td>StartServices</td><td/></row>
 		<row><td>StopServices</td><td>VersionNT</td><td>1900</td><td>StopServices</td><td/></row>
 		<row><td>UnpublishComponents</td><td/><td>1700</td><td>UnpublishComponents</td><td/></row>
@@ -4189,8 +4190,8 @@
 		<col def="S0">Value</col>
 		<row><td>ActiveLanguage</td><td>1033</td></row>
 		<row><td>Comments</td><td/></row>
-		<row><td>CurrentMedia</td><td dt:dt="bin.base64" md5="b491486f2ea923dc16dc8132d9c8c265">
-UgBlAGwAZQBhAHMAZQAgADEAAQBQAHIAbwBkAHUAYwB0ACAAQwBvAG4AZgBpAGcAdQByAGEAdABpAG8AbgAgADEA
+		<row><td>CurrentMedia</td><td dt:dt="bin.base64" md5="35b5393b9f048b429fbb961c2557cd2c">
+UgBlAGwAZQBhAHMAZQABAFAAcgBvAGQAdQBjAHQAIABDAG8AbgBmAGkAZwB1AHIAYQB0AGkAbwBuACAAMQA=
 			</td></row>
 		<row><td>EnableSwidtag</td><td>1</td></row>
 		<row><td>ISCompilerOption_CompileBeforeBuild</td><td>1</td></row>
