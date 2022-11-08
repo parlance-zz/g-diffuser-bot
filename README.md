@@ -19,13 +19,13 @@ Oct 22-2022 Update: Most of the annoying bugs in the Discord bot have now been f
  2)  download / install miniconda (https://docs.conda.io/en/latest/miniconda.html)
  3)  open a conda prompt (click on the start menu and look for "anaconda prompt"), then navigate to the folder where you cloned or downloaded this repository.
  4)  run "conda env create -f environment.yaml"
- 5)  Install Docker Desktop:
-         - On Windows: https://docs.docker.com/desktop/install/windows-install/
+ 5)  Install Docker Desktop:<br/>
+         - On Windows: https://docs.docker.com/desktop/install/windows-install/ <br/>
          - On Linux: sudo apt install docker-desktop
  6)  Sign up for an account at https://huggingface.co/
-         - Accept the terms of use for the models that you wish to use (e.g. https://huggingface.co/runwayml/stable-diffusion-v1-5)
-         - Go to https://huggingface.co/settings/tokens and create a new access token.
-         - Open g_diffuser_config.py and find GRPC_SERVER_SETTINGS.hf_token = "YOUR_HUGGINGFACE_ACCESS_TOKEN_HERE"; replace this placeholder text with the access token you generated above and save the file.
+         - Accept the terms of use for the models that you wish to use (e.g. https://huggingface.co/runwayml/stable-diffusion-v1-5)<br/>
+         - Go to https://huggingface.co/settings/tokens and create a new access token.<br/>
+         - Open g_diffuser_config.py and find GRPC_SERVER_SETTINGS.hf_token = "YOUR_HUGGINGFACE_ACCESS_TOKEN_HERE"; replace this placeholder text with the access token you generated above and save the file.<br/>
          - If you wish to use the Discord bot, this file is also where you should enter your Discord bot token and guild id. (https://discordapp.com/developers/applications/, https://www.writebots.com/discord-bot-token/)
 
 Optional: edit g_diffuser_config.py and g_diffuser_defaults.py to change any other default settings of interest
