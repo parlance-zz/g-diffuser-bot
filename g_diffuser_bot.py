@@ -341,8 +341,6 @@ async def download_attachment(url):
     global DEFAULT_PATHS, DISCORD_BOT_SETTINGS
     try:
         attachment_extension = get_file_extension_from_url(url)
-        #if attachment_extension not in DISCORD_BOT_SETTINGS.accepted_attachments:
-        #    raise Exception("attachment type '"+attachment_extension+"' not found in allowed attachment list '"+str(DISCORD_BOT_SETTINGS.accepted_attachments)+"'")        
         sanitized_attachment_name = gdl.get_default_output_name(url)
         download_path = sanitized_attachment_name+attachment_extension
         full_download_path = DEFAULT_PATHS.inputs+"/"+download_path
@@ -370,24 +368,3 @@ async def download_attachment(url):
 
 if __name__ == "__main__":
     client.run(DISCORD_BOT_SETTINGS.token, reconnect=True)
-
-"""
-def _restart_program():
-    global CMD_QUEUE
-    SCRIPT_FILE_NAME = os.path.basename(__file__)
-    print("Restarting...")
-    run_string = 'python "'+ SCRIPT_FILE_NAME + '"'
-    print(run_string)
-    subprocess.Popen(run_string)
-    exit(0)
-
-async def _top(ctx):    # replies to a message with a sorted list of all users and their run-time
-    global CMD_QUEUE
-    i = 0 ; msg = "Okay @" + str(ctx.message.author.name) + ", here's the top users... \n"
-    for user in sorted(CMD_QUEUE.users_elapsed_time, reverse=True, key=CMD_QUEUE.users_elapsed_time.get):
-        i += 1 ; msg += str(i) + ": @" + user + " <" + str(datetime.timedelta(seconds=CMD_QUEUE.users_elapsed_time[user].seconds)) + "s>\n"
-    if i == 0: msg = "No users yet!"
-    try: await ctx.send("@" + str(ctx.message.author.name) + " : " + msg)
-    except Exception as e: print("Error sending !top acknowledgement - " + str(e))
-    return
-"""

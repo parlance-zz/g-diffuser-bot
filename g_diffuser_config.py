@@ -36,7 +36,7 @@ DISCORD_BOT_SETTINGS.max_queue_length = 1000     # beyond this limit additional 
 DISCORD_BOT_SETTINGS.default_output_n = 1        # default batch size to create images
 DISCORD_BOT_SETTINGS.max_output_limit = 3        # max number of samples to create simultaneously with -n param
 DISCORD_BOT_SETTINGS.max_steps_limit = 120       # max number of steps per sample command
-DISCORD_BOT_SETTINGS.accepted_attachments = [".png", ".jpg", ".jpeg"] # attachments in bot commands not matching this list will not be downloaded
+DISCORD_BOT_SETTINGS.accepted_attachments = ["image/png", "image/jpg", "image/jpeg"] # attachments in bot commands not matching this list will not be downloaded
 DISCORD_BOT_SETTINGS.state_file_path = "./g-diffuser-bot.json"        # relative to root path
 DISCORD_BOT_SETTINGS.activity = "/help, /about"
 
