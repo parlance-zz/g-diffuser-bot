@@ -224,10 +224,10 @@ async def dream(
         return
 
     if input_image_url != "":
-        print(input_image_url) # todo: download attachment to ./inputs
         init_img = await download_attachment(input_image_url) #"holo_masked.png"
-        print(init_img)
-
+    else:
+        init_img = ""
+        
     # build sample args from app command params
     args = gdl.get_default_args()
     args.prompt = prompt
