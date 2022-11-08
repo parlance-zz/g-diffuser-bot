@@ -64,6 +64,11 @@ class DashboardServiceStub(object):
                 request_serializer=dashboard__pb2.EmptyRequest.SerializeToString,
                 response_deserializer=dashboard__pb2.UserPasswordChangeTicket.FromString,
                 )
+        self.DeleteAccount = channel.unary_unary(
+                '/gooseai.DashboardService/DeleteAccount',
+                request_serializer=dashboard__pb2.EmptyRequest.SerializeToString,
+                response_deserializer=dashboard__pb2.User.FromString,
+                )
         self.CreateCharge = channel.unary_unary(
                 '/gooseai.DashboardService/CreateCharge',
                 request_serializer=dashboard__pb2.CreateChargeRequest.SerializeToString,
@@ -157,6 +162,12 @@ class DashboardServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def DeleteAccount(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def CreateCharge(self, request, context):
         """Payment functions
         """
@@ -240,6 +251,11 @@ def add_DashboardServiceServicer_to_server(servicer, server):
                     servicer.CreatePasswordChangeTicket,
                     request_deserializer=dashboard__pb2.EmptyRequest.FromString,
                     response_serializer=dashboard__pb2.UserPasswordChangeTicket.SerializeToString,
+            ),
+            'DeleteAccount': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeleteAccount,
+                    request_deserializer=dashboard__pb2.EmptyRequest.FromString,
+                    response_serializer=dashboard__pb2.User.SerializeToString,
             ),
             'CreateCharge': grpc.unary_unary_rpc_method_handler(
                     servicer.CreateCharge,
@@ -443,6 +459,23 @@ class DashboardService(object):
         return grpc.experimental.unary_unary(request, target, '/gooseai.DashboardService/CreatePasswordChangeTicket',
             dashboard__pb2.EmptyRequest.SerializeToString,
             dashboard__pb2.UserPasswordChangeTicket.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def DeleteAccount(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/gooseai.DashboardService/DeleteAccount',
+            dashboard__pb2.EmptyRequest.SerializeToString,
+            dashboard__pb2.User.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
