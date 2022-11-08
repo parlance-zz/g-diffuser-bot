@@ -48,7 +48,7 @@ GRPC_SERVER_SETTINGS.enable_mps = False
 GRPC_SERVER_SETTINGS.nsfw_behaviour="ignore" # can be "flag", "block", or "ignore"
 #GRPC_SERVER_SETTINGS.docker_image_name = "hafriedlander/stable-diffusion-grpcserver:xformers-latest"
 #GRPC_SERVER_SETTINGS.docker_image_name = "hafriedlander/stable-diffusion-grpcserver:cuda118-xformers-0.0.2"
-GRPC_SERVER_SETTINGS.docker_image_name = "parlance/sdgrpcserver-dev"
+GRPC_SERVER_SETTINGS.docker_image_name = "hafriedlander/stable-diffusion-grpcserver:cuda118-xformers-0.0.4" #"parlance/sdgrpcserver-dev"
 
 #IMPORTANT - Enter your hugging-face access token here to download models automatically as needed (https://huggingface.co/settings/tokens)
 # - If you choose not to use a hugging-face access token you will need to place pre-downloaded (diffusers) models in the ./models folder; Please see ./models/README.md for more info.
