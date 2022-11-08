@@ -209,6 +209,8 @@ async def dream(
     steps: Optional[app_commands.Range[int, 1, DISCORD_BOT_SETTINGS.max_steps_limit]] = DEFAULT_SAMPLE_SETTINGS.steps,
     negative_prompt: Optional[str] = DEFAULT_SAMPLE_SETTINGS.negative_prompt,
     guidance_strength: Optional[app_commands.Range[float, 0.0, 1.0]] = DEFAULT_SAMPLE_SETTINGS.guidance_strength,
+    input_image_url: Optional[str] = "",
+    img2img_strength: Optional[app_commands.Range[float, 0.0, 1.0]] = DEFAULT_SAMPLE_SETTINGS.noise_start,
     n: Optional[app_commands.Range[int, 1, DISCORD_BOT_SETTINGS.max_output_limit]] = DISCORD_BOT_SETTINGS.default_output_n,
 ):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS, GRPC_SERVER_LOCK
@@ -220,7 +222,12 @@ async def dream(
         try: await interaction.followup.send(content="sorry @"+interaction.user.display_name+", please enter a prompt", ephemeral=True)
         except Exception as e: print("exception in await interaction - " + str(e))
         return
-    
+
+    if input_image_url != "":
+        print(input_image_url) # todo: download attachment to ./inputs
+        init_img = await download_attachment(input_image_url) #"holo_masked.png"
+        print(init_img)
+
     # build sample args from app command params
     args = gdl.get_default_args()
     args.prompt = prompt
@@ -228,13 +235,15 @@ async def dream(
     else: args.model_name = model_name.value
     if type(sampler) == str: args.sampler = sampler
     else: args.sampler = sampler.value
-    args.w = width
-    args.h = height
+    if width != DEFAULT_SAMPLE_SETTINGS.resolution[0]: args.w = width
+    if height != DEFAULT_SAMPLE_SETTINGS.resolution[1]: args.h = height
     args.scale = scale
     args.seed = seed
     args.steps = steps
     args.negative_prompt = negative_prompt
     args.guidance_strength = guidance_strength
+    if init_img != "": args.init_img = init_img
+    args.noise_start = img2img_strength
     args.n = n
     args.interactive = True
     gdl.print_namespace(args, debug=0, verbosity_level=1)
@@ -289,11 +298,22 @@ async def dream(
         if args.sampler == DEFAULT_SAMPLE_SETTINGS.sampler: del args.sampler
         if args.steps == DEFAULT_SAMPLE_SETTINGS.steps: del args.steps
         if args.scale == DEFAULT_SAMPLE_SETTINGS.scale: del args.scale
+        if args.noise_q == DEFAULT_SAMPLE_SETTINGS.noise_q: del args.noise_q
+        if args.noise_start == DEFAULT_SAMPLE_SETTINGS.noise_start: del args.noise_start
+        if args.noise_end == DEFAULT_SAMPLE_SETTINGS.noise_end: del args.noise_end
+        if args.noise_eta == DEFAULT_SAMPLE_SETTINGS.noise_eta: del args.noise_eta
         if args.n == DEFAULT_SAMPLE_SETTINGS.n: del args.n
         if args.width == DEFAULT_SAMPLE_SETTINGS.resolution[0]: del args.width
         if args.height == DEFAULT_SAMPLE_SETTINGS.resolution[1]: del args.height
         if args.negative_prompt == DEFAULT_SAMPLE_SETTINGS.negative_prompt: del args.negative_prompt
         if args.guidance_strength == DEFAULT_SAMPLE_SETTINGS.guidance_strength: del args.guidance_strength
+        if args.init_img != "":
+             del args.init_img
+             args.input_image_url = input_image_url
+        if "noise_start" in args:
+            noise_start = args.noise_start
+            del args.noise_start
+            if noise_start != 1.: args.img2img_strength = noise_start
 
         # construct args string for echo / acknowledgement
         args_dict = vars(gdl.strip_args(args, level=1))
@@ -314,22 +334,28 @@ async def dream(
     
 def get_file_extension_from_url(url):
     tokens = os.path.splitext(os.path.basename(urllib.parse.urlsplit(url).path))
-    if len(tokens) > 1: return tokens[1]
+    if len(tokens) > 1: return tokens[1].strip().lower()
     else: return ""
 
-async def download_attachment(url, user, attachment_name):
-    global DEFAULT_PATHS
+async def download_attachment(url):
+    global DEFAULT_PATHS, DISCORD_BOT_SETTINGS
     try:
-        sanitized_username = gdl.get_default_output_name(user); sanitized_attachment_name = gdl.get_default_output_name(attachment_name)
-        download_path = DEFAULT_PATHS.inputs+"/"+sanitized_username+"/"+sanitized_attachment_name+get_file_extension_from_url(url)
-        print("Downloading '" + url + "' to '" + download_path + "'...")
-        
+        attachment_extension = get_file_extension_from_url(url)
+        #if attachment_extension not in DISCORD_BOT_SETTINGS.accepted_attachments:
+        #    raise Exception("attachment type '"+attachment_extension+"' not found in allowed attachment list '"+str(DISCORD_BOT_SETTINGS.accepted_attachments)+"'")        
+        sanitized_attachment_name = gdl.get_default_output_name(url)
+        download_path = sanitized_attachment_name+attachment_extension
+        full_download_path = DEFAULT_PATHS.inputs+"/"+download_path
+
+        print("Downloading '" + url + "' to '" + full_download_path + "'...")
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
-                print(response.content_type)
-                breakpoint()
+                attachment_type = response.content_type
+                if attachment_type not in DISCORD_BOT_SETTINGS.accepted_attachments:
+                    raise Exception("attachment type '"+attachment_type+"' not found in allowed attachment list '"+str(DISCORD_BOT_SETTINGS.accepted_attachments)+"'")
+                                 
                 if response.status == 200:
-                    with open(download_path, "wb") as out_file:
+                    with open(full_download_path, "wb") as out_file:
                         out_file.write(await response.read())
                         out_file.close()
                 else:
