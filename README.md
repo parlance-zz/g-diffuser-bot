@@ -42,6 +42,7 @@ Optional: edit g_diffuser_config.py and g_diffuser_defaults.py to change any oth
 ## Running:
  1)  Run the discord bot by using "start_discord_bot.bat"
  2)  Run the interactive CLI by using "start_interactive_cli.bat"
+ 3)  You can (optionally) start the sdgrpcserver with "start_server.bat" to see the server console in it's own separate window
 
 ## Updating:
  - Simply git pull or download and replace your files with those from this repository. You probably won't need to replace your g_diffuser_config.py or g_diffuser_defaults.py files, but you may need to merge changes.
