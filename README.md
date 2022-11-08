@@ -25,14 +25,14 @@ Oct 22-2022 Update: Most of the annoying bugs in the Discord bot have now been f
  6)  Sign up for an account at https://huggingface.co/
  ```
  - Accept the terms of use for the models you wish to use:
-  (https://huggingface.co/runwayml/stable-diffusion-v1-5, https://huggingface.co/hakurei/waifu-diffusion-v1-4)
+(https://huggingface.co/runwayml/stable-diffusion-v1-5, https://huggingface.co/hakurei/waifu-diffusion-v1-4)
 
  - Go to https://huggingface.co/settings/tokens and create a new access token.
 
  - Open g_diffuser_config.py, find GRPC_SERVER_SETTINGS.hf_token = "YOUR_HUGGINGFACE_ACCESS_TOKEN_HERE"
    Replace the placeholder text with the access token you generated above and save the file.
 
- - If you are using the Discord bot this is also where you should enter your Discord bot token and guild id.
+ - If you're using the Discord bot this is also where you enter your Discord bot token and guild id.
    (https://discordapp.com/developers/applications/, https://www.writebots.com/discord-bot-token/)
 ```
 Optional: edit g_diffuser_config.py and g_diffuser_defaults.py to change any other default settings of interest
