@@ -2,7 +2,7 @@
 
 ##  g-diffuser-bot - Discord bot and Interactive CLI for stable-diffusion-grpcserver
 
-Nov 07-2022 Update: This update adds support for clip guided models and new parameters to control them. For now clip guidance has a heavy performance penalty, but this will improve with optimization. This update also adds negative prompt support to both the CLI and discord bot, and changes the default loaded models to include SD1.5 and SD1.5 with (small) clip.
+Nov 07-2022 Update: This update adds support for clip guided models and new parameters to control them. For now clip guidance has a heavy performance penalty, but this will improve with optimization. This update also adds negative prompt support to both the CLI and discord bot, and changes the default loaded models to include SD1.5 and SD1.5 with (small) clip. This update also adds several new samplers (dpmspp_1, dpmspp_2, dpmspp_3).
 
 Nov 02-2022 Update: In/out-painting bugs are now fixed, and the interactive CLI now prints proper error messages.
 
