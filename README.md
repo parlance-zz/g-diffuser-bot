@@ -22,7 +22,7 @@ Oct 22-2022 Update: Most of the annoying bugs in the Discord bot have now been f
  5)  Install Docker Desktop:<br/>
          - On Windows: https://docs.docker.com/desktop/install/windows-install/ <br/>
          - On Linux: sudo apt install docker-desktop
- 6)  Sign up for an account at https://huggingface.co/
+ 6)  Sign up for an account at https://huggingface.co/ <br/>
          - Accept the terms of use for the models that you wish to use (e.g. https://huggingface.co/runwayml/stable-diffusion-v1-5)<br/>
          - Go to https://huggingface.co/settings/tokens and create a new access token.<br/>
          - Open g_diffuser_config.py and find GRPC_SERVER_SETTINGS.hf_token = "YOUR_HUGGINGFACE_ACCESS_TOKEN_HERE"; replace this placeholder text with the access token you generated above and save the file.<br/>
