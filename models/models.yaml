@@ -1,36 +1,251 @@
-- id: "stable-diffusion-v1-5"
-  default: True
-  enabled: True
-  visible: True
-  name: "Stable Diffusion V1.5"
-  description: "Stable Diffusion using the RunwayML model and our Unified pipeline"
-  class: "UnifiedPipeline"
-  model: "runwayml/stable-diffusion-v1-5"
-  local_model: "./stable-diffusion-v1-5"
-  local_model_fp16: "./stable-diffusion-v1-5-fp16"
+# ---- Model definitions ----
+
+# You can either specify models inside the engine definition, or specify them first.
+# Putting them first like this allows them to be used multiple times while only loading 
+# them off disk once, reducing RAM usage and speeding up loading engines that share model files
+
+# We start off by defining a single model, in this case the Stability VAE.
+# Model definitions must have a unqiue model_id which is how they are referenced later.
+- model_id: "stability-vae-ema"
+  # This is only a vae model, not a pipeline, so we must tell the server that
+  type: "vae"
+  # There isn't an fp16 version of the model available, so always load the fp32 version.
+  # If you have fp16 models available, it reduces RAM usage to use them, but the server
+  # will convert the fp32 model if it needs an fp16 model and one doesn't exist.
+  has_fp16: False
+  # This is the HuggingFace model ID to load from if the local version isn't found.
+  # You can leave it out, but then the model will fail to load if the local files don't exist
+  model: "stabilityai/sd-vae-ft-ema"
+  # This is a path (relative or absolute) to look for a local copy of the fp32 model.
+  # You can leave it out if you want to only load from HuggingFace
+  local_model: "./sd-vae-ft-ema"
+
+# Here we define the inpainting pipeline. Since only the unet is different to the models in
+# the V1.5 pipeline, we'll only load that
+- model_id: "stable-diffusion-inpainting"
+  # We don't need a type field here, as pipeline is the default
+  #   type: "pipeline"
+  # We only use the unet from this model, so only load that. You could also
+  # pass a list of submodules here
+  whitelist: "unet"
+  # You've seen this model field above, it's the HuggingFace model ID
+  model: "runwayml/stable-diffusion-inpainting"
+  # If loading from HuggingFace, for this model we need to provide an authorization token
   use_auth_token: True
+  # As above, this is the path to look for a local copy of the fp32 model.
+  local_model: "./stable-diffusion-inpainting"
+  # Because this model has fp16 weights available, you can also specify where a local
+  # copy of those can be found. You can leave either of these local_model fields out if
+  # you know you won't use that weight.
+  local_model_fp16: "./stable-diffusion-inpainting-fp16"
+
+# Here we define the base v1.5 Stable Diffusion pipeline model. 
+- model_id: "stable-diffusion-v1-5-base"
+  # We blacklist the vae as we will be replacing it in the overrides, and this saves a little RAM
+  blacklist: "vae"
+  # You've see these next few fields already - this is the HuggingFace model ID
+  model: "runwayml/stable-diffusion-v1-5"
+  # .. saying we need to authorise to download
+  use_auth_token: True
+  # .. where the local fp32 model is
+  local_model: "./stable-diffusion-v1-5"
+  # .. and where the local fp16 model is
+  local_model_fp16: "./stable-diffusion-v1-5-fp16"
+  # Now we provide two additional models to load into the pipeline.
   overrides:
-    inpaint_unet:
-      model: "runwayml/stable-diffusion-inpainting"
-      local_model: "./stable-diffusion-inpainting"
-      local_model_fp16: "./stable-diffusion-inpainting-fp16"
-      use_auth_token: True
-    vae: 
-      model: "stabilityai/sd-vae-ft-ema"
-      local_model: "./sd-vae-ft-ema"
-      has_fp16: False
-- id: "waifu-diffusion-v1-3"
-  enabled: True
-  visible: True
-  name: "Waifu Diffusion V1.3"
-  description: "Stable Diffusion using the Hakurei Waitfu Diffusion model and our Unified pipeline"
-  class: "UnifiedPipeline"
+    # We load the inpaint_unet here (the pipeline otherwise wouldn't have one and would fall back
+    # to the previous model-independant inpaintint algorithm.)
+    # Because we're using a single model from a whole pipeline, we need to specify to use the unet.
+    inpaint_unet: "@stable-diffusion-inpainting/unet"
+    # We override the vae with a different (better) one here.
+    # Because we're using a simple model, we just reference it directly.
+    vae: "@stability-vae-ema"
+
+# Here are two CLIP models. These are used in the CLIP guidance engines.
+# We're going to stop commenting on fields you've seen before now
+- model_id: "laion-clip-h"
+  # Clip models can be loaded as clip_model or feature_extractor. By using a type of clip
+  # a pipeline is created with just clip_model and feature_extractor models.
+  # You _could_ specify clip_model or feature extractor here to just load that type of model
+  type: "clip"
+  model: "laion/CLIP-ViT-H-14-laion2B-s32B-b79K"
+  has_fp16: False
+# None of the engines reference this CLIP model. If you define a model 
+# but never use it, it doesn't get loaded, so this won't use any RAM
+- model_id: "laion-clip-l"
+  type: "clip"
+  model: "laion/CLIP-ViT-L-14-laion2B-s32B-b82K"
+  has_fp16: False
+- model_id: "laion-clip-b"
+  type: "clip"
+  model: "laion/CLIP-ViT-B-32-laion2B-s34B-b79K"
+  has_fp16: False
+
+# And finally, the Waifu Diffusion V1.3 pipeline. By now everything should make sense.
+- model_id: "waifu-diffusion-v1-3-base"
+  blacklist: "vae"
   model: "hakurei/waifu-diffusion"
   local_model: "./waifu-diffusion-v1-3"
   local_model_fp16: "./waifu-diffusion-v1-3-fp16"
-  use_auth_token: True
+  use_auth_token: False
   overrides:
-    vae: 
-      model: "stabilityai/sd-vae-ft-ema"
-      local_model: "./sd-vae-ft-ema"
-      has_fp16: False
+    vae: "@stability-vae-ema"
+
+# ---- Engine definitions ----
+
+# Now we define a set of engines that will handle requests. These expect
+# to be passed a classname to use to actually build the engine with, a model
+# (either from the definitions above or just declared inline) and maybe some options
+
+# This is the main Stable Diffusion V1.5 model
+- id: "stable-diffusion-v1-5"
+  # You can set enabled to False to temporarily prevent it from being loaded
+  enabled: True
+  # You can set visible to False to make the engine available but prevent it from showing 
+  # up in the API list (directly requesting it works)
+  visible: True
+  # This name can be used by User Interfaces
+  name: "Stable Diffusion V1.5"
+  # This description can be used by User Interfaces
+  description: "Stable Diffusion using the RunwayML model and our Unified pipeline"
+  # This class is used to actually handle the generation.
+  class: "UnifiedPipeline"
+  # You can set various options on each engine. In this case we're enabling xformers (if available)
+  options:
+    xformers: True
+  # And finally we set the model to use - in this case we're just referencing an already-loaded model
+  model: "@stable-diffusion-v1-5-base"
+
+# This is the main Stable Diffusion V1.5 model, but without xformers for comparison
+# Xformers is not quite seed-stable, so if seed stability is important to you, you might prefer to use this
+- id: "stable-diffusion-v1-5-no-xformers"
+  # This engine is disabled by default. You can enable it by changed this to True
+  enabled: False
+  visible: False
+  name: "Stable Diffusion V1.5"
+  description: "Stable Diffusion using the RunwayML model and our Unified pipeline"
+  class: "UnifiedPipeline"
+  model: "@stable-diffusion-v1-5-base"
+
+# This is the Stable Diffusion V1.5 model with CLIP guidance enabled. This configuration needs quite
+# a lot of VRAM, but is faster and produces better results if you have enough.
+- id: "stable-diffusion-v1-5-clip"
+  # If you test this and find it won't work on your GPU, set this to False
+  # to prevent it from being used in future.
+  enabled: False
+  visible: False
+  name: "Stable Diffusion V1.5 CLIP guided"
+  description: "Stable Diffusion using the RunwayML model, CLIP guidance and our Unified pipeline"
+  class: "UnifiedPipeline"
+  # Here we're setting some options for the CLIP guidance engine
+  options:
+    xformers: "reversible"
+    clip:
+      approx_cutouts: 2
+      vae_cutouts: 2
+  model: "@stable-diffusion-v1-5-base"
+  # You can provide individual model overrides in engines just like in models
+  overrides:
+    # Just like in models, clip means both clip_model and feature_extractor
+    clip: "@laion-clip-h"
+
+# This is the Stable Diffusion V1.5 model with CLIP guidance enabled. This configuration needs much less
+# VRAM (6GB should be sufficient in fp16 mode if xformers is available), but is slower and slightly less accurate
+- id: "stable-diffusion-v1-5-clip-small"
+  enabled: True
+  visible: True
+  name: "Stable Diffusion V1.5 CLIP guided"
+  description: "Stable Diffusion using the RunwayML model, CLIP guidance (limited memory version) and our Unified pipeline"
+  class: "UnifiedPipeline"
+  options:
+    # For now, the xformers implementation in Diffusers is not able to be run backwards
+    # so we explicitly use a reversable implementation instead
+    xformers: "reversible"
+    # And we use less cutouts than standard CLIP guidance, avoiding using the VAE entirely
+    clip:
+      approx_cutouts: 2
+      vae_cutouts: 0
+  model: "@stable-diffusion-v1-5-base"
+  overrides:
+    clip: "@laion-clip-b"
+
+# This is the standard Waifu Diffusion V1.3 model
+- id: "waifu-diffusion-v1-3"
+  enabled: False
+  visible: False
+  name: "Waifu Diffusion V1.3"
+  description: "Stable Diffusion using the Hakurei Waifu Diffusion model and our Unified pipeline"
+  class: "UnifiedPipeline"
+  options:
+    xformers: True
+  model: "@waifu-diffusion-v1-3-base"
+
+# This is the Waifu Diffusion model, but with Stable Diffusion's inpainting grafted in. This generally
+# gives better results than the model-independant inpainting method, but has it's own oddities
+- id: "waifu-diffusion-v1-3-grafted"
+  enabled: False
+  visible: False
+  name: "Waifu Diffusion V1.3 Grafted"
+  description: "Waifu Diffusion with grafted inpainting"
+  class: "UnifiedPipeline"
+  options:
+    grafted_inpaint: True
+    # Graft factor sets the transition from base inpainting model to real model.
+    # A low graft factor means the underlying model runs longer, which can reduce discontinuity, but
+    # means less of the style of the main model comes through.
+    graft_factor: 0.8
+    xformers: True
+  model: "@waifu-diffusion-v1-3-base"
+  overrides:
+    inpaint_unet: "@stable-diffusion-inpainting/unet"
+
+# This is the Waifu Diffusion model with CLIP guidance (high vram version)
+# (Grafted inpainting doesn't work very well with CLIP, so I recommend low CLIP guidance when inpainting)
+- id: "waifu-diffusion-v1-3-grafted-clip"
+  enabled: False
+  visible: False
+  name: "Waifu Diffusion V1.3 Grafted"
+  description: "Waifu Diffusion with grafted inpainting and CLIP guidance"
+  class: "UnifiedPipeline"
+  options:
+    grafted_inpaint: True
+    graft_factor: 0.8
+    clip:
+      approx_cutouts: 2
+      vae_cutouts: 2
+  model: "@waifu-diffusion-v1-3-base"
+  overrides:
+    inpaint_unet: "@stable-diffusion-inpainting/unet"
+    clip: "@laion-clip-b"
+
+# This is the Waifu Diffusion model with SD grafted inpaint and CLIP guidance (low vram version)
+- id: "waifu-diffusion-v1-3-grafted-clip-small"
+  enabled: False
+  visible: False
+  name: "Waifu Diffusion V1.3 Grafted"
+  description: "Waifu Diffusion with grafted inpainting and CLIP guidance"
+  class: "UnifiedPipeline"
+  options:
+    grafted_inpaint: True
+    graft_factor: 0.8
+    xformers: "reversible"
+    clip:
+      approx_cutouts: 2
+      vae_cutouts: 0
+  model: "@waifu-diffusion-v1-3-base"
+  overrides:
+    inpaint_unet: "@stable-diffusion-inpainting/unet"
+    clip: "@laion-clip-b"
+
+# And finally, here is the unmodified Stable Diffusion V1.4 model, showing how to list
+# the model inline
+- id: "stable-diffusion-v1-4"
+  enabled: False
+  visible: False
+  name: "Stable Diffusion V1.4"
+  description: "Stable Diffusion using the CompVis model and our Unified pipeline"
+  class: "UnifiedPipeline"
+  model: "CompVis/stable-diffusion-v1-4"
+  local_model: "./stable-diffusion-v1-4"
+  local_model_fp16: "./stable-diffusion-v1-4-fp16"
+  use_auth_token: True
