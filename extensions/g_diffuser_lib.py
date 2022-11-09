@@ -311,7 +311,7 @@ def load_image(args):
 
         # apply mask cutoff threshold, this is required because bad paint programs corrupt color data by premultiplying alpha
         # using the 8-bit opacity mask, resulting in unexpected artifacts in areas that are almost but not completely erased
-        mask_image = mask_image*(mask_image < MASK_CUTOFF_THRESHOLD) + (mask_image >= 200.)*MASK_CUTOFF_THRESHOLD
+        mask_image = mask_image*(mask_image < MASK_CUTOFF_THRESHOLD) + (mask_image >= MASK_CUTOFF_THRESHOLD)*255.
         init_image *= gdl_utils.np_img_grey_to_rgb(mask_image) < 255. # force color data in erased areas to 0
 
         if args.sampler == "k_euler":
