@@ -54,6 +54,9 @@ import discord
 #from discord.ext import tasks
 from discord import app_commands
 
+import numpy as np
+import cv2
+
 # redirect default paths to designated bot root path
 DEFAULT_PATHS.inputs = DEFAULT_PATHS.bot+"/inputs"
 DEFAULT_PATHS.outputs = DEFAULT_PATHS.bot+"/outputs"
@@ -176,6 +179,67 @@ if __name__ == "__main__":
             client = G_DiffuserBot()
 
 @client.tree.command(
+    name="expand",
+    description="resize an input image canvas, filling the new area with transparency",
+)
+@app_commands.describe(
+    top='expand top by how much (in %)?',
+    right='expand right by how much (in %)?',
+    bottom='expand bottom by how much (in %)?',
+    left='expand left by how much (in %)?',
+    input_image_url='input image url for expansion',
+)
+async def expand(
+    interaction: discord.Interaction,
+    input_image_url: str,
+    top: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
+    right: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
+    bottom: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
+    left: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
+):
+    global DEFAULT_PATHS
+
+    try: await interaction.response.defer(thinking=True, ephemeral=False) # start by requesting more time to respond
+    except Exception as e: print("exception in await interaction - " + str(e))
+    
+    if not input_image_url:
+        try: await interaction.followup.send(content="sorry @"+interaction.user.display_name+", please enter an input_image_url", ephemeral=True)
+        except Exception as e: print("exception in await interaction - " + str(e))
+        return
+
+    try:
+        init_img = await download_attachment(input_image_url)
+        init_img_fullpath = DEFAULT_PATHS.inputs+"/"+init_img
+        cv2_img = cv2.imread(init_img_fullpath)
+
+        top = int(top / 100. * cv2_img.shape[0])
+        right = int(right / 100. * cv2_img.shape[1])
+        bottom = int(bottom / 100. * cv2_img.shape[0])
+        left = int(left / 100. * cv2_img.shape[1])
+        new_width = cv2_img.shape[1] + left + right
+        new_height = cv2_img.shape[0] + top + bottom
+        new_img = np.zeros((new_height, new_width, 4), np.uint8) # expanded image is rgba
+        
+        if cv2_img.shape[2] == 3: # rgb input image
+            new_img[top:top+cv2_img.shape[0], left:left+cv2_img.shape[1], 0:3] = cv2_img
+            new_img[top:top+cv2_img.shape[0], left:left+cv2_img.shape[1], 3] = 255 # fully opaque
+        elif cv2_img.shape[2] == 4: # rgba input image
+            new_img[top:top+cv2_img.shape[0], left:left+cv2_img.shape[1]] = cv2_img
+        else:
+            raise Exception("Unsupported image format: " + str(cv2_img.shape[2]) + " channels")
+
+        new_img_fullpath = DEFAULT_PATHS.outputs+"/"+init_img+".expanded.png"
+        cv2.imwrite(new_img_fullpath, new_img)
+        await interaction.followup.send(content="@"+interaction.user.display_name+" - here's your expanded image:", file=discord.File(new_img_fullpath), ephemeral=True)
+
+    except Exception as e:
+        print("error - " + str(e))
+        try: await interaction.followup.send(content="sorry, something went wrong :(", ephemeral=True)
+        except Exception as e: print("exception in await interaction - " + str(e))
+        return
+    return
+
+@client.tree.command(
     name="dream",
     description="create something",
 #    nsfw=(GRPC_SERVER_SETTINGS.nsfw_behaviour != "block"),
@@ -191,6 +255,8 @@ if __name__ == "__main__":
     steps='number of sampling steps',
     negative_prompt='has the effect of an anti-prompt',
     guidance_strength='clip guidance (only affects clip models)',
+    input_image_url='optional input image url for in/out-painting or img2img',
+    img2img_strength='amount to change the input image (only affects img2img, not in/out-painting)',
     n='number of images to generate at once',
 )
 @app_commands.choices(
@@ -210,7 +276,7 @@ async def dream(
     negative_prompt: Optional[str] = DEFAULT_SAMPLE_SETTINGS.negative_prompt,
     guidance_strength: Optional[app_commands.Range[float, 0.0, 1.0]] = DEFAULT_SAMPLE_SETTINGS.guidance_strength,
     input_image_url: Optional[str] = "",
-    img2img_strength: Optional[app_commands.Range[float, 0.0, 1.0]] = DEFAULT_SAMPLE_SETTINGS.noise_start,
+    img2img_strength: Optional[app_commands.Range[float, 0.0, 2.0]] = DEFAULT_SAMPLE_SETTINGS.noise_start,
     n: Optional[app_commands.Range[int, 1, DISCORD_BOT_SETTINGS.max_output_limit]] = DISCORD_BOT_SETTINGS.default_output_n,
 ):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS, GRPC_SERVER_LOCK
@@ -224,7 +290,7 @@ async def dream(
         return
 
     if input_image_url != "":
-        init_img = await download_attachment(input_image_url) #"holo_masked.png"
+        init_img = await download_attachment(input_image_url)
     else:
         init_img = ""
         
@@ -303,8 +369,8 @@ async def dream(
         if args.noise_end == DEFAULT_SAMPLE_SETTINGS.noise_end: del args.noise_end
         if args.noise_eta == DEFAULT_SAMPLE_SETTINGS.noise_eta: del args.noise_eta
         if args.n == DEFAULT_SAMPLE_SETTINGS.n: del args.n
-        if args.width == DEFAULT_SAMPLE_SETTINGS.resolution[0]: del args.width
-        if args.height == DEFAULT_SAMPLE_SETTINGS.resolution[1]: del args.height
+        if width == DEFAULT_SAMPLE_SETTINGS.resolution[0]: del args.width
+        if height == DEFAULT_SAMPLE_SETTINGS.resolution[1]: del args.height
         if args.negative_prompt == DEFAULT_SAMPLE_SETTINGS.negative_prompt: del args.negative_prompt
         if args.guidance_strength == DEFAULT_SAMPLE_SETTINGS.guidance_strength: del args.guidance_strength
         if args.init_img != "":
