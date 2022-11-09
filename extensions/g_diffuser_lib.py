@@ -53,7 +53,7 @@ import numpy as np
 import cv2
 
 from extensions import grpc_client
-#from extensions import g_diffuser_utilities as gdl_utils
+from extensions import g_diffuser_utilities as gdl_utils
 
 from torch import autocast
 
@@ -289,6 +289,8 @@ def get_annotated_image(image, args):
 def load_image(args):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
     assert(DEFAULT_PATHS.inputs)
+    MASK_CUTOFF_THRESHOLD = 200. # this will force the image mask to 0 if opacity falls below a threshold. set to 255. to disable
+
     final_init_img_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_img).as_posix()
     
     # load and resize input image to multiple of 8x8
@@ -305,7 +307,13 @@ def load_image(args):
     if num_channels == 4:     # input image has an alpha channel, setup mask for in/out-painting
         args.noise_start = 1. # override img2img "strength", for in/out-painting this should always be maxed
         mask_image = 255. - init_image[:,:,3] # extract mask from alpha channel and invert
-        init_image = init_image[:,:,0:3]      # strip mask from init_img / convert to rgb
+        init_image = 0. + init_image[:,:,0:3]      # strip mask from init_img / convert to rgb
+
+        # apply mask cutoff threshold, this is required because bad paint programs corrupt color data by premultiplying alpha
+        # using the 8-bit opacity mask, resulting in unexpected artifacts in areas that are almost but not completely erased
+        mask_image = mask_image*(mask_image < MASK_CUTOFF_THRESHOLD) + (mask_image >= 200.)*MASK_CUTOFF_THRESHOLD
+        init_image *= gdl_utils.np_img_grey_to_rgb(mask_image) < 255. # force color data in erased areas to 0
+
         if args.sampler == "k_euler":
             print("Warning: k_euler is not currently supported for in-painting, switching to sampler=k_euler_ancestral")
             args.sampler = "k_euler_ancestral" # k_euler currently does not add noise during sampling
@@ -313,8 +321,7 @@ def load_image(args):
     elif num_channels == 3: # rgb image, regular img2img without a mask
         mask_image = None
     else:
-        print("Error loading init_image "+final_init_img_path+": unsupported image format")
-        return None, None
+        raise Exception("Error loading init_image "+final_init_img_path+": unsupported image format")
 
     return init_image, mask_image
 
@@ -345,7 +352,14 @@ def build_sample_args(args):
 def get_samples(args, write=True, no_grid=False):
     global DEFAULT_PATHS, GRPC_SERVER_SETTINGS
     assert((args.n > 0) or write) # repeating forever without writing to disk wouldn't make much sense
-    init_image, mask_image = build_sample_args(args)
+
+    try:
+        init_image, mask_image = build_sample_args(args)
+    except Exception as e:
+        args.status = -1; args.err_txt = str(e) # error status
+        if args.debug: raise
+        else: print("Error: " + args.err_txt)
+        return [],[]
 
     samples = []; sample_files = []
     stability_api = grpc_client.StabilityInference("localhost:50051", None, engine=args.model_name, verbose=False)
@@ -379,7 +393,7 @@ def get_samples(args, write=True, no_grid=False):
             args.status = -1; args.err_txt = str(e) # error status
             if args.debug: raise
             else: print("Error: " + args.err_txt)
-            return samples
+            return samples, sample_files
 
     if write and len(samples) > 1 and (not no_grid):
         save_samples_grid(samples, args) # if batch size > 1 and write to disk is enabled, save composite "grid image"
