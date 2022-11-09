@@ -114,7 +114,15 @@ def validate_resolution(width, height, init_image_dims):  # clip output dimensio
     height = np.clip(height, DEFAULT_SAMPLE_SETTINGS.resolution_granularity, DEFAULT_SAMPLE_SETTINGS.max_resolution[1])
 
     return int(width), int(height)
-    
+
+def soften_mask(np_rgba_image, softness):
+    if softness == 0: return np_rgba_image
+    blurred_mask = np_rgba_image[:,:,3] * np.clip(gdl_utils.gaussian_blur(np_rgba_image[:,:,3], 3.14/softness), 0., 1.) ** 8
+    blurred_mask -= np.min(blurred_mask)
+    blurred_mask /= np.max(blurred_mask)
+    np_rgba_image[:,:,3] = blurred_mask
+    return np_rgba_image
+
 def get_random_string(digits=8):
     uuid_str = str(uuid.uuid4())
     return uuid_str[0:digits] # shorten uuid, don't need that many digits usually
