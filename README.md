@@ -2,7 +2,7 @@
 
 ##  g-diffuser-bot - Discord bot and Interactive CLI for stable-diffusion-grpcserver
 
-Nov 08-2022 Update: In/out-painting and img2img (aka "riffing") has (finally) been added to the Discord bot.
+Nov 08-2022 Update: In/out-painting and img2img (aka "riffing") has (finally) been added to the Discord bot. New Discord bot command 'expand' allows you to change the canvas size of an input image while filling it with transparency, perfect for setting up out-painting.
 
 Nov 07-2022 Update: This update adds support for **clip guided models** and new parameters to control them. For now clip guidance has a heavy performance penalty, but this will improve with optimization. This update also adds **negative prompt support** to both the CLI and discord bot, and changes the default loaded models to include SD1.5 and SD1.5 with (small) clip. This update also adds several **new samplers (dpmspp_1, dpmspp_2, dpmspp_3)**.
 
