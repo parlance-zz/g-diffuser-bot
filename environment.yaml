@@ -1,13 +1,13 @@
 name: g_diffuser
 channels:
   - pytorch
-  - defaults
+  - nvidia
 dependencies:
-  - python=3.10
-  - pip
-  - cudatoolkit
   - pytorch
   - torchvision
+  - torchaudio
+  - pytorch-cuda=11.7
+  - python  
   - numpy 
   - pip:
     - docker
@@ -19,4 +19,3 @@ dependencies:
     - service_identity
     - grpcio
     - google-api-python-client
-    - diffusers
