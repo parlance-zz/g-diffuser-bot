@@ -55,8 +55,11 @@ import cv2
 from extensions import grpc_client
 from extensions import g_diffuser_utilities as gdl_utils
 
-from torch import autocast
+import torch
 
+if not torch.cuda.is_available():
+    raise Exception("Error: Torch CUDA is not available. Please run 'conda env update -f .\environment.yaml'")
+    
 global GRPC_SERVER_PROCESS
 GRPC_SERVER_PROCESS = None
 
@@ -297,7 +300,7 @@ def get_annotated_image(image, args):
 def load_image(args):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
     assert(DEFAULT_PATHS.inputs)
-    MASK_CUTOFF_THRESHOLD = 200. # this will force the image mask to 0 if opacity falls below a threshold. set to 255. to disable
+    MASK_CUTOFF_THRESHOLD = 215. # this will force the image mask to 0 if opacity falls below a threshold. set to 255. to disable
 
     final_init_img_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_img).as_posix()
     
@@ -483,7 +486,7 @@ def get_args_parser():
         "--model-name",
         type=str,
         default=DEFAULT_SAMPLE_SETTINGS.model_name,
-        help="diffusers model name",
+        help="model id as defined in models.yaml",
     )
     parser.add_argument(
         "--sampler",
@@ -495,7 +498,7 @@ def get_args_parser():
         "--command",
         type=str,
         default="sample",
-        help="diffusers command to execute",
+        help="command to execute",
     )    
     parser.add_argument(
         "--seed",
