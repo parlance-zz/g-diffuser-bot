@@ -305,7 +305,7 @@ def load_image(args):
     
     num_channels = init_image.shape[2]
     if num_channels == 4:     # input image has an alpha channel, setup mask for in/out-painting
-        args.noise_start = 1. # override img2img "strength", for in/out-painting this should always be maxed
+        args.noise_start = np.maximum(1., args.noise_start) # override img2img "strength" if it is < 1., for in/out-painting this should at least 1.
         mask_image = 255. - init_image[:,:,3] # extract mask from alpha channel and invert
         init_image = 0. + init_image[:,:,0:3]      # strip mask from init_img / convert to rgb
 
