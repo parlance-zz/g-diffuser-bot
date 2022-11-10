@@ -221,7 +221,10 @@ async def expand(
         new_width = cv2_img.shape[1] + left + right
         new_height = cv2_img.shape[0] + top + bottom
         new_img = np.zeros((new_height, new_width, 4), np.uint8) # expanded image is rgba
-        
+        new_img[:,:,0] = np.average(cv2_img[:,:,0])
+        new_img[:,:,1] = np.average(cv2_img[:,:,1])
+        new_img[:,:,2] = np.average(cv2_img[:,:,2])
+
         if cv2_img.shape[2] == 3: # rgb input image
             new_img[top:top+cv2_img.shape[0], left:left+cv2_img.shape[1], 0:3] = cv2_img
             new_img[top:top+cv2_img.shape[0], left:left+cv2_img.shape[1], 3] = 255 # fully opaque
@@ -230,7 +233,10 @@ async def expand(
         else:
             raise Exception("Unsupported image format: " + str(cv2_img.shape[2]) + " channels")
 
-        if softness > 0.: new_img = (gdl.soften_mask(new_img/255., softness/100.)*255.).astype(np.uint8)
+        if softness > 0.:
+            new_img = gdl.soften_mask(new_img/255., softness/100.)
+            new_img = (np.clip(new_img, 0., 1.)*255.).astype(np.uint8)
+
         new_img_fullpath = DEFAULT_PATHS.outputs+"/"+init_img+".expanded.png"
         cv2.imwrite(new_img_fullpath, new_img)
         await interaction.followup.send(content="@"+interaction.user.display_name+" - here's your expanded image:", file=discord.File(new_img_fullpath), ephemeral=True)
@@ -243,7 +249,7 @@ async def expand(
     return
 
 @client.tree.command(
-    name="dream",
+    name="g",
     description="create something",
 #    nsfw=(GRPC_SERVER_SETTINGS.nsfw_behaviour != "block"),
 )
@@ -266,7 +272,7 @@ async def expand(
     sampler=SAMPLER_CHOICES,
     model_name=MODEL_CHOICES,
 )
-async def dream(
+async def g(
     interaction: discord.Interaction,
     prompt: str,# = DEFAULT_SAMPLE_SETTINGS.prompt,
     model_name: Optional[app_commands.Choice[str]] = DEFAULT_SAMPLE_SETTINGS.model_name,
@@ -388,7 +394,7 @@ async def dream(
         args_dict = vars(gdl.strip_args(args, level=1))
         args_str = str(args_dict).replace("{","").replace("}","").replace('"', "").replace("'", "").replace(",", " ")
         args_str = "prompt: " + args_prompt + "  " + args_str + "  seed: " + str(args_seed)
-        message = "@" + interaction.user.display_name + ":  /dream "+ args_str
+        message = "@" + interaction.user.display_name + ":  /g "+ args_str
 
         try: await interaction.followup.send(files=attachment_files, content=message)
         except Exception as e: print("exception in await interaction - " + str(e))
