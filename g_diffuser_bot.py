@@ -194,10 +194,10 @@ async def expand(
     interaction: discord.Interaction,
     input_image_url: str,
     top: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
-    right: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
+    right: Optional[app_commands.Range[float, 0.0, 1000.0]] = 50.,
     bottom: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
-    left: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
-    softness: Optional[app_commands.Range[float, 0.0, 100.0]] = 0.,
+    left: Optional[app_commands.Range[float, 0.0, 1000.0]] = 50.,
+    softness: Optional[app_commands.Range[float, 0.0, 100.0]] = 100.,
 ):
     global DEFAULT_PATHS
 
@@ -221,9 +221,9 @@ async def expand(
         new_width = cv2_img.shape[1] + left + right
         new_height = cv2_img.shape[0] + top + bottom
         new_img = np.zeros((new_height, new_width, 4), np.uint8) # expanded image is rgba
-        new_img[:,:,0] = np.average(cv2_img[:,:,0])
-        new_img[:,:,1] = np.average(cv2_img[:,:,1])
-        new_img[:,:,2] = np.average(cv2_img[:,:,2])
+        #new_img[:,:,0] = np.average(cv2_img[:,:,0])
+        #new_img[:,:,1] = np.average(cv2_img[:,:,1])
+        #new_img[:,:,2] = np.average(cv2_img[:,:,2])
 
         if cv2_img.shape[2] == 3: # rgb input image
             new_img[top:top+cv2_img.shape[0], left:left+cv2_img.shape[1], 0:3] = cv2_img

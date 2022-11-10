@@ -120,7 +120,7 @@ def validate_resolution(width, height, init_image_dims):  # clip output dimensio
 
 def soften_mask(np_rgba_image, softness):
     if softness == 0: return np_rgba_image
-    blurred_mask = np_rgba_image[:,:,3] * np.clip(gdl_utils.gaussian_blur(np_rgba_image[:,:,3], 3.14/softness), 0., 1.) ** 8
+    blurred_mask = np_rgba_image[:,:,3] * np.clip(gdl_utils.gaussian_blur(np_rgba_image[:,:,3], 3.14/softness), 0., 1.) ** 12.
     blurred_mask -= np.min(blurred_mask)
     blurred_mask /= np.max(blurred_mask)
     np_rgba_image[:,:,3] = blurred_mask
@@ -300,7 +300,7 @@ def get_annotated_image(image, args):
 def load_image(args):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
     assert(DEFAULT_PATHS.inputs)
-    MASK_CUTOFF_THRESHOLD = 250. #215. # this will force the image mask to 0 if opacity falls below a threshold. set to 255. to disable
+    MASK_CUTOFF_THRESHOLD = 255. #215. # this will force the image mask to 0 if opacity falls below a threshold. set to 255. to disable
 
     final_init_img_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_img).as_posix()
     
@@ -322,8 +322,9 @@ def load_image(args):
 
         # apply mask cutoff threshold, this is required because bad paint programs corrupt color data by premultiplying alpha
         # using the 8-bit opacity mask, resulting in unexpected artifacts in areas that are almost but not completely erased
-        mask_image = mask_image*(mask_image < MASK_CUTOFF_THRESHOLD) + (mask_image >= MASK_CUTOFF_THRESHOLD)*255.
-        init_image *= gdl_utils.np_img_grey_to_rgb(mask_image) < 255. # force color data in erased areas to 0
+        if MASK_CUTOFF_THRESHOLD < 255.:
+            mask_image = mask_image*(mask_image < MASK_CUTOFF_THRESHOLD) + (mask_image >= MASK_CUTOFF_THRESHOLD)*255.
+            init_image *= gdl_utils.np_img_grey_to_rgb(mask_image) < 255. # force color data in erased areas to 0
 
         if args.sampler == "k_euler":
             print("Warning: k_euler is not currently supported for in-painting, switching to sampler=k_euler_ancestral")
