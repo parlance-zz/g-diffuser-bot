@@ -189,6 +189,7 @@ if __name__ == "__main__":
     left='expand left by how much (in %)?',
     input_image_url='input image url for expansion',
     softness='amount to soften the resulting mask (in %)',
+    space='distance erased from the edge of the original image',
 )
 async def expand(
     interaction: discord.Interaction,
@@ -198,6 +199,7 @@ async def expand(
     bottom: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
     left: Optional[app_commands.Range[float, 0.0, 1000.0]] = 50.,
     softness: Optional[app_commands.Range[float, 0.0, 100.0]] = 100.,
+    space: Optional[app_commands.Range[float, 1.0, 100.0]] = 2.,
 ):
     global DEFAULT_PATHS
 
@@ -234,7 +236,7 @@ async def expand(
             raise Exception("Unsupported image format: " + str(cv2_img.shape[2]) + " channels")
 
         if softness > 0.:
-            new_img = gdl.soften_mask(new_img/255., softness/100.)
+            new_img = gdl.soften_mask(new_img/255., softness/100., space)
             new_img = (np.clip(new_img, 0., 1.)*255.).astype(np.uint8)
 
         new_img_fullpath = DEFAULT_PATHS.outputs+"/"+init_img+".expanded.png"

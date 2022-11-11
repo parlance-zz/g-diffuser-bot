@@ -118,13 +118,14 @@ def validate_resolution(width, height, init_image_dims):  # clip output dimensio
 
     return int(width), int(height)
 
-def soften_mask(np_rgba_image, softness):
+def soften_mask(np_rgba_image, softness, space):
     if softness == 0: return np_rgba_image
     #blurred_mask = np_rgba_image[:,:,3] * np.clip(gdl_utils.gaussian_blur(np_rgba_image[:,:,3], 3.14/softness), 0., 1.) ** 32. # 12.
     out_mask = np_rgba_image[:,:,3] <= 0.
     blurred_mask = gdl_utils.gaussian_blur(np_rgba_image[:,:,3], 3.14/softness)
     blurred_mask = np.maximum(blurred_mask - np.max(blurred_mask[out_mask]), 0.)
     blurred_mask /= np.max(blurred_mask)
+    blurred_mask **= np.maximum(space, 1.)
     cv2.imwrite("blurred_mask.png", np.clip(blurred_mask*255., 0., 255.).astype(np.uint8))
 
     np_rgba_image[:,:,3] = blurred_mask
