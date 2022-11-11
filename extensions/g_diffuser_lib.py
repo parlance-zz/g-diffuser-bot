@@ -47,7 +47,6 @@ import re
 import subprocess
 import glob
 import socket
-import aiofiles
 
 import numpy as np
 import cv2
@@ -160,26 +159,11 @@ def save_image(cv2_image, file_path):
     cv2.imwrite(file_path, cv2_image)
     return
 
-async def save_image_async(cv2_image, file_path):
-    assert(file_path); (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
-    img_bytes = np.array(cv2.imencode(os.path.splitext(file_path)[1], cv2_image)[1]).tobytes()
-    async with aiofiles.open(file_path, mode="wb") as out_file:
-        await out_file.write(img_bytes)
-        await out_file.close()
-    return
-
 def save_json(_dict, file_path):
     assert(file_path); (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
     with open(file_path, "w") as file:
         json.dump(_dict, file, indent=4)
         file.close()
-    return
-    
-async def save_json_async(_dict, file_path):
-    assert(file_path); (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
-    async with aiofiles.open(file_path, "w") as file:
-        await file.write(json.dumps(_dict, indent=4))
-        await file.close()
     return
 
 def load_json(file_path):
@@ -302,7 +286,7 @@ def get_annotated_image(image, args):
 def load_image(args):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
     assert(DEFAULT_PATHS.inputs)
-    MASK_CUTOFF_THRESHOLD = 250. #215. # this will force the image mask to 0 if opacity falls below a threshold. set to 255. to disable
+    MASK_CUTOFF_THRESHOLD = 253. #215. # this will force the image mask to 0 if opacity falls below a threshold. set to 255. to disable
 
     final_init_img_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_img).as_posix()
     
