@@ -120,9 +120,13 @@ def validate_resolution(width, height, init_image_dims):  # clip output dimensio
 
 def soften_mask(np_rgba_image, softness):
     if softness == 0: return np_rgba_image
-    blurred_mask = np_rgba_image[:,:,3] * np.clip(gdl_utils.gaussian_blur(np_rgba_image[:,:,3], 3.14/softness), 0., 1.) ** 12.
-    blurred_mask -= np.min(blurred_mask)
+    #blurred_mask = np_rgba_image[:,:,3] * np.clip(gdl_utils.gaussian_blur(np_rgba_image[:,:,3], 3.14/softness), 0., 1.) ** 32. # 12.
+    out_mask = np_rgba_image[:,:,3] <= 0.
+    blurred_mask = gdl_utils.gaussian_blur(np_rgba_image[:,:,3], 3.14/softness)
+    blurred_mask = np.maximum(blurred_mask - np.max(blurred_mask[out_mask]), 0.)
     blurred_mask /= np.max(blurred_mask)
+    cv2.imwrite("blurred_mask.png", np.clip(blurred_mask*255., 0., 255.).astype(np.uint8))
+
     np_rgba_image[:,:,3] = blurred_mask
     return np_rgba_image
 
@@ -300,7 +304,7 @@ def get_annotated_image(image, args):
 def load_image(args):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
     assert(DEFAULT_PATHS.inputs)
-    MASK_CUTOFF_THRESHOLD = 255. #215. # this will force the image mask to 0 if opacity falls below a threshold. set to 255. to disable
+    MASK_CUTOFF_THRESHOLD = 250. #215. # this will force the image mask to 0 if opacity falls below a threshold. set to 255. to disable
 
     final_init_img_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_img).as_posix()
     
