@@ -17,8 +17,8 @@ Oct 22-2022 Update: Most of the annoying bugs in the Discord bot have now been f
  - Nov 01-2022: There are now many mature and rapidly evolving easy-to-use frontends and discord bots for Stable Diffusion. As a lone developer I do not have the time or resources to keep pace with these developments. I will do my best to continue to maintain the project, and may occasionally add new features, but this project is no longer my primary focus.
 
 ## Installation:
- - If you are running Windows 10 you may need to turn on "developer mode" before beginning the install instructions. Look for "developer settings" in the start menu.
  - System Requirements: Windows 10 (1903+), Windows 11, or Linux (Ubuntu 20+), nvidia GPU with at least 8GB VRAM, ~10GB free space for model downloads
+ - If you are running Windows 10 you may need to turn on "developer mode" before beginning the install instructions. Look for "developer settings" in the start menu.
  
  1)  git clone this repository to a folder of your choice (or click the green "code" button up top and click "download zip")
  2)  download / install miniconda (https://docs.conda.io/en/latest/miniconda.html)
