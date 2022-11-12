@@ -291,13 +291,13 @@ def load_image(args):
     final_init_img_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_img).as_posix()
     
     # load and resize input image to multiple of 8x8
-    init_image = cv2.imread(final_init_img_path, cv2.IMREAD_UNCHANGED).astype(np.float64)
+    init_image = cv2.imread(final_init_img_path, cv2.IMREAD_UNCHANGED) #.astype(np.float64)
     init_image_dims = (init_image.shape[1], init_image.shape[0])
     width, height = validate_resolution(args.w, args.h, init_image_dims)
     if (width, height) != (init_image.shape[1], init_image.shape[0]):
         if args.debug: print("Resizing input image to (" + str(width) + ", " + str(height) + ")")
         #init_image = cv2.resize(init_image, (width, height), interpolation=cv2.INTER_CUBIC)
-        init_image = cv2.resize(init_image, (width, height), interpolation=cv2.INTER_LANCZOS4)
+        init_image = np.clip(cv2.resize(init_image, (width, height), interpolation=cv2.INTER_LANCZOS4), 0, 255)
     args.w = width
     args.h = height
     
@@ -322,7 +322,7 @@ def load_image(args):
     else:
         raise Exception("Error loading init_image "+final_init_img_path+": unsupported image format")
 
-    return init_image.astype(np.uint8), mask_image.astype(np.uint8)
+    return init_image, mask_image
 
 def build_sample_args(args):
     global DEFAULT_SAMPLE_SETTINGS
