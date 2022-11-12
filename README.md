@@ -18,7 +18,7 @@ Oct 22-2022 Update: Most of the annoying bugs in the Discord bot have now been f
 
 ## Installation:
  - System Requirements: Windows 10 (1903+), Windows 11, or Linux (Ubuntu 20+), nvidia GPU with at least 8GB VRAM, ~10GB free space for model downloads
- - If you are running Windows 10 you may need to turn on "developer mode" before beginning the install instructions. Look for "developer settings" in the start menu.
+ - If you are running Windows 10/11 you may need to turn on "developer mode" before beginning the install instructions. Look for "developer settings" in the start menu.
  
  1)  git clone this repository to a folder of your choice (or click the green "code" button up top and click "download zip")
  2)  download / install miniconda (https://docs.conda.io/en/latest/miniconda.html)
