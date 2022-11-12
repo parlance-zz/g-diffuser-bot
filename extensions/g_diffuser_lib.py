@@ -286,7 +286,7 @@ def get_annotated_image(image, args):
 def load_image(args):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
     assert(DEFAULT_PATHS.inputs)
-    MASK_CUTOFF_THRESHOLD = 222. #215. # this will force the image mask to 0 if opacity falls below a threshold. set to 255. to disable
+    MASK_CUTOFF_THRESHOLD = 255.#242. #215. # this will force the image mask to 0 if opacity falls below a threshold. set to 255. to disable
 
     final_init_img_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_img).as_posix()
     
@@ -296,8 +296,8 @@ def load_image(args):
     width, height = validate_resolution(args.w, args.h, init_image_dims)
     if (width, height) != (init_image.shape[1], init_image.shape[0]):
         if args.debug: print("Resizing input image to (" + str(width) + ", " + str(height) + ")")
-        #init_image = cv2.resize(init_image, (width, height), interpolation=cv2.INTER_CUBIC)
-        init_image = np.clip(cv2.resize(init_image, (width, height), interpolation=cv2.INTER_LANCZOS4), 0, 255)
+        init_image = cv2.resize(init_image, (width, height), interpolation=cv2.INTER_CUBIC)
+        #init_image = np.clip(cv2.resize(init_image, (width, height), interpolation=cv2.INTER_LANCZOS4), 0, 255)
     args.w = width
     args.h = height
     
