@@ -49,6 +49,7 @@ Optional: edit g_diffuser_config.py and g_diffuser_defaults.py to change any oth
 
 ## Updating:
  - Simply git pull or download and replace your files with those from this repository. You probably won't need to replace your g_diffuser_config.py or g_diffuser_defaults.py files, but you may need to merge changes.
+ - The conda environment is sometimes (rarely) updated to include new requirements. If you git pull and get an error running the software try updating the conda environment with any new dependencies by running "conda env update -f environment.yaml"
 
 ## Troubleshooting:
  - Better install instructions are (always) coming
