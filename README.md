@@ -1,6 +1,7 @@
 ![https://www.stablecabal.org](https://raw.githubusercontent.com/parlance-zz/g-diffuser-bot/dev/part_of_stable_cabal.png) https://www.stablecabal.org
 
 ##  [g-diffuser-bot](https://www.g-diffuser.com) - Discord bot and interface for Stable Diffusion
+- [G-Diffuser / Stable Cabal Discord](https://discord.gg/stFy2UPppg)
 
 Nov 11-2022 Update: I've created a website to showcase a demo gallery of out-painting images made using g-diffuser bot - https://www.g-diffuser.com/
 
