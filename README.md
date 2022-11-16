@@ -53,5 +53,6 @@ Optional: edit g_diffuser_config.py and g_diffuser_defaults.py to change any oth
 
 ## Troubleshooting:
  - Better install instructions are (always) coming
+ - Docker Desktop depends on WSL2 (Windows subsystem for Linux). For best results always make sure you're using the latest version of WSL by opening a command prompt as administrator and running "wsl --update"
  - Docker Desktop has a helpful GUI that you can use to keep track of the gRPC server and it's Docker "container". You can view the server parameters it was launched with, restart it or shut it down, and view the console output to track down any errors from the grpc server side. In some rare cases (or when updating) you may need to delete the existing "image" from the docker images list.
  - If you have questions or problems running g-diffuser-bot, please post as much detailed information as you can in (https://github.com/parlance-zz/g-diffuser-bot/discussions/categories/q-a), either myself or someone in the community may be able to help you. Thank you for your patience.
