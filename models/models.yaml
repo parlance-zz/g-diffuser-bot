@@ -100,10 +100,10 @@
 # This is the main Stable Diffusion V1.5 model
 - id: "stable-diffusion-v1-5"
   # You can set enabled to False to temporarily prevent it from being loaded
-  enabled: True
+  enabled: False
   # You can set visible to False to make the engine available but prevent it from showing 
   # up in the API list (directly requesting it works)
-  visible: True
+  visible: False
   # This name can be used by User Interfaces
   name: "Stable Diffusion V1.5"
   # This description can be used by User Interfaces
