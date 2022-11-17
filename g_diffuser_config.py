@@ -31,7 +31,7 @@ DEFAULT_PATHS.sdgrpcserver_docker_volume = ""
 # - Discord bot setup guide: https://www.writebots.com/discord-bot-token/
 DISCORD_BOT_SETTINGS.token = "YOUR_DISCORD_BOT_TOKEN_HERE"
 DISCORD_BOT_SETTINGS.guilds = [1021168973582184548] # IMPORTANT - Enter your discord guild/server id(s) here
-DISCORD_BOT_SETTINGS.model_list = ["stable-diffusion-v1-5", "stable-diffusion-v1-5-clip-small"] # IMPORTANT - model id's to be accessible from the discord bot (from ./models/models.yaml)
+DISCORD_BOT_SETTINGS.model_list = ["stable-diffusion-v1-5-clip-small"] # IMPORTANT - model id's to be accessible from the discord bot (from ./models/models.yaml)
 DISCORD_BOT_SETTINGS.max_queue_length = 1000     # beyond this limit additional commands will be rejected
 DISCORD_BOT_SETTINGS.default_output_n = 1        # default batch size to create images
 DISCORD_BOT_SETTINGS.max_output_limit = 3        # max number of samples to create simultaneously with -n param
