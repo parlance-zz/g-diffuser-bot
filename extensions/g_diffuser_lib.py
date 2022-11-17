@@ -286,7 +286,7 @@ def get_annotated_image(image, args):
 def load_image(args):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
     assert(DEFAULT_PATHS.inputs)
-    MASK_CUTOFF_THRESHOLD = 255.#242. #215. # this will force the image mask to 0 if opacity falls below a threshold. set to 255. to disable
+    MASK_CUTOFF_THRESHOLD = 232.     # this will force the image mask to 0 if opacity falls below a threshold. set to 255. to disable
 
     final_init_img_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_img).as_posix()
     
@@ -303,7 +303,7 @@ def load_image(args):
     
     num_channels = init_image.shape[2]
     if num_channels == 4:     # input image has an alpha channel, setup mask for in/out-painting
-        args.noise_start = np.maximum(1., args.noise_start) # override img2img "strength" if it is < 1., for in/out-painting this should at least 1.
+        args.noise_start = np.maximum(DEFAULT_SAMPLE_SETTINGS.min_outpaint_noise, args.noise_start) # override img2img "strength" if it is < 1., for in/out-painting this should at least 1.
         mask_image = 255. - init_image[:,:,3] # extract mask from alpha channel and invert
         init_image = 0. + init_image[:,:,0:3]      # strip mask from init_img / convert to rgb
 
@@ -445,8 +445,8 @@ def start_grpc_server(args):
     else:
         print("Starting GRPC server...")
 
-    #grpc_server_run_string = "docker run --pull always --gpus all -p 50051:50051 -e HF_API_TOKEN="+GRPC_SERVER_SETTINGS.hf_token
-    grpc_server_run_string = "docker run --gpus all -p 50051:50051 -e HF_API_TOKEN="+GRPC_SERVER_SETTINGS.hf_token
+    grpc_server_run_string = "docker run --pull always --gpus all -p 50051:50051 -e HF_API_TOKEN="+GRPC_SERVER_SETTINGS.hf_token
+    #grpc_server_run_string = "docker run --gpus all -p 50051:50051 -e HF_API_TOKEN="+GRPC_SERVER_SETTINGS.hf_token
     if GRPC_SERVER_SETTINGS.enable_local_network_access: grpc_server_run_string += " -e SD_LISTEN_TO_ALL=1"
     if GRPC_SERVER_SETTINGS.enable_mps: grpc_server_run_string += " -e SD_ENABLE_MPS=1"
     if GRPC_SERVER_SETTINGS.refresh_models: grpc_server_run_string += " -e SD_REFRESH_MODELS=*"
