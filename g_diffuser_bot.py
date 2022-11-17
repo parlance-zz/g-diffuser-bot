@@ -198,8 +198,8 @@ async def expand(
     right: Optional[app_commands.Range[float, 0.0, 1000.0]] = 50.,
     bottom: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
     left: Optional[app_commands.Range[float, 0.0, 1000.0]] = 50.,
-    softness: Optional[app_commands.Range[float, 0.0, 100.0]] = 100.,
-    space: Optional[app_commands.Range[float, 1.0, 100.0]] = 2.,
+    softness: Optional[app_commands.Range[float, 0.0, 1000.0]] = 40.,
+    space: Optional[app_commands.Range[float, 0.1, 100.0]] = 1.,
 ):
     global DEFAULT_PATHS
 
@@ -390,7 +390,8 @@ async def g(
         if "noise_start" in args:
             noise_start = args.noise_start
             del args.noise_start
-            if noise_start != 1.: args.img2img_strength = noise_start
+            if noise_start != DEFAULT_SAMPLE_SETTINGS.min_outpaint_noise:
+                args.img2img_strength = noise_start
 
         # construct args string for echo / acknowledgement
         args_dict = vars(gdl.strip_args(args, level=1))
