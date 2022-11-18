@@ -9,10 +9,11 @@ dependencies:
   - pytorch-cuda=11.7
   - python  
   - numpy 
+  - opencv
+  - pip
   - pip:
     - docker
     - pyyaml
-    - opencv-python
     - aiofiles
     - discord
     - wsgicors
