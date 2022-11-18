@@ -298,7 +298,7 @@ def cli_expand(init_img, top=0., right=0., bottom=0., left=0., softness=40., spa
     global DEFAULT_PATHS
 
     init_img_fullpath = DEFAULT_PATHS.inputs+"/"+init_img
-    cv2_img = cv2.imread(init_img_fullpath, cv2.IMREAD_COLOR)
+    cv2_img = cv2.imread(init_img_fullpath)
     
     new_img = gdl.expand_image(cv2_img, top, right, bottom, left, softness, space)
     new_img_fullpath = DEFAULT_PATHS.inputs+"/"+ os.path.splitext(init_img)[0]+".expanded.png"
@@ -384,7 +384,7 @@ def cli_save_comparison_grid(*paths, **kwargs):
 
         samples = []
         for file in path_files:
-            img = cv2.imread(file, cv2.IMREAD_COLOR)
+            img = cv2.imread(file)
             max_sample_width = np.maximum(max_sample_width, img.shape[0])
             max_sample_height = np.maximum(max_sample_height, img.shape[1])
             samples.append(img)
