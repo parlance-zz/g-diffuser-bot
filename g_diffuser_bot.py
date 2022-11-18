@@ -216,31 +216,10 @@ async def expand(
         init_img_fullpath = DEFAULT_PATHS.inputs+"/"+init_img
         cv2_img = cv2.imread(init_img_fullpath)
 
-        top = int(top / 100. * cv2_img.shape[0])
-        right = int(right / 100. * cv2_img.shape[1])
-        bottom = int(bottom / 100. * cv2_img.shape[0])
-        left = int(left / 100. * cv2_img.shape[1])
-        new_width = cv2_img.shape[1] + left + right
-        new_height = cv2_img.shape[0] + top + bottom
-        new_img = np.zeros((new_height, new_width, 4), np.uint8) # expanded image is rgba
-        #new_img[:,:,0] = np.average(cv2_img[:,:,0])
-        #new_img[:,:,1] = np.average(cv2_img[:,:,1])
-        #new_img[:,:,2] = np.average(cv2_img[:,:,2])
-
-        if cv2_img.shape[2] == 3: # rgb input image
-            new_img[top:top+cv2_img.shape[0], left:left+cv2_img.shape[1], 0:3] = cv2_img
-            new_img[top:top+cv2_img.shape[0], left:left+cv2_img.shape[1], 3] = 255 # fully opaque
-        elif cv2_img.shape[2] == 4: # rgba input image
-            new_img[top:top+cv2_img.shape[0], left:left+cv2_img.shape[1]] = cv2_img
-        else:
-            raise Exception("Unsupported image format: " + str(cv2_img.shape[2]) + " channels")
-
-        if softness > 0.:
-            new_img = gdl.soften_mask(new_img/255., softness/100., space)
-            new_img = (np.clip(new_img, 0., 1.)*255.).astype(np.uint8)
-
+        new_img = gdl.expand_image(cv2_img, top, right, bottom, left, softness, space)
         new_img_fullpath = DEFAULT_PATHS.outputs+"/"+init_img+".expanded.png"
-        cv2.imwrite(new_img_fullpath, new_img)
+        gdl.save_image(new_img, new_img_fullpath)
+        print("Saved " + new_img_fullpath)
         await interaction.followup.send(content="@"+interaction.user.display_name+" - here's your expanded image:", file=discord.File(new_img_fullpath), ephemeral=True)
 
     except Exception as e:
@@ -276,7 +255,8 @@ async def expand(
 )
 async def g(
     interaction: discord.Interaction,
-    prompt: str,# = DEFAULT_SAMPLE_SETTINGS.prompt,
+    #prompt: str,
+    prompt: Optional[str] = "",
     model_name: Optional[app_commands.Choice[str]] = DEFAULT_SAMPLE_SETTINGS.model_name,
     sampler: Optional[app_commands.Choice[str]] = DEFAULT_SAMPLE_SETTINGS.sampler,
     width: Optional[app_commands.Range[int, 64, DEFAULT_SAMPLE_SETTINGS.max_resolution[0]]] = DEFAULT_SAMPLE_SETTINGS.resolution[0],
@@ -296,9 +276,10 @@ async def g(
     except Exception as e: print("exception in await interaction - " + str(e))
     
     if not prompt:
-        try: await interaction.followup.send(content="sorry @"+interaction.user.display_name+", please enter a prompt", ephemeral=True)
-        except Exception as e: print("exception in await interaction - " + str(e))
-        return
+        prompt = " "
+        #try: await interaction.followup.send(content="sorry @"+interaction.user.display_name+", please enter a prompt", ephemeral=True)
+        #except Exception as e: print("exception in await interaction - " + str(e))
+        #return
 
     if input_image_url != "":
         init_img = await download_attachment(input_image_url)
