@@ -127,6 +127,29 @@ def soften_mask(np_rgba_image, softness, space):
     np_rgba_image[:,:,3] = blurred_mask
     return np_rgba_image
 
+def expand_image(cv2_img, top, right, bottom, left, softness, space):
+    top = int(top / 100. * cv2_img.shape[0])
+    right = int(right / 100. * cv2_img.shape[1])
+    bottom = int(bottom / 100. * cv2_img.shape[0])
+    left = int(left / 100. * cv2_img.shape[1])
+    new_width = cv2_img.shape[1] + left + right
+    new_height = cv2_img.shape[0] + top + bottom
+    new_img = np.zeros((new_height, new_width, 4), np.uint8) # expanded image is rgba
+
+    if cv2_img.shape[2] == 3: # rgb input image
+        new_img[top:top+cv2_img.shape[0], left:left+cv2_img.shape[1], 0:3] = cv2_img
+        new_img[top:top+cv2_img.shape[0], left:left+cv2_img.shape[1], 3] = 255 # fully opaque
+    elif cv2_img.shape[2] == 4: # rgba input image
+        new_img[top:top+cv2_img.shape[0], left:left+cv2_img.shape[1]] = cv2_img
+    else:
+        raise Exception("Unsupported image format: " + str(cv2_img.shape[2]) + " channels")
+        
+    if softness > 0.:
+        new_img = soften_mask(new_img/255., softness/100., space)
+        new_img = (np.clip(new_img, 0., 1.)*255.).astype(np.uint8)
+
+    return new_img
+
 def get_random_string(digits=8):
     uuid_str = str(uuid.uuid4())
     return uuid_str[0:digits] # shorten uuid, don't need that many digits usually
@@ -479,7 +502,7 @@ def get_args_parser():
     parser.add_argument(
         "--sampler",
         type=str,
-        default="k_euler",
+        default=DEFAULT_SAMPLE_SETTINGS.sampler,
         help="sampler to use (ddim, plms, k_euler, k_euler_ancestral, k_heun, k_dpm_2, k_dpm_2_ancestral, k_lms)"
     )  
     parser.add_argument(
