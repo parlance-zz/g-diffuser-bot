@@ -314,7 +314,7 @@ def load_image(args):
     final_init_img_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_img).as_posix()
     
     # load and resize input image to multiple of 8x8
-    init_image = cv2.imread(final_init_img_path, cv2.IMREAD_UNCHANGED) #.astype(np.float64)
+    init_image = cv2.imread(final_init_img_path, cv2.IMREAD_COLOR) #.astype(np.float64)
     init_image_dims = (init_image.shape[1], init_image.shape[0])
     width, height = validate_resolution(args.w, args.h, init_image_dims)
     if (width, height) != (init_image.shape[1], init_image.shape[0]):

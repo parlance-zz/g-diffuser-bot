@@ -214,7 +214,7 @@ async def expand(
     try:
         init_img = await download_attachment(input_image_url)
         init_img_fullpath = DEFAULT_PATHS.inputs+"/"+init_img
-        cv2_img = cv2.imread(init_img_fullpath)
+        cv2_img = cv2.imread(init_img_fullpath, cv2.IMREAD_COLOR)
 
         new_img = gdl.expand_image(cv2_img, top, right, bottom, left, softness, space)
         new_img_fullpath = DEFAULT_PATHS.outputs+"/"+init_img+".expanded.png"

@@ -170,7 +170,7 @@ def cli_get_samples(prompt=None, **kwargs):
     args = argparse.Namespace(**(vars(INTERACTIVE_CLI_ARGS) | kwargs)) # merge with keyword args
     if prompt: args.prompt = prompt
     else: args.prompt = " "
-    
+
     if args.n <= 0: print("Repeating sample, press ctrl+c to stop...")
     
     args.init_time = str(datetime.datetime.now()) # time the command was created / queued
@@ -298,7 +298,7 @@ def cli_expand(init_img, top=0., right=0., bottom=0., left=0., softness=40., spa
     global DEFAULT_PATHS
 
     init_img_fullpath = DEFAULT_PATHS.inputs+"/"+init_img
-    cv2_img = cv2.imread(init_img_fullpath)
+    cv2_img = cv2.imread(init_img_fullpath, cv2.IMREAD_COLOR)
     
     new_img = gdl.expand_image(cv2_img, top, right, bottom, left, softness, space)
     new_img_fullpath = DEFAULT_PATHS.inputs+"/"+ os.path.splitext(init_img)[0]+".expanded.png"
@@ -384,7 +384,7 @@ def cli_save_comparison_grid(*paths, **kwargs):
 
         samples = []
         for file in path_files:
-            img = cv2.imread(file)
+            img = cv2.imread(file, cv2.IMREAD_COLOR)
             max_sample_width = np.maximum(max_sample_width, img.shape[0])
             max_sample_height = np.maximum(max_sample_height, img.shape[1])
             samples.append(img)
