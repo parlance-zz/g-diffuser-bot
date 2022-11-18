@@ -191,7 +191,7 @@ def cli_get_samples(prompt=None, **kwargs):
         if args.debug: print("Error saving sample args - " + str(e))
 
     if args.debug: gdl.print_namespace(args, debug=0, verbosity_level=1)
-    return
+    return args
     
 def cli_show_args(level=None):
     global INTERACTIVE_CLI_ARGS
@@ -294,14 +294,18 @@ def cli_rename(old_path, new_path):
     print("Renamed '"+old_path+"' to '"+new_path+"'")
     return   
 
-def cli_expand(init_img, top=0., right=0., bottom=0., left=0., softness=40., space=1.):
+def cli_expand(init_img, top=0., right=0., bottom=0., left=0., softness=40., space=1., output_file=""):
     global DEFAULT_PATHS
 
     init_img_fullpath = DEFAULT_PATHS.inputs+"/"+init_img
     cv2_img = cv2.imread(init_img_fullpath)
     
     new_img = gdl.expand_image(cv2_img, top, right, bottom, left, softness, space)
-    new_img_fullpath = DEFAULT_PATHS.inputs+"/"+ os.path.splitext(init_img)[0]+".expanded.png"
+    if not output_file:
+        new_img_fullpath = DEFAULT_PATHS.inputs+"/"+ os.path.splitext(init_img)[0]+".expanded.png"
+    else:
+        new_img_fullpath = DEFAULT_PATHS.inputs+"/"+output_file
+
     gdl.save_image(new_img, new_img_fullpath)
     print("Saved " + new_img_fullpath)
     return
