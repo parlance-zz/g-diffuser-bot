@@ -69,6 +69,10 @@ restore("my_path")              # moves the specified output path from ./backups
 save("my_path")                 # copies the specified output path from ./outputs to ./saved
 rename("old_path", "new_path")  # renames the specified output path in ./outputs
 
+expand("outpaint.png", top=10, bottom=30, left=0, right=40, space=1)  # expands the canvas of an input image and
+                                                                      # softens the mask, perfect for outpainting
+                                                                      # values for top/bottom/left/right are in %
+
 resample("old_path", "new_path", scale=20)  # regenerate all saved outputs in old_path into new_path with replacement arguments
 compare("path1", "path2", "path3")          # make a comparison grid from all images in the specified output paths
 compare("a", "b", mode="rows")              # arrange each output path's images into rows instead
@@ -133,6 +137,7 @@ def main():
         cli_locals.save = cli_save
         cli_locals.rename = cli_rename
         cli_locals.move = cli_rename
+        cli_locals.expand = cli_expand
         cli_locals.resample = cli_resample
         cli_locals.compare = cli_save_comparison_grid
         cli_locals.show = cli_show
@@ -164,6 +169,8 @@ def cli_get_samples(prompt=None, **kwargs):
     global INTERACTIVE_CLI_ARGS, LAST_ARGS_PATH
     args = argparse.Namespace(**(vars(INTERACTIVE_CLI_ARGS) | kwargs)) # merge with keyword args
     if prompt: args.prompt = prompt
+    else: args.prompt = " "
+    
     if args.n <= 0: print("Repeating sample, press ctrl+c to stop...")
     
     args.init_time = str(datetime.datetime.now()) # time the command was created / queued
@@ -286,6 +293,18 @@ def cli_rename(old_path, new_path):
     shutil.move(DEFAULT_PATHS.outputs+"/"+old_path, DEFAULT_PATHS.outputs+"/"+new_path)
     print("Renamed '"+old_path+"' to '"+new_path+"'")
     return   
+
+def cli_expand(init_img, top=0., right=0., bottom=0., left=0., softness=40., space=1.):
+    global DEFAULT_PATHS
+
+    init_img_fullpath = DEFAULT_PATHS.inputs+"/"+init_img
+    cv2_img = cv2.imread(init_img_fullpath)
+    
+    new_img = gdl.expand_image(cv2_img, top, right, bottom, left, softness, space)
+    new_img_fullpath = DEFAULT_PATHS.inputs+"/"+ os.path.splitext(init_img)[0]+".expanded.png"
+    gdl.save_image(new_img, new_img_fullpath)
+    print("Saved " + new_img_fullpath)
+    return
 
 def cli_resample(old_path, new_path, **kwargs):
     resample_args = argparse.Namespace(**kwargs)
