@@ -1,3 +1,6 @@
+# my apologies for the speed of rendering, this was cobbled together pretty quicl just to test the idea
+# I'll probably upgrade it soon to do compositing on GPU for more speed
+
 import cv2
 import glob
 import numpy as np
@@ -5,19 +8,18 @@ import numpy as np
 from g_diffuser_config import DEFAULT_PATHS
 from extensions import g_diffuser_utilities as gdu
 
-frames_path = "Face_portrait_of_a_retrofuturistic_assassin_surrounded_by_advanced_brutalist_architecture_highly_det"
+frames_path = "art_by_remedios_varo"
 expand_top = 50      # the expand values here should match the values used to create the frames
 expand_bottom = 50
 expand_left = 50
 expand_right = 50
-expand_softness = 80.
+expand_softness = 85.#80.
 expand_space = 1.
 start_in_black_void = True   # enabled to start zooming out from a black void instead of starting on the first frame
-num_interpolated_frames = 30 # number of interpolated frames per keyframe
-frame_rate = 30              # fps of the output videos
+num_interpolated_frames = 60 # number of interpolated frames per keyframe
+frame_rate = 60              # fps of the output videos
 
 frames = sorted(glob.glob(DEFAULT_PATHS.outputs+"/"+frames_path+"/*.png"), reverse=True)
-#frames = frames[0:50]
 frames_filenames = frames.copy()
 for f in range(len(frames)):
     print("Expanding frame {0}/{1}...".format(f+1, len(frames)))
@@ -37,14 +39,14 @@ for _x in range(size[1]): remap_y[_x, :] = y
 
 if start_in_black_void: start_offset = -6
 else: start_offset = 1
-for f in range(start_offset, len(frames)-2):
+for f in range(start_offset, len(frames)-1):
     print("Rendering {0}/{1}...".format(f+1, len(frames)-1))
 
     for i in range(num_interpolated_frames):
-        t = f + i/num_interpolated_frames + 1.
+        t = f + i/num_interpolated_frames
 
         blended_frame = frames[0][:,:,0:3]*0.
-        start_frame = int(np.clip(t+0.5-3., 0, len(frames)-1))
+        start_frame = int(np.clip(t+0.5-4., 0, len(frames)-1))
         end_frame = int(np.clip(t+0.5+2., 1, len(frames)))
         for f0 in range(start_frame, end_frame):
             z = f0 - t + 1.
@@ -62,7 +64,7 @@ for f in range(start_offset, len(frames)-2):
         
         result.write(blended_frame.astype(np.uint8))
 
-for i in range(frame_rate*2): # linger on the last frame for 2 seconds
+for i in range(frame_rate*3): # linger on the last frame for 3 seconds
     result.write(blended_frame.astype(np.uint8))
 
 result.release()
