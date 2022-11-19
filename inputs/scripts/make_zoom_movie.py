@@ -10,7 +10,7 @@ from extensions import g_diffuser_utilities as gdu
 
 frames_path = "art_by_remedios_varo"
 expand_top = 50      # the expand values here should match the values used to create the frames
-expand_bottom = 50
+expand_bottom = 50   # these values are in % of the original image size
 expand_left = 50
 expand_right = 50
 expand_softness = 85.#80.
@@ -20,6 +20,7 @@ num_interpolated_frames = 60 # number of interpolated frames per keyframe
 frame_rate = 60              # fps of the output videos
 
 frames = sorted(glob.glob(DEFAULT_PATHS.outputs+"/"+frames_path+"/*.png"), reverse=True)
+#frames = frames[0:12] # just render the first 12 keyframes for testing
 frames_filenames = frames.copy()
 for f in range(len(frames)):
     print("Expanding frame {0}/{1}...".format(f+1, len(frames)))
