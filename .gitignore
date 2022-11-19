@@ -6,4 +6,5 @@ __pycache__/
 *.jpg
 *.jpeg
 *.log
+*.mp4
 !part_of_stable_cabal.png
