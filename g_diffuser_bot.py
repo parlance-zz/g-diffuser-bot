@@ -194,11 +194,11 @@ if __name__ == "__main__":
 async def expand(
     interaction: discord.Interaction,
     input_image_url: str,
-    top: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
-    right: Optional[app_commands.Range[float, 0.0, 1000.0]] = 50.,
-    bottom: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
-    left: Optional[app_commands.Range[float, 0.0, 1000.0]] = 50.,
-    softness: Optional[app_commands.Range[float, 0.0, 1000.0]] = 40.,
+    top: Optional[app_commands.Range[float, 0.0, 1000.0]] = 25.,
+    right: Optional[app_commands.Range[float, 0.0, 1000.0]] = 25.,
+    bottom: Optional[app_commands.Range[float, 0.0, 1000.0]] = 25.,
+    left: Optional[app_commands.Range[float, 0.0, 1000.0]] = 25.,
+    softness: Optional[app_commands.Range[float, 0.0, 1000.0]] = 85.,
     space: Optional[app_commands.Range[float, 0.1, 100.0]] = 1.,
 ):
     global DEFAULT_PATHS
