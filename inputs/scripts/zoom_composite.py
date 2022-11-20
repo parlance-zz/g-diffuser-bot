@@ -18,19 +18,19 @@ expand_left = 50
 expand_right = 50
 expand_softness = 80.
 expand_space = 1.
-start_in_black_void = True    # enabled to start zooming out from a black void instead of starting on the first frame
+start_in_black_void = False   # enabled to start zooming out from a black void instead of starting on the first frame
 num_interpolated_frames = 200 # number of interpolated frames per keyframe
 frame_rate = 60               # fps of the output video
 output_file = "zoom.mp4"      # name of output file (this will be saved in the folder with the key frames)
 preview_output = False        # if enabled this will show a preview of the video in a window as it renders
-
+video_size = (1920, 1080)
 
 # find keyframes and sort them
 frame_filenames = sorted(glob.glob(DEFAULT_PATHS.outputs+"/"+frames_path+"/*.png"), reverse=True)
 num_keyframes = len(frame_filenames)
 frame0_cv2_image = cv2.imread(frame_filenames[0])
 source_size = (int(frame0_cv2_image.shape[1]), int(frame0_cv2_image.shape[0]))
-video_size = (source_size[0]*2, source_size[1]*2)
+#video_size = (source_size[0]*2, source_size[1]*2)
 
 # setup opengl for compositing via pygame
 pygame.init()
@@ -63,8 +63,8 @@ frame_pixels = (GLubyte * (4*video_size[0]*video_size[1]))(0)
 
 if preview_output: # show video window if preview is enabled
     pygame.display.set_mode(video_size, SHOWN|DOUBLEBUF|OPENGL, vsync=0)
-if start_in_black_void: start_offset = -3 # start by zooming in from a black screen if enabled
-else: start_offset = 0 # otherwise start on the first keyframe
+if start_in_black_void: start_offset = -2 # start by zooming in from a black screen if enabled
+else: start_offset = 2 # otherwise start very slightly pulled back from the first keyframe
 
 try:
     for f in range(start_offset, num_keyframes-1):
