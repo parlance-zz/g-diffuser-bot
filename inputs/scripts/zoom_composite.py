@@ -11,7 +11,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 
 # this is the folder relative to the output path where the keyframes are stored
-frames_path = "art_by_edward_hopper_jesper_ejsing,_by_rhads,_makoto_shinkai_and_lois_van_baarle,_ilya_kuvshinov,_ro"
+frames_path = "Agfa_vista_400_photograph_of_a_cluttered_90s_teenagers_bedroom,_synth_vibe,_vaporwave_colors,_lens_f"
 expand_top = 50      # **the expand values here should match the values used to create the frames**
 expand_bottom = 50   # these values are in % of the original image size
 expand_left = 50
@@ -67,8 +67,8 @@ if start_in_black_void: start_offset = -2 # start by zooming in from a black scr
 else: start_offset = 2 # otherwise start very slightly pulled back from the first keyframe
 
 try:
-    for f in range(start_offset, num_keyframes-1):
-        print("Rendering {0}/{1}...".format(f+1, num_keyframes-1))
+    for f in range(start_offset, num_keyframes):
+        print("Rendering {0}/{1}...".format(f+1, num_keyframes))
         for i in range(num_interpolated_frames):
             glClear(GL_COLOR_BUFFER_BIT)
 
