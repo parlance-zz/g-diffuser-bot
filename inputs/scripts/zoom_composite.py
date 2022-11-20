@@ -19,9 +19,9 @@ expand_right = 50
 expand_softness = 80.
 expand_space = 1.
 start_in_black_void = True    # enabled to start zooming out from a black void instead of starting on the first frame
-num_interpolated_frames = 90  # number of interpolated frames per keyframe
-frame_rate = 60               # fps of the output videos
-output_file = "zoom.mp4"      # name of output file to save in ./outputs
+num_interpolated_frames = 100 # number of interpolated frames per keyframe
+frame_rate = 60               # fps of the output video
+output_file = "zoom.mp4"      # name of output file (this will be saved in the folder with the key frames)
 preview_output = False        # if enabled this will show a preview of the video in a window as it renders
 
 
@@ -63,19 +63,16 @@ frame_pixels = (GLubyte * (4*video_size[0]*video_size[1]))(0)
 
 if preview_output: # show video window if preview is enabled
     pygame.display.set_mode(video_size, SHOWN|DOUBLEBUF|OPENGL, vsync=0)
-
-if start_in_black_void: start_offset = -5 # start by zooming in from a black screen if enabled
+if start_in_black_void: start_offset = -3 # start by zooming in from a black screen if enabled
 else: start_offset = 0 # otherwise start on the first keyframe
 
 try:
     for f in range(start_offset, num_keyframes-1):
         print("Rendering {0}/{1}...".format(f+1, num_keyframes-1))
-
         for i in range(num_interpolated_frames):
-            t = f + i/num_interpolated_frames
-
             glClear(GL_COLOR_BUFFER_BIT)
 
+            t = f + i/num_interpolated_frames
             start_frame = int(np.clip(t+0.5-6., 0, num_keyframes-1))
             end_frame = int(np.clip(t+0.5+6., 1, num_keyframes))
             for f0 in range(start_frame, end_frame):
