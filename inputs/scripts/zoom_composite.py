@@ -11,7 +11,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 
 # this is the folder relative to the output path where the keyframes are stored
-frames_path = "coolzoom"
+frames_path = "art_by_edward_hopper_jesper_ejsing,_by_rhads,_makoto_shinkai_and_lois_van_baarle,_ilya_kuvshinov,_ro"
 expand_top = 50      # **the expand values here should match the values used to create the frames**
 expand_bottom = 50   # these values are in % of the original image size
 expand_left = 50
@@ -19,7 +19,7 @@ expand_right = 50
 expand_softness = 80.
 expand_space = 1.
 start_in_black_void = True    # enabled to start zooming out from a black void instead of starting on the first frame
-num_interpolated_frames = 100 # number of interpolated frames per keyframe
+num_interpolated_frames = 200 # number of interpolated frames per keyframe
 frame_rate = 60               # fps of the output video
 output_file = "zoom.mp4"      # name of output file (this will be saved in the folder with the key frames)
 preview_output = False        # if enabled this will show a preview of the video in a window as it renders
