@@ -3,6 +3,8 @@
 ##  [g-diffuser-bot](https://www.g-diffuser.com) - Discord bot and interface for Stable Diffusion
 - [G-Diffuser / Stable Cabal Discord](https://discord.gg/stFy2UPppg)
 
+Nov 20-2022 Update: The infinite zoom scripts have been updated with some improvements, notably a new compositer script that is hundreds of times faster than before. The environment / requirements have changed, so if you want to use the new zoom compositer be sure to run a "conda env update -f environment.yaml"
+
 Nov 19-2022 Update: There are some new g-diffuser CLI scripts that can be used to make infinite zoom videos. Check out [/inputs/scripts/](https://github.com/parlance-zz/g-diffuser-bot/tree/dev/inputs/scripts) and have a look at [zoom_maker](https://github.com/parlance-zz/g-diffuser-bot/blob/dev/inputs/scripts/zoom_maker.py) and [make_zoom_movie](https://github.com/parlance-zz/g-diffuser-bot/blob/dev/inputs/scripts/make_zoom_movie.py)
 
 Nov 11-2022 Update: I've created a website to showcase a demo gallery of out-painting images made using g-diffuser bot - https://www.g-diffuser.com/
