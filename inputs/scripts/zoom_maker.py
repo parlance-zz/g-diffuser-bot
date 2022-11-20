@@ -6,14 +6,14 @@ from g_diffuser_defaults import DEFAULT_SAMPLE_SETTINGS
 from g_diffuser_config import DEFAULT_PATHS
 
 # put your prompt for sampling here
-my_prompt = "art by remedios varo"
+my_prompt = "art by edward hopper jesper ejsing, by rhads, makoto shinkai and lois van baarle, ilya kuvshinov, rossdraws"
 init_img = "endzoom.png"  # starting (or rather, ending image)
 num_frames = 100000       # number of discrete zoom images to sample
 expand_top = 50           # amount to expand in each direction in each step
 expand_bottom = 50        # these values are in % of the original image size
 expand_left = 50
 expand_right = 50
-expand_softness = 85.
+expand_softness = 80.
 expand_space = 1.
 
 args = gdl.get_default_args() # sampling params
@@ -21,9 +21,8 @@ args.prompt = my_prompt
 args.init_img = init_img
 args.steps = 100
 args.scale = 8.
-args.guidance_scale = 0.25
-args.noise_start = 1.618
-#args.guidance_scale = 0.
+args.guidance_strength = 0.4 #0.25
+args.noise_start = 2. #1.618
 #args.sampler = "k_euler_ancestral"
 
 expanded_img = os.path.splitext(init_img)[0]+".expanded.png"
