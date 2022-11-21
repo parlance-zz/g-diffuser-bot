@@ -125,7 +125,7 @@ try:
 
             glReadPixels(0, 0, video_size[0], video_size[1], GL_RGBA, GL_UNSIGNED_BYTE, frame_pixels)
             np_frame = np.array(frame_pixels).reshape(video_size[1], video_size[0], 4)
-            result.write(np_frame)
+            result.write(np_frame[:,:,:3])
 
             pygame.display.flip()
             for e in pygame.event.get():
