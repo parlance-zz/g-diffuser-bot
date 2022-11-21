@@ -127,7 +127,7 @@ def soften_mask(np_rgba_image, softness, space):
     np_rgba_image[:,:,3] = blurred_mask
     return np_rgba_image
 
-def expand_image(cv2_img, top, right, bottom, left, softness, space, add_noise=0.):
+def expand_image(cv2_img, top, right, bottom, left, softness, space, add_noise=1.):
     top = int(top / 100. * cv2_img.shape[0])
     right = int(right / 100. * cv2_img.shape[1])
     bottom = int(bottom / 100. * cv2_img.shape[0])
@@ -311,7 +311,7 @@ def get_annotated_image(image, args):
 def load_image(args):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
     assert(DEFAULT_PATHS.inputs)
-    MASK_CUTOFF_THRESHOLD = 240.     # this will force the image mask to 0 if opacity falls below a threshold. set to 255. to disable
+    MASK_CUTOFF_THRESHOLD = 255. #240.     # this will force the image mask to 0 if opacity falls below a threshold. set to 255. to disable
 
     final_init_img_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_img).as_posix()
     
