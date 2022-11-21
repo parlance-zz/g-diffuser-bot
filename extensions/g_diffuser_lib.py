@@ -127,7 +127,7 @@ def soften_mask(np_rgba_image, softness, space):
     np_rgba_image[:,:,3] = blurred_mask
     return np_rgba_image
 
-def expand_image(cv2_img, top, right, bottom, left, softness, space):
+def expand_image(cv2_img, top, right, bottom, left, softness, space, add_noise=0.):
     top = int(top / 100. * cv2_img.shape[0])
     right = int(right / 100. * cv2_img.shape[1])
     bottom = int(bottom / 100. * cv2_img.shape[0])
@@ -146,6 +146,8 @@ def expand_image(cv2_img, top, right, bottom, left, softness, space):
         
     if softness > 0.:
         new_img = soften_mask(new_img/255., softness/100., space)
+        if add_noise > 0.:
+            new_img[:,:,3] -= np.absolute(np.random.normal(0., add_noise/255., (new_img.shape[0], new_img.shape[1])) * (new_img[:,:,3] > 0.))
         new_img = (np.clip(new_img, 0., 1.)*255.).astype(np.uint8)
 
     return new_img

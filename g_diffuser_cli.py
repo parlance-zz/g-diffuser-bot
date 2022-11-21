@@ -294,13 +294,13 @@ def cli_rename(old_path, new_path):
     print("Renamed '"+old_path+"' to '"+new_path+"'")
     return   
 
-def cli_expand(init_img, top=0., right=0., bottom=0., left=0., softness=40., space=1., output_file=""):
+def cli_expand(init_img, top=0., right=0., bottom=0., left=0., softness=40., space=1., output_file="", add_noise=0.):
     global DEFAULT_PATHS
 
     init_img_fullpath = DEFAULT_PATHS.inputs+"/"+init_img
     cv2_img = cv2.imread(init_img_fullpath)
     
-    new_img = gdl.expand_image(cv2_img, top, right, bottom, left, softness, space)
+    new_img = gdl.expand_image(cv2_img, top, right, bottom, left, softness, space, add_noise)
     if not output_file:
         new_img_fullpath = DEFAULT_PATHS.inputs+"/"+ os.path.splitext(init_img)[0]+".expanded.png"
     else:
