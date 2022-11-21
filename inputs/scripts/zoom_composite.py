@@ -11,26 +11,42 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 
 # this is the folder relative to the output path where the keyframes are stored
-frames_path = "Agfa_vista_400_photograph_of_a_cluttered_90s_teenagers_bedroom,_synth_vibe,_vaporwave_colors,_lens_f"
-expand_top = 50      # **the expand values here should match the values used to create the frames**
-expand_bottom = 50   # these values are in % of the original image size
+frames_path = "pixel_art,_snes,_super_nintendo,_screenshot,_retro_game"
+
+mode = "zoom"
+expand_softness = 50. # **the expand values here should match the values used to create the frames in zoom_maker**
+expand_space = 1. 
+expand_top = 50      
+expand_bottom = 50   
 expand_left = 50
 expand_right = 50
-expand_softness = 80.
-expand_space = 1.
+""" # this will be added eventually, but I need to refactor some code first
+mode = "pan" # generate an infinite scroller instead
+expand_top = 0
+expand_bottom = 0
+expand_left = 0
+expand_right = 50
+"""
+
 start_in_black_void = False   # enabled to start zooming out from a black void instead of starting on the first frame
-num_interpolated_frames = 200 # number of interpolated frames per keyframe
+num_interpolated_frames = 90  # number of interpolated frames per keyframe
 frame_rate = 60               # fps of the output video
 output_file = "zoom.mp4"      # name of output file (this will be saved in the folder with the key frames)
 preview_output = False        # if enabled this will show a preview of the video in a window as it renders
 video_size = (1920, 1080)
 
+# *****************************************************************
+
 # find keyframes and sort them
+print("Loading keyframes from {0}...".format(DEFAULT_PATHS.outputs+"/"+frames_path))
 frame_filenames = sorted(glob.glob(DEFAULT_PATHS.outputs+"/"+frames_path+"/*.png"), reverse=True)
 num_keyframes = len(frame_filenames)
+
 frame0_cv2_image = cv2.imread(frame_filenames[0])
 source_size = (int(frame0_cv2_image.shape[1]), int(frame0_cv2_image.shape[0]))
-#video_size = (source_size[0]*2, source_size[1]*2)
+video_aspect_ratio = video_size[0]/video_size[1]
+source_aspect_ratio = source_size[0]/source_size[1]
+aspect_adjustment = source_aspect_ratio / video_aspect_ratio
 
 # setup opengl for compositing via pygame
 pygame.init()
@@ -77,18 +93,34 @@ try:
             end_frame = int(np.clip(t+0.5+6., 1, num_keyframes))
             for f0 in range(start_frame, end_frame):
                 z = f0 - t + 1.
-                scaleX = ((expand_left + expand_right)/100. +1.) ** (-z)
-                scaleY = ((expand_top + expand_bottom)/100. +1.) ** (-z)
 
-                glBindTexture(GL_TEXTURE_2D, frame_textures[f0])
                 glPushMatrix()
-                glScalef(scaleX, scaleY, 1.)
+
+                if mode == "zoom":
+                    scaleX = ((expand_left + expand_right)/100. +1.) ** (-z)
+                    scaleY = ((expand_top + expand_bottom)/100. +1.) ** (-z)
+                    glScalef(scaleX * aspect_adjustment, scaleY, 1.)
+                    """ # todo: need to refactor auto input image scaling to allow cropping instead for this to work
+                elif mode == "pan":
+                    panX = (expand_left - expand_right)/100. * z
+                    panY = (expand_top - expand_bottom)/100. * z
+                    scaleX = (expand_left + expand_right)/100. * 2. + 1.
+                    scaleY = (expand_top + expand_bottom)/100. * 2. + 1.
+                    glTranslatef(-panX, -panY, 0.)
+                    glScalef(scaleX, scaleY, 1.)
+                    
+                else:
+                    raise Exception("Unknown mode: {0}".format(mode))
+                    """
+
+                glBindTexture(GL_TEXTURE_2D, frame_textures[f0])                
                 glBegin(GL_QUADS)
                 glTexCoord2f(0., 0.); glVertex2f(-1.,-1.)
                 glTexCoord2f(1., 0.); glVertex2f( 1.,-1.)
                 glTexCoord2f(1., 1.); glVertex2f( 1., 1.)
                 glTexCoord2f(0., 1.); glVertex2f(-1., 1.)
                 glEnd()
+
                 glPopMatrix()
 
             glReadPixels(0, 0, video_size[0], video_size[1], GL_RGBA, GL_UNSIGNED_BYTE, frame_pixels)
