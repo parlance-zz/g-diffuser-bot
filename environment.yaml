@@ -7,7 +7,7 @@ dependencies:
   - torchvision
   - torchaudio
   - pytorch-cuda=11.7
-  - python  
+  - python=3.9
   - numpy 
   - opencv
   - pip
