@@ -11,7 +11,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 
 # this is the folder relative to the output path where the keyframes are stored
-frames_path = "by_alex_russell_flint,_cyberpunk_art"
+frames_path = "art_by_studio_ghibli"
 
 mode = "zoom"
 expand_softness = 50. # **the expand values here should match the values used to create the frames in zoom_maker**
