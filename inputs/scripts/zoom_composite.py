@@ -11,7 +11,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 
 # this is the folder relative to the output path where the keyframes are stored
-frames_path = "pixel_art,_snes,_super_nintendo,_screenshot,_retro_game"
+frames_path = "by_alex_russell_flint,_cyberpunk_art"
 
 mode = "zoom"
 expand_softness = 50. # **the expand values here should match the values used to create the frames in zoom_maker**
@@ -75,7 +75,7 @@ for f in range(num_keyframes):
 video_output_path = DEFAULT_PATHS.outputs+"/"+gdl.get_noclobber_checked_path(DEFAULT_PATHS.outputs, frames_path+"/"+output_file)
 print("Creating video of size {0}x{1}...".format(video_size[0], video_size[1]))
 result = cv2.VideoWriter(video_output_path, cv2.VideoWriter_fourcc(*'H265'), frame_rate, video_size)
-frame_pixels = (GLubyte * (4*video_size[0]*video_size[1]))(0)
+frame_pixels = (GLubyte * (3*video_size[0]*video_size[1]))(0)
 
 if preview_output: # show video window if preview is enabled
     pygame.display.set_mode(video_size, SHOWN|DOUBLEBUF|OPENGL, vsync=0)
@@ -123,8 +123,8 @@ try:
 
                 glPopMatrix()
 
-            glReadPixels(0, 0, video_size[0], video_size[1], GL_RGBA, GL_UNSIGNED_BYTE, frame_pixels)
-            np_frame = np.array(frame_pixels).reshape(video_size[1], video_size[0], 4)
+            glReadPixels(0, 0, video_size[0], video_size[1], GL_RGB, GL_UNSIGNED_BYTE, frame_pixels)
+            np_frame = np.array(frame_pixels).reshape(video_size[1], video_size[0], 3)
             result.write(np_frame)
 
             pygame.display.flip()
