@@ -12,7 +12,7 @@ init_img = "endzoom.png"  # starting (or rather, ending image)
 num_frames = 100000       # number of discrete zoom images to sample
 
 mode = "zoom"
-expand_softness = 50.
+expand_softness = 100.
 expand_space = 1.
 expand_top = 50           # amount to expand in each direction in each step
 expand_bottom = 50        # these values are in % of the original image size

@@ -14,7 +14,7 @@ from OpenGL.GLU import *
 frames_path = "by_Adrianus_Eversen"
 
 mode = "zoom"
-expand_softness = 50. # **the expand values here should match the values used to create the frames in zoom_maker**
+expand_softness = 100. # **the expand values here should match the values used to create the frames in zoom_maker**
 expand_space = 1. 
 expand_top = 50      
 expand_bottom = 50   
