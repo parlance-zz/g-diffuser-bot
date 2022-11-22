@@ -311,7 +311,7 @@ def get_annotated_image(image, args):
 def load_image(args):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
     assert(DEFAULT_PATHS.inputs)
-    MASK_CUTOFF_THRESHOLD = 250. #240.     # this will force the image mask to 0 if opacity falls below a threshold. set to 255. to disable
+    MASK_CUTOFF_THRESHOLD = 225. #240.     # this will force the image mask to 0 if opacity falls below a threshold. set to 255. to disable
 
     final_init_img_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_img).as_posix()
     
