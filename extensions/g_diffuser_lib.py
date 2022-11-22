@@ -147,7 +147,7 @@ def expand_image(cv2_img, top, right, bottom, left, softness, space, add_noise=0
     if softness > 0.:
         new_img = soften_mask(new_img/255., softness/100., space)
         if add_noise > 0.:
-            new_img[:,:,3] -= np.absolute(np.random.normal(0., add_noise/255., (new_img.shape[0], new_img.shape[1])) * (new_img[:,:,3] > 0.))
+            new_img[:,:,3] += np.random.normal(0., add_noise/255., (new_img.shape[0], new_img.shape[1])) * (new_img[:,:,3] >= 255.)
         new_img = (np.clip(new_img, 0., 1.)*255.).astype(np.uint8)
 
     return new_img
