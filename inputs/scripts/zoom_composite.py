@@ -11,17 +11,17 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 
 # this is the folder relative to the output path where the keyframes are stored
-frames_path = "Fujifilm_XT3,_80mm_Sigma_f14"
+frames_path = "zoom_maker"
 
 expand_softness = 100. # **the expand values here should match the values used to create the frames in zoom_maker**
 expand_space = 1. 
-expand_top = 40
-expand_bottom = 40
-expand_left = 40
-expand_right = 40
+expand_top = 30
+expand_bottom = 30
+expand_left = 30
+expand_right = 30
 
 start_in_black_void = False   # enabled to start zooming out from a black void instead of starting on the first frame
-num_interpolated_frames = 30  # number of interpolated frames per keyframe
+num_interpolated_frames = 90  # number of interpolated frames per keyframe
 frame_rate = 30               # fps of the output video
 output_file = "zoom.mp4"      # name of output file (this will be saved in the folder with the key frames)
 preview_output = False        # if enabled this will show a preview of the video in a window as it renders
