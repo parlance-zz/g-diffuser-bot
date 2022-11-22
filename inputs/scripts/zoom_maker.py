@@ -30,9 +30,9 @@ args = gdl.get_default_args() # sampling params
 args.prompt = my_prompt
 args.init_img = init_img
 args.steps = 100  #100
-args.scale = 13.5 #15. #8.
-args.guidance_strength = 0.4 #0.3 #0.25  # try lowering clip guidance_strength if you have problems with zooms "exploding"
-args.noise_start = 1.5     #1.618
+args.scale = 14. #15. #8.
+args.guidance_strength = 0.25 #0.3 #0.25  # try lowering clip guidance_strength if you have problems with zooms "exploding"
+args.noise_start = 1.65     #1.618
 #args.sampler = "k_euler_ancestral"
 
 # *****************************************************************

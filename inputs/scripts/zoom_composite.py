@@ -29,7 +29,7 @@ expand_right = 50
 """
 
 start_in_black_void = False   # enabled to start zooming out from a black void instead of starting on the first frame
-num_interpolated_frames = 90  # number of interpolated frames per keyframe
+num_interpolated_frames = 120 # number of interpolated frames per keyframe
 frame_rate = 60               # fps of the output video
 output_file = "zoom.mp4"      # name of output file (this will be saved in the folder with the key frames)
 preview_output = False        # if enabled this will show a preview of the video in a window as it renders
