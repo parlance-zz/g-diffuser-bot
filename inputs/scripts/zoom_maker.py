@@ -7,12 +7,12 @@ from g_diffuser_defaults import DEFAULT_SAMPLE_SETTINGS
 from g_diffuser_config import DEFAULT_PATHS
 
 # put your prompt for sampling here
-my_prompt = "by Adrianus Eversen" #"art by studio ghibli"
+my_prompt = "Face portrait of a retrofuturistic assassin surrounded by advanced brutalist architecture. highly detailed science fiction, rich colors, high contrast, gloomy atmosphere, dark background. trending on artstation an ultrafine hyperdetailed colorfull illustration by kim jung gi, moebius, irakli nadar, alphonse mucha, ayami kojima, amano, greg hildebrandt" #"art by studio ghibli"
 init_img = "endzoom.png"  # starting (or rather, ending image)
 num_frames = 100000       # number of discrete zoom images to sample
 
 mode = "zoom"
-expand_softness = 100.
+expand_softness = 80.
 expand_space = 1.
 expand_top = 50           # amount to expand in each direction in each step
 expand_bottom = 50        # these values are in % of the original image size
@@ -29,10 +29,10 @@ expand_right = 50
 args = gdl.get_default_args() # sampling params
 args.prompt = my_prompt
 args.init_img = init_img
-args.steps = 100 #100
-args.scale = 15. #14. #8.
-args.guidance_strength = 0.2 #0.4 #0.25  # try lowering clip guidance_strength if you have problems with zooms "exploding"
-args.noise_start = 2.     #1.618
+args.steps = 100  #100
+args.scale = 13.5 #15. #8.
+args.guidance_strength = 0.4 #0.3 #0.25  # try lowering clip guidance_strength if you have problems with zooms "exploding"
+args.noise_start = 1.5     #1.618
 #args.sampler = "k_euler_ancestral"
 
 # *****************************************************************

@@ -11,10 +11,10 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 
 # this is the folder relative to the output path where the keyframes are stored
-frames_path = "by_Adrianus_Eversen"
+frames_path = "Face_portrait_of_a_retrofuturistic_assassin_surrounded_by_advanced_brutalist_architecture_highly_det"
 
 mode = "zoom"
-expand_softness = 100. # **the expand values here should match the values used to create the frames in zoom_maker**
+expand_softness = 80. # **the expand values here should match the values used to create the frames in zoom_maker**
 expand_space = 1. 
 expand_top = 50      
 expand_bottom = 50   
