@@ -31,8 +31,8 @@ args.prompt = my_prompt
 args.init_img = init_img
 args.steps = 100  #100
 args.scale = 14. #15. #8.
-args.guidance_strength = 0.25 #0.3 #0.25  # try lowering clip guidance_strength if you have problems with zooms "exploding"
-args.noise_start = 1.65     #1.618
+args.guidance_strength = 0.32 #0.3 #0.25  # try lowering clip guidance_strength if you have problems with zooms "exploding"
+args.noise_start = 1.618
 #args.sampler = "k_euler_ancestral"
 
 # *****************************************************************
@@ -50,7 +50,7 @@ if mode == "pan":
 # create zoom frames
 for i in range(num_frames):
     print("Starting iteration {0} of {1}...".format(i+1, num_frames))
-    expand(args.init_img, expand_top, expand_right, expand_bottom, expand_left, expand_softness, expand_space, output_file=expanded_img, add_noise=2.)
+    expand(args.init_img, expand_top, expand_right, expand_bottom, expand_left, expand_softness, expand_space, output_file=expanded_img)
     args.init_img = expanded_img
     args = sample(**vars(args))
 
