@@ -30,8 +30,8 @@ g_diffuser_bot.py - discord bot interface for g-diffuser-lib
 
 """
 
-import extensions.g_diffuser_lib as gdl
-from g_diffuser_config import DEFAULT_PATHS, DISCORD_BOT_SETTINGS, GRPC_SERVER_SETTINGS
+import modules.g_diffuser_lib as gdl
+from g_diffuser_config import DEFAULT_PATHS, DISCORD_BOT_SETTINGS
 from g_diffuser_defaults import DEFAULT_SAMPLE_SETTINGS
 
 import os; os.chdir(DEFAULT_PATHS.root)
@@ -60,8 +60,8 @@ import cv2
 # redirect default paths to designated bot root path
 DEFAULT_PATHS.inputs = DEFAULT_PATHS.bot+"/inputs"
 DEFAULT_PATHS.outputs = DEFAULT_PATHS.bot+"/outputs"
-DEFAULT_PATHS.backups = DEFAULT_PATHS.bot+"/backups"
-DEFAULT_PATHS.saved = DEFAULT_PATHS.bot+"/saved"
+
+DISCORD_BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN", "")
 
 # help and about strings, these must be 2000 characters or less
 ABOUT_TXT = """
@@ -152,7 +152,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--token",
         type=str,
-        default=DISCORD_BOT_SETTINGS.token,
+        default=DISCORD_BOT_TOKEN,
         help="if you want to override the discord bot token in g_diffuser_config.py you can supply an alternate here",
     )
     parser.add_argument(
@@ -166,7 +166,7 @@ if __name__ == "__main__":
     DISCORD_BOT_SETTINGS.token = args.token
     DISCORD_BOT_SETTINGS.guilds = args.guilds
     # if we don't have a valid discord bot token or guild id let's not go any further
-    if (not DISCORD_BOT_SETTINGS.token) or (DISCORD_BOT_SETTINGS.token == "YOUR_DISCORD_BOT_TOKEN_HERE"):
+    if (not DISCORD_BOT_SETTINGS.token) or (DISCORD_BOT_SETTINGS.token == "{your discord bot token}"):
         print("Fatal error: Cannot start discord bot with token '" + DISCORD_BOT_SETTINGS.token + "'")
         print("Please update DISCORD_BOT_SETTINGS.token in g_diffuser_config.py and try again.")
         exit(1)

@@ -1,2 +1,0 @@
-- This folder is for sample or argument files that discord bot users have explicitly saved or preserved
-- All discord bot user paths are prefixed with the server/guild and the username

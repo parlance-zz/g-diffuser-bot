@@ -27,7 +27,7 @@ g_diffuser_cli.py - command line interface for g-diffuser-lib with interactive m
 
 """
 
-import extensions.g_diffuser_lib as gdl
+import modules.g_diffuser_lib as gdl
 from g_diffuser_config import DEFAULT_PATHS, CLI_SETTINGS
 
 import os; os.chdir(DEFAULT_PATHS.root)
@@ -42,7 +42,7 @@ import pathlib
 import numpy as np
 import cv2
 
-VERSION_STRING = "g-diffuser-cli v0.99c"
+VERSION_STRING = "g-diffuser-cli v1.0"
 INTERACTIVE_MODE_BANNER_STRING = """
 Interactive mode:
     call sample() with keyword arguments and use the up/down arrow-keys to browse command history:

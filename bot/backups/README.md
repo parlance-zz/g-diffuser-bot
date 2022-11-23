@@ -1,2 +1,0 @@
-- This folder is used for temporary backup files if a user chooses to delete or remove a file
-- All discord bot user paths are prefixed with the server/guild and the username

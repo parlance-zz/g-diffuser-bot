@@ -1,7 +1,0 @@
-*.pyc
-*.pyo
-__pycache__/
-*.png
-*.json
-*.jpg
-*.jpeg
