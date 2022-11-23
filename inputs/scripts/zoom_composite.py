@@ -25,7 +25,7 @@ num_interpolated_frames = 50  # number of interpolated frames per keyframe
 frame_rate = 24               # fps of the output video
 output_file = "zoom.mp4"      # name of output file (this will be saved in the folder with the key frames)
 preview_output = False        # if enabled this will show a preview of the video in a window as it renders
-video_size = (1920*2, 1080*2)
+video_size = (1920, 1080)
 
 # *****************************************************************
 
