@@ -15,31 +15,31 @@ frames_path = "zoom_maker"
 
 expand_softness = 100. # **the expand values here should match the values used to create the frames in zoom_maker**
 expand_space = 1. 
-expand_top = 30
-expand_bottom = 30
-expand_left = 30
-expand_right = 30
+expand_top = 40
+expand_bottom = 40
+expand_left = 40
+expand_right = 40
 
 start_in_black_void = False   # enabled to start zooming out from a black void instead of starting on the first frame
-num_interpolated_frames = 90  # number of interpolated frames per keyframe
-frame_rate = 30               # fps of the output video
+num_interpolated_frames = 50  # number of interpolated frames per keyframe
+frame_rate = 24               # fps of the output video
 output_file = "zoom.mp4"      # name of output file (this will be saved in the folder with the key frames)
 preview_output = False        # if enabled this will show a preview of the video in a window as it renders
-video_size = (1920, 1080)
+video_size = (1920*2, 1080*2)
 
 # *****************************************************************
 
 # find keyframes and sort them
 print("Loading keyframes from {0}...".format(DEFAULT_PATHS.outputs+"/"+frames_path))
 frame_filenames = sorted(glob.glob(DEFAULT_PATHS.outputs+"/"+frames_path+"/*.png"), reverse=True)
-#frame_filenames = frame_filenames[0:4]
 num_keyframes = len(frame_filenames)
 
 frame0_cv2_image = cv2.imread(frame_filenames[0])
 source_size = (int(frame0_cv2_image.shape[1]), int(frame0_cv2_image.shape[0]))
 video_aspect_ratio = video_size[0]/video_size[1]
 source_aspect_ratio = source_size[0]/source_size[1]
-aspect_adjustment = source_aspect_ratio / video_aspect_ratio
+aspect_adjustmentX = source_size[0] / video_size[0]
+aspect_adjustmentY = source_size[1] / video_size[1]
 
 # setup opengl for compositing via pygame
 pygame.init()
@@ -82,10 +82,10 @@ try:
             glClear(GL_COLOR_BUFFER_BIT)
 
             t = f + i/num_interpolated_frames
-            start_frame = int(np.clip(t+0.5-6., 0, num_keyframes-1))
-            end_frame = int(np.clip(t+0.5+6., 1, num_keyframes))
+            start_frame = int(np.clip(t+0.5-8., 0, num_keyframes-1))
+            end_frame = int(np.clip(t+0.5+8., 1, num_keyframes))
             for f0 in range(start_frame, end_frame):
-                z = f0 - t + 0.5
+                z = f0 - t# + 0.5
                 """
                 num_oversamples = 8
                 radial_blur_amount = 1.
@@ -97,7 +97,7 @@ try:
                 glPushMatrix()
                 scaleX = ((expand_left + expand_right)/100. +1.) ** (-z)
                 scaleY = ((expand_top + expand_bottom)/100. +1.) ** (-z)
-                glScalef(scaleX * aspect_adjustment, scaleY, 1.)
+                glScalef(scaleX * aspect_adjustmentX, scaleY * aspect_adjustmentY, 1.)
 
                 glBindTexture(GL_TEXTURE_2D, frame_textures[f0])                
                 glBegin(GL_QUADS)
