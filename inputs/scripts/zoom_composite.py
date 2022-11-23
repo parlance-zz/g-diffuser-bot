@@ -25,7 +25,7 @@ num_interpolated_frames = 50  # number of interpolated frames per keyframe
 frame_rate = 24               # fps of the output video
 output_file = "zoom.mp4"      # name of output file (this will be saved in the folder with the key frames)
 preview_output = False        # if enabled this will show a preview of the video in a window as it renders
-video_size = (1920, 1080)
+video_size = (1920*2, 1080*2) # 4k by default
 
 # *****************************************************************
 
@@ -67,13 +67,13 @@ for f in range(num_keyframes):
 # create video encoder
 video_output_path = DEFAULT_PATHS.outputs+"/"+gdl.get_noclobber_checked_path(DEFAULT_PATHS.outputs, frames_path+"/"+output_file)
 print("Creating video of size {0}x{1}...".format(video_size[0], video_size[1]))
-result = cv2.VideoWriter(video_output_path, cv2.VideoWriter_fourcc(*'H265'), frame_rate, video_size)
+result = cv2.VideoWriter(video_output_path, cv2.VideoWriter_fourcc(*'mp4v'), frame_rate, video_size)
 frame_pixels = (GLubyte * (3*video_size[0]*video_size[1]))(0)
 
 if preview_output: # show video window if preview is enabled
     pygame.display.set_mode(video_size, SHOWN|DOUBLEBUF|OPENGL, vsync=0)
-if start_in_black_void: start_offset = -2 # start by zooming in from a black screen if enabled
-else: start_offset = 2 # otherwise start very slightly pulled back from the first keyframe
+if start_in_black_void: start_offset = 0 # start by zooming in from a black screen if enabled
+else: start_offset = 4 # otherwise start very slightly pulled back from the first keyframe
 
 try:
     for f in range(start_offset, num_keyframes):
@@ -85,7 +85,7 @@ try:
             start_frame = int(np.clip(t+0.5-8., 0, num_keyframes-1))
             end_frame = int(np.clip(t+0.5+8., 1, num_keyframes))
             for f0 in range(start_frame, end_frame):
-                z = f0 - t# + 0.5
+                z = f0 - t
                 """
                 num_oversamples = 8
                 radial_blur_amount = 1.
