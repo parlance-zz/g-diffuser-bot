@@ -3,7 +3,7 @@ import glob
 import numpy as np
 
 from g_diffuser_config import DEFAULT_PATHS
-from extensions import g_diffuser_utilities as gdu
+from modules import g_diffuser_utilities as gdu
 
 import pygame
 from pygame.locals import *
