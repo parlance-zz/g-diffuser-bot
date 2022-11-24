@@ -35,3 +35,4 @@ The first release of the all-in-one installer is here. It notably features much 
 - You should see a G-Diffuser icon in your systray / notification area. Click on the icon to open and interact with the G-Diffuser system. If the icon is missing be sure it isn't hidden by clicking the "up" arrow near the notification area.
 
 ![G-Diffuser Systray](https://www.g-diffuser.com/systray_screenshot.jpg)
+GUI is coming soon ;)
