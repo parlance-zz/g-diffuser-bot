@@ -3,6 +3,8 @@
 ##  [g-diffuser-bot](https://www.g-diffuser.com) - Discord bot and interface for Stable Diffusion
 - [G-Diffuser / Stable Cabal Discord](https://discord.gg/stFy2UPppg)
 
+Nov 23:2022 Update: The first release of the all-in-one installer version of G-Diffuser is here. This release no longer requires the installation of WSL or Docker, and has includes a systray icon to keep track of and launch G-Diffuser components. The download link is available under this project's [releases](https://github.com/parlance-zz/g-diffuser-bot/releases/tag/aio-release).
+
 Nov 20-2022 Update: The infinite zoom scripts have been updated with some improvements, notably a new compositer script that is hundreds of times faster than before. The environment / requirements have changed, so if you want to use the new zoom compositer be sure to run a "conda env update -f environment.yaml"
 
 Nov 19-2022 Update: There are some new g-diffuser CLI scripts that can be used to make infinite zoom videos. Check out [/inputs/scripts/](https://github.com/parlance-zz/g-diffuser-bot/tree/dev/inputs/scripts) and have a look at [zoom_maker](https://github.com/parlance-zz/g-diffuser-bot/blob/dev/inputs/scripts/zoom_maker.py) and [zoom_composite](https://github.com/parlance-zz/g-diffuser-bot/blob/dev/inputs/scripts/zoom_composite.py)
@@ -13,50 +15,24 @@ Nov 08-2022 Update: In/out-painting and img2img (aka "riffing") has (finally) be
 
 Nov 07-2022 Update: This update adds support for **clip guided models** and new parameters to control them. For now clip guidance has a heavy performance penalty, but this will improve with optimization. This update also adds **negative prompt support** to both the CLI and discord bot, and changes the default loaded models to include SD1.5 and SD1.5 with (small) clip. This update also adds several **new samplers (dpmspp_1, dpmspp_2, dpmspp_3)**.
 
-Nov 02-2022 Update: In/out-painting bugs are now fixed, and the interactive CLI now prints proper error messages.
-
-Oct 22-2022 Update: Most of the annoying bugs in the Discord bot have now been fixed. The gRPC server now uses a Docker image which includes xformers support (large speed boost) as well as support for **stable-diffusion-v1-5 (which is the new default)**. The install instructions have changed accordingly, please find the changes below:
-
-## Vision for the g-diffuser-bot project:
- - Nov 01-2022: There are now many mature and rapidly evolving easy-to-use frontends and discord bots for Stable Diffusion. As a lone developer I do not necessarily have the time or resources to keep pace with these developments, but I will do my best to continue to maintain the project and may occasionally add new features.
-
-## Installation:
- - System Requirements: Windows 10 (1903+), Windows 11, or Linux (Ubuntu 20+), nvidia GPU with at least 8GB VRAM, ~10GB free space for model downloads
+## System Requirements:
+ - Windows 10 (1903+), Windows 11, or Linux (Ubuntu 20+), nvidia GPU with at least 8GB VRAM, ~40GB free space for model downloads
  - If you are running Windows 10/11 you may need to turn on "developer mode" before beginning the install instructions. Look for "developer settings" in the start menu.
- 
- 1)  git clone this repository to a folder of your choice (or click the green "code" button up top and click "download zip")
- 2)  download / install miniconda (https://docs.conda.io/en/latest/miniconda.html)
- 3)  open a conda prompt (click on the start menu and look for "anaconda prompt"), then navigate to the folder where you cloned or downloaded this repository.
- 4)  run "conda env create -f environment.yaml"
- 5)  Install Docker Desktop:<br/>
-         - On Windows: https://docs.docker.com/desktop/install/windows-install/ <br/>
-         - On Linux: sudo apt install docker-desktop
- 6)  Sign up for an account at https://huggingface.co/
- ```
- - Accept the terms of use for the models you wish to use:
-(https://huggingface.co/runwayml/stable-diffusion-v1-5, https://huggingface.co/hakurei/waifu-diffusion-v1-4)
 
- - Go to https://huggingface.co/settings/tokens and create a new access token.
+ # G-Diffuser all-in-one
 
- - Open g_diffuser_config.py, find GRPC_SERVER_SETTINGS.hf_token = "YOUR_HUGGINGFACE_ACCESS_TOKEN_HERE"
-   Replace the placeholder text with the access token you generated above and save the file.
+The first release of the all-in-one installer is here. It notably features much easier "one-click" installation and updating, as well as a systray icon to keep track of g-diffuser programs and the server while it is running.
 
- - If you're using the Discord bot this is also where you enter your Discord bot token and guild id.
-   (https://discordapp.com/developers/applications/, https://www.writebots.com/discord-bot-token/)
-```
-Optional: edit g_diffuser_config.py and g_diffuser_defaults.py to change any other default settings of interest
- 
-## Running:
- 1)  Run the discord bot by using "start_discord_bot.bat"
- 2)  Run the interactive CLI by using "start_interactive_cli.bat"
- 3)  You can (optionally) start the sdgrpcserver with "start_server.bat" to see the server console in it's own separate window
+# Installation / Setup
 
-## Updating:
- - Simply git pull or download and replace your files with those from this repository. You probably won't need to replace your g_diffuser_config.py or g_diffuser_defaults.py files, but you may need to merge changes.
- - The conda environment is sometimes (rarely) updated to include new requirements. If you git pull and get an error running the software try updating the conda environment with any new dependencies by running "conda env update -f environment.yaml"
+- Run install_or_update.cmd at least once (once to install, and again later if you wish update to the latest version)
+- Edit the filed named "config" and make sure to add your hugging-face access token and save the file.
+  - If you don't have a huggingface token yet
+    - Register for a HuggingFace account at https://huggingface.co/join
+    - Follow the instructions to access the repository at https://huggingface.co/CompVis/stable-diffusion-v1-4
+    - Create a token at https://huggingface.co/settings/tokens
 
-## Troubleshooting:
- - Better install instructions are (always) coming
- - Docker Desktop depends on WSL2 (Windows subsystem for Linux). For best results always make sure you're using the latest version of WSL by opening a command prompt as administrator and running "wsl --update"
- - Docker Desktop has a helpful GUI that you can use to keep track of the gRPC server and it's Docker "container". You can view the server parameters it was launched with, restart it or shut it down, and view the console output to track down any errors from the grpc server side. In some rare cases (or when updating) you may need to delete the existing "image" from the docker images list.
- - If you have questions or problems running g-diffuser-bot, please post as much detailed information as you can in (https://github.com/parlance-zz/g-diffuser-bot/discussions/categories/q-a), either myself or someone in the community may be able to help you. Thank you for your patience.
+# Usage
+
+- Run run.cmd to start the G-Diffuser system
+- You should see a G-Diffuser icon in your systray / notification area. Click on the icon to open and interact with the G-Diffuser system. If the icon is missing be sure it isn't hidden by clicking the "up" arrow near the notification area.
