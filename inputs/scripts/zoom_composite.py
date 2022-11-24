@@ -15,16 +15,17 @@ frames_path = "zoom_maker"
 
 expand_softness = 100. # **the expand values here should match the values used to create the frames in zoom_maker**
 expand_space = 1. 
-expand_top = 40
-expand_bottom = 40
-expand_left = 40
-expand_right = 40
+expand_top = 30
+expand_bottom = 30
+expand_left = 30
+expand_right = 30
 
-start_in_black_void = False   # enabled to start zooming out from a black void instead of starting on the first frame
-num_interpolated_frames = 50  # number of interpolated frames per keyframe
-frame_rate = 24               # fps of the output video
+start_in_black_void = False    # enabled to start zooming out from a black void instead of starting on the first frame
+num_interpolated_frames = 90   # number of interpolated frames per keyframe, controls zoom speed (and the expand ratio)
+frame_rate = 60               # fps of the output video
 output_file = "zoom.mp4"      # name of output file (this will be saved in the folder with the key frames)
 preview_output = False        # if enabled this will show a preview of the video in a window as it renders
+zoom_out = True               # if enabled this will zoom out instead of zooming in
 video_size = (1920*2, 1080*2) # 4k by default
 
 # *****************************************************************
@@ -75,47 +76,48 @@ if preview_output: # show video window if preview is enabled
 if start_in_black_void: start_offset = 0 # start by zooming in from a black screen if enabled
 else: start_offset = 4 # otherwise start very slightly pulled back from the first keyframe
 
+t_schedule = np.tanh(np.linspace(-3., 3., num_interpolated_frames * num_keyframes))
+t_schedule = t_schedule - np.min(t_schedule)
+t_schedule = t_schedule / np.max(t_schedule) * (num_keyframes-1.) + start_offset
+# uncomment and use the line below if you would like to disable acceleration smoothing
+# t_schedule = np.linspace(start_offset, num_keyframes-1., num_interpolated_frames * num_keyframes)
+
+if zoom_out: t_schedule = t_schedule[::-1] # reverse the schedule if zooming out
+
 try:
-    for f in range(start_offset, num_keyframes):
-        print("Rendering {0}/{1}...".format(f+1, num_keyframes))
-        for i in range(num_interpolated_frames):
-            glClear(GL_COLOR_BUFFER_BIT)
+    for f in range(len(t_schedule)):
+        if (f % frame_rate) == 0: # print progress every (video) second
+            print("Rendering {0:.2f}%...".format(f/len(t_schedule)*100.))
+        t = t_schedule[f]
+        
+        glClear(GL_COLOR_BUFFER_BIT)
+        start_frame = int(np.clip(t+0.5-10., 0, num_keyframes-1))
+        end_frame = int(np.clip(t+0.5+10., 1, num_keyframes))
+        for f0 in range(start_frame, end_frame):
+            z = f0 - t
+            
+            glPushMatrix()
+            scaleX = ((expand_left + expand_right)/100. +1.) ** (-z)
+            scaleY = ((expand_top + expand_bottom)/100. +1.) ** (-z)
+            glScalef(scaleX * aspect_adjustmentX, scaleY * aspect_adjustmentY, 1.)
 
-            t = f + i/num_interpolated_frames
-            start_frame = int(np.clip(t+0.5-8., 0, num_keyframes-1))
-            end_frame = int(np.clip(t+0.5+8., 1, num_keyframes))
-            for f0 in range(start_frame, end_frame):
-                z = f0 - t
-                """
-                num_oversamples = 8
-                radial_blur_amount = 1.
-                glColor4f(1., 1., 1., 1./num_oversamples)
-                for s in range(num_oversamples):
-                    z = f0 - t + 1. + s / num_oversamples / 30. * radial_blur_amount
-                """
+            glBindTexture(GL_TEXTURE_2D, frame_textures[f0])                
+            glBegin(GL_QUADS)
+            glTexCoord2f(0., 0.); glVertex2f(-1.,-1.)
+            glTexCoord2f(1., 0.); glVertex2f( 1.,-1.)
+            glTexCoord2f(1., 1.); glVertex2f( 1., 1.)
+            glTexCoord2f(0., 1.); glVertex2f(-1., 1.)
+            glEnd()
+            glPopMatrix()
 
-                glPushMatrix()
-                scaleX = ((expand_left + expand_right)/100. +1.) ** (-z)
-                scaleY = ((expand_top + expand_bottom)/100. +1.) ** (-z)
-                glScalef(scaleX * aspect_adjustmentX, scaleY * aspect_adjustmentY, 1.)
+        glReadPixels(0, 0, video_size[0], video_size[1], GL_RGB, GL_UNSIGNED_BYTE, frame_pixels)
+        np_frame = np.array(frame_pixels).reshape(video_size[1], video_size[0], 3)
+        result.write(np_frame)
 
-                glBindTexture(GL_TEXTURE_2D, frame_textures[f0])                
-                glBegin(GL_QUADS)
-                glTexCoord2f(0., 0.); glVertex2f(-1.,-1.)
-                glTexCoord2f(1., 0.); glVertex2f( 1.,-1.)
-                glTexCoord2f(1., 1.); glVertex2f( 1., 1.)
-                glTexCoord2f(0., 1.); glVertex2f(-1., 1.)
-                glEnd()
-                glPopMatrix()
-
-            glReadPixels(0, 0, video_size[0], video_size[1], GL_RGB, GL_UNSIGNED_BYTE, frame_pixels)
-            np_frame = np.array(frame_pixels).reshape(video_size[1], video_size[0], 3)
-            result.write(np_frame)
-
-            pygame.display.flip()
-            for e in pygame.event.get():
-                if e.type == pygame.QUIT:
-                    raise Exception("Operation cancelled by user")
+        pygame.display.flip()
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                raise Exception("Operation cancelled by user")
 
 except Exception as e:
     print("Error: {0}".format(str(e)))
@@ -124,8 +126,8 @@ except Exception as e:
 
 pygame.quit()
 
-for i in range(frame_rate*3): # linger on the last frame for 3 seconds
-    result.write(np_frame)
+#for i in range(frame_rate*3): # linger on the last frame for 3 seconds
+#    result.write(np_frame)
 
 result.release()
 print("Saved {0}".format(video_output_path))
