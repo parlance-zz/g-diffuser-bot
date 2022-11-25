@@ -1,3 +1,4 @@
+import os
 import cv2
 import glob
 import numpy as np
@@ -20,21 +21,22 @@ expand_bottom = 30
 expand_left = 30
 expand_right = 30
 
-start_in_black_void = False    # enabled to start zooming out from a black void instead of starting on the first frame
-num_interpolated_frames = 20   # number of interpolated frames per keyframe, controls zoom speed (and the expand ratio)
-frame_rate = 30                # fps of the output video
-output_file = "zoom.mp4"       # name of output file (this will be saved in the folder with the key frames)
-preview_output = False         # if enabled this will show a preview of the video in a window as it renders
-zoom_out = False               # if enabled this will zoom out instead of zooming in
-acceleration_smoothing = False # if enabled this slows the start and stop
-video_size = (1920*2, 1080*2)  # 4k by default
+start_in_black_void = False      # enabled to start zooming out from a black void instead of starting on the first frame
+num_interpolated_frames = 25     # number of interpolated frames per keyframe, controls zoom speed (and the expand ratio)
+frame_rate = 30                  # fps of the output video
+output_file = "zoom.mp4"         # name of output file (this will be saved in the folder with the key frames)
+preview_output = False           # if enabled this will show a preview of the video in a window as it renders
+zoom_out = False                 # if enabled this will zoom out instead of zooming in
+acceleration_smoothing = 0. #1.8 # if > 0. this slows the start and stop, good values are 1 to 3
+video_size = (1920*2, 1080*2)    # video output resolution
+encode_lossless = False          # set to True to make an uncompressed video file (this will take a lot of disk space)
 
 # *****************************************************************
 
 # find keyframes and sort them
 print("Loading keyframes from {0}...".format(DEFAULT_PATHS.outputs+"/"+frames_path))
 frame_filenames = sorted(glob.glob(DEFAULT_PATHS.outputs+"/"+frames_path+"/*.png"), reverse=True)
-#frame_filenames = frame_filenames[0:20] # limit to 20 frames for testing
+#frame_filenames = frame_filenames[0:3] # limit to 20 frames for testing
 num_keyframes = len(frame_filenames)
 
 frame0_cv2_image = cv2.imread(frame_filenames[0])
@@ -68,9 +70,16 @@ for f in range(num_keyframes):
     glGenerateMipmap(GL_TEXTURE_2D)
 
 # create video encoder
-video_output_path = DEFAULT_PATHS.outputs+"/"+gdl.get_noclobber_checked_path(DEFAULT_PATHS.outputs, frames_path+"/"+output_file)
+if encode_lossless == False:
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+else:
+    fourcc = cv2.VideoWriter_fourcc(*'HFYU')
+    output_file = os.path.splitext(output_file)[0]+".avi"
+
 print("Creating video of size {0}x{1}...".format(video_size[0], video_size[1]))
-result = cv2.VideoWriter(video_output_path, cv2.VideoWriter_fourcc(*'mp4v'), frame_rate, video_size)
+video_output_path = DEFAULT_PATHS.outputs+"/"+gdl.get_noclobber_checked_path(DEFAULT_PATHS.outputs, frames_path+"/"+output_file)
+
+result = cv2.VideoWriter(video_output_path, fourcc, frame_rate, video_size)
 frame_pixels = (GLubyte * (3*video_size[0]*video_size[1]))(0)
 
 if preview_output: # show video window if preview is enabled
@@ -79,8 +88,8 @@ if start_in_black_void: start_offset = 0 # start by zooming in from a black scre
 else: start_offset = 4 # otherwise start very slightly pulled back from the first keyframe
 
 # create a schedule of time values for each rendered video frame
-if acceleration_smoothing == True:
-    t_schedule = np.tanh(np.linspace(-1.25, 1.25, num_interpolated_frames * num_keyframes))
+if acceleration_smoothing > 0.:
+    t_schedule = np.tanh(np.linspace(-acceleration_smoothing, acceleration_smoothing, num_interpolated_frames * num_keyframes))
     t_schedule = t_schedule - np.min(t_schedule)
     t_schedule = t_schedule / np.max(t_schedule) * (num_keyframes-2.5) + start_offset
 else:
