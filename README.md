@@ -23,10 +23,10 @@ Nov 07-2022 Update: This update adds support for **clip guided models** and new 
 The first release of the all-in-one installer is here. It notably features much easier "one-click" installation and updating, as well as a systray icon to keep track of g-diffuser programs and the server while it is running.
 
 ## Installation / Setup
-- Download and extract the AIO release [here](https://github.com/parlance-zz/g-diffuser-bot/releases/tag/aio-release) to a folder of your choice.
+- Download and extract [G-Diffuser AIO Installer (Windows 10+ 64-bit)](https://github.com/parlance-zz/g-diffuser-bot/releases/tag/aio-release) to a folder of your choice.
 - Run install_or_update.cmd at least once (once to install, and again later if you wish update to the latest version)
 - Edit the filed named "config" and make sure to add your hugging-face access token and save the file.
-  - If you don't have a huggingface token yet
+  - If you don't have a huggingface token yet:
     - Register for a HuggingFace account at https://huggingface.co/join
     - Follow the instructions to access the repository at https://huggingface.co/CompVis/stable-diffusion-v1-4 (don't worry, this doesn't mean SD1.4 will be downloaded or used, it just grants you the necessary access to download stable diffusion models)
     - Create a token at https://huggingface.co/settings/tokens (if required, choose the "read" role)
