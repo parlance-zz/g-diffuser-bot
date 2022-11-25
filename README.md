@@ -23,6 +23,7 @@ Nov 07-2022 Update: This update adds support for **clip guided models** and new 
 The first release of the all-in-one installer is here. It notably features much easier "one-click" installation and updating, as well as a systray icon to keep track of g-diffuser programs and the server while it is running.
 
 ## Installation / Setup
+- Download and extract the AIO release [here](https://github.com/parlance-zz/g-diffuser-bot/releases/tag/aio-release) to a folder of your choice.
 - Run install_or_update.cmd at least once (once to install, and again later if you wish update to the latest version)
 - Edit the filed named "config" and make sure to add your hugging-face access token and save the file.
   - If you don't have a huggingface token yet
