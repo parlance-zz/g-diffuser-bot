@@ -29,7 +29,7 @@ The first release of the all-in-one installer is here. It notably features much 
   - If you don't have a huggingface token yet
     - Register for a HuggingFace account at https://huggingface.co/join
     - Follow the instructions to access the repository at https://huggingface.co/CompVis/stable-diffusion-v1-4 (don't worry, this doesn't mean SD1.4 will be downloaded or used, it just grants you the necessary access to download stable diffusion models)
-    - Create a token at https://huggingface.co/settings/tokens
+    - Create a token at https://huggingface.co/settings/tokens (if required, choose the "read" role)
 
 ## Usage
 - Run run.cmd to start the G-Diffuser system
