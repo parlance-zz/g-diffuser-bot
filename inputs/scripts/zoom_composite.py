@@ -21,7 +21,7 @@ expand_left = 30
 expand_right = 30
 
 start_in_black_void = False    # enabled to start zooming out from a black void instead of starting on the first frame
-num_interpolated_frames = 40   # number of interpolated frames per keyframe, controls zoom speed (and the expand ratio)
+num_interpolated_frames = 20   # number of interpolated frames per keyframe, controls zoom speed (and the expand ratio)
 frame_rate = 30                # fps of the output video
 output_file = "zoom.mp4"       # name of output file (this will be saved in the folder with the key frames)
 preview_output = False         # if enabled this will show a preview of the video in a window as it renders
@@ -34,7 +34,7 @@ video_size = (1920*2, 1080*2)  # 4k by default
 # find keyframes and sort them
 print("Loading keyframes from {0}...".format(DEFAULT_PATHS.outputs+"/"+frames_path))
 frame_filenames = sorted(glob.glob(DEFAULT_PATHS.outputs+"/"+frames_path+"/*.png"), reverse=True)
-frame_filenames = frame_filenames[0:20] # limit to 20 frames for testing
+#frame_filenames = frame_filenames[0:20] # limit to 20 frames for testing
 num_keyframes = len(frame_filenames)
 
 frame0_cv2_image = cv2.imread(frame_filenames[0])
