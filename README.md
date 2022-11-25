@@ -27,7 +27,7 @@ The first release of the all-in-one installer is here. It notably features much 
 - Edit the filed named "config" and make sure to add your hugging-face access token and save the file.
   - If you don't have a huggingface token yet
     - Register for a HuggingFace account at https://huggingface.co/join
-    - Follow the instructions to access the repository at https://huggingface.co/CompVis/stable-diffusion-v1-4
+    - Follow the instructions to access the repository at https://huggingface.co/CompVis/stable-diffusion-v1-4 (don't worry, this doesn't mean SD1.4 will be downloaded or used, it just grants you the necessary access to download stable diffusion models)
     - Create a token at https://huggingface.co/settings/tokens
 
 ## Usage
@@ -35,4 +35,5 @@ The first release of the all-in-one installer is here. It notably features much 
 - You should see a G-Diffuser icon in your systray / notification area. Click on the icon to open and interact with the G-Diffuser system. If the icon is missing be sure it isn't hidden by clicking the "up" arrow near the notification area.
 
 ![G-Diffuser Systray](https://www.g-diffuser.com/systray_screenshot.jpg)
-GUI is coming soon ;)
+
+GUI is coming soon(tm)
