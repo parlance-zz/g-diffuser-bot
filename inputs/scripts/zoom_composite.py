@@ -21,18 +21,20 @@ expand_left = 30
 expand_right = 30
 
 start_in_black_void = False    # enabled to start zooming out from a black void instead of starting on the first frame
-num_interpolated_frames = 90   # number of interpolated frames per keyframe, controls zoom speed (and the expand ratio)
-frame_rate = 60               # fps of the output video
-output_file = "zoom.mp4"      # name of output file (this will be saved in the folder with the key frames)
-preview_output = False        # if enabled this will show a preview of the video in a window as it renders
-zoom_out = True               # if enabled this will zoom out instead of zooming in
-video_size = (1920*2, 1080*2) # 4k by default
+num_interpolated_frames = 40   # number of interpolated frames per keyframe, controls zoom speed (and the expand ratio)
+frame_rate = 30                # fps of the output video
+output_file = "zoom.mp4"       # name of output file (this will be saved in the folder with the key frames)
+preview_output = False         # if enabled this will show a preview of the video in a window as it renders
+zoom_out = False               # if enabled this will zoom out instead of zooming in
+acceleration_smoothing = False # if enabled this slows the start and stop
+video_size = (1920*2, 1080*2)  # 4k by default
 
 # *****************************************************************
 
 # find keyframes and sort them
 print("Loading keyframes from {0}...".format(DEFAULT_PATHS.outputs+"/"+frames_path))
 frame_filenames = sorted(glob.glob(DEFAULT_PATHS.outputs+"/"+frames_path+"/*.png"), reverse=True)
+frame_filenames = frame_filenames[0:20] # limit to 20 frames for testing
 num_keyframes = len(frame_filenames)
 
 frame0_cv2_image = cv2.imread(frame_filenames[0])
@@ -76,13 +78,16 @@ if preview_output: # show video window if preview is enabled
 if start_in_black_void: start_offset = 0 # start by zooming in from a black screen if enabled
 else: start_offset = 4 # otherwise start very slightly pulled back from the first keyframe
 
-t_schedule = np.tanh(np.linspace(-3., 3., num_interpolated_frames * num_keyframes))
-t_schedule = t_schedule - np.min(t_schedule)
-t_schedule = t_schedule / np.max(t_schedule) * (num_keyframes-1.) + start_offset
-# uncomment and use the line below if you would like to disable acceleration smoothing
-# t_schedule = np.linspace(start_offset, num_keyframes-1., num_interpolated_frames * num_keyframes)
+# create a schedule of time values for each rendered video frame
+if acceleration_smoothing == True:
+    t_schedule = np.tanh(np.linspace(-1.25, 1.25, num_interpolated_frames * num_keyframes))
+    t_schedule = t_schedule - np.min(t_schedule)
+    t_schedule = t_schedule / np.max(t_schedule) * (num_keyframes-2.5) + start_offset
+else:
+    t_schedule = np.linspace(start_offset, num_keyframes-2.5, num_interpolated_frames * num_keyframes)
 
-if zoom_out: t_schedule = t_schedule[::-1] # reverse the schedule if zooming out
+if zoom_out:
+    t_schedule = t_schedule[::-1] # reverse the schedule if zooming out
 
 try:
     for f in range(len(t_schedule)):
@@ -125,9 +130,6 @@ except Exception as e:
     raise
 
 pygame.quit()
-
-#for i in range(frame_rate*3): # linger on the last frame for 3 seconds
-#    result.write(np_frame)
 
 result.release()
 print("Saved {0}".format(video_output_path))
