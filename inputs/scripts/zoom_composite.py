@@ -27,6 +27,7 @@ frame_rate = 30                  # fps of the output video
 output_file = "zoom.mp4"         # name of output file (this will be saved in the folder with the key frames)
 preview_output = False           # if enabled this will show a preview of the video in a window as it renders
 zoom_out = False                 # if enabled this will zoom out instead of zooming in
+rotate_speed = 0.                # change from 0. if you _really_ want to barf
 acceleration_smoothing = 0. #1.8 # if > 0. this slows the start and stop, good values are 1 to 3
 video_size = (1920*2, 1080*2)    # video output resolution
 encode_lossless = False          # set to True to make an uncompressed video file (this will take a lot of disk space)
@@ -114,6 +115,7 @@ try:
             scaleX = ((expand_left + expand_right)/100. +1.) ** (-z)
             scaleY = ((expand_top + expand_bottom)/100. +1.) ** (-z)
             glScalef(scaleX * aspect_adjustmentX, scaleY * aspect_adjustmentY, 1.)
+            glRotatef(t * rotate_speed, 0., 0., 1.)
 
             glBindTexture(GL_TEXTURE_2D, frame_textures[f0])                
             glBegin(GL_QUADS)
