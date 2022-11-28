@@ -13,9 +13,10 @@ my_prompts = [
    #"Face portrait of a retrofuturistic assassin surrounded by advanced brutalist architecture. highly detailed fantasy, trending on artstation an ultrafine hyperdetailed colorfull illustration by kim jung gi, moebius, irakli nadar, alphonse mucha, ayami kojima, amano, greg hildebrandt",
    #"a wooden shed, many green plant and flower gowing on it, illustration key visual trending pixiv fanbox by wlop and greg rutkowski and makoto shinkai and studio ghibli",
    #"Face portrait of a retrofuturistic assassin surrounded by advanced brutalist architecture. highly detailed fantasy, rich colors, high contrast, gloomy atmosphere, dark background. trending on artstation an ultrafine hyperdetailed colorfull illustration by kim jung gi, moebius, irakli nadar, alphonse mucha, ayami kojima, amano, greg hildebrandt",
-   "Face portrait of a retrofuturistic assassin surrounded by advanced brutalist architecture. highly detailed science fiction, rich colors, high contrast, gloomy atmosphere, dark background. trending on artstation an ultrafine hyperdetailed colorfull illustration by kim jung gi, moebius, irakli nadar, alphonse mucha, ayami kojima, amano, greg hildebrandt",
+   #"Face portrait of a retrofuturistic assassin surrounded by advanced brutalist architecture. highly detailed science fiction, rich colors, high contrast, gloomy atmosphere, dark background. trending on artstation an ultrafine hyperdetailed colorfull illustration by kim jung gi, moebius, irakli nadar, alphonse mucha, ayami kojima, amano, greg hildebrandt",
+   "entrance of the huge castle surrounded by advanced brutalist architecture, art by moebius, irakli nadar, overdetailed art, colorful, artistic record jacket design",
 ]
-prompt_reset_interval = 3   # the prompt is switched to the next prompt in the list every n samples
+prompt_reset_interval = 2   # the prompt is switched to the next prompt in the list every n samples
 prompt_schedule = "linear"  # rotate through the prompt list in order
 #prompt_schedule = "random" # uncomment this line to use prompts in random order
 
@@ -34,15 +35,16 @@ args = gdl.get_default_args() # sampling params
 args.init_img = init_img
 args.output_path = "zoom_maker"
 args.output_name = "zoom_maker"
-args.steps = 12 #12 
+args.steps = 60 #12 
 args.scale = 14.#14. 
 args.guidance_strength = 0.5   # try lowering clip guidance_strength if you have problems with zooms "exploding"
 args.noise_start = 2.
 #args.negative_prompt = "frame, comic book, collage, cropped, oversaturated, signed, greyscale, monotone, vignette, title, text, logo, watermark"
-#args.negative_prompt = "frame, panel, comic book, collage, cropped, oversaturated, signed, greyscale, monotone, vignette"
+args.negative_prompt = "watermark, title, label, logo, collage, cropped, oversaturated, monotone, vignette"
 
-args.sampler = "dpmspp_2"
-#args.sampler = "dpmspp_3"
+#args.sampler = "k_euler_ancestral"
+#args.sampler = "dpmspp_2"
+args.sampler = "dpmspp_3"
 
 # *****************************************************************
 
@@ -53,7 +55,7 @@ original_size = cv2_image.shape
 # create zoom frames
 for i in range(num_frames):
     print("Starting iteration {0} of {1}...".format(i+1, num_frames))
-    expand(args.init_img, expand_top, expand_right, expand_bottom, expand_left, expand_softness, expand_space, output_file=expanded_img, add_noise=1.)
+    expand(args.init_img, expand_top, expand_right, expand_bottom, expand_left, expand_softness, expand_space, output_file=expanded_img)
 
     if ((i % prompt_reset_interval) == 0) or (i == 0):
         if prompt_schedule == "linear":

@@ -22,14 +22,14 @@ expand_left = 30
 expand_right = 30
 
 start_in_black_void = False      # enabled to start zooming out from a black void instead of starting on the first frame
-num_interpolated_frames = 25     # number of interpolated frames per keyframe, controls zoom speed (and the expand ratio)
+num_interpolated_frames = 20     # number of interpolated frames per keyframe, controls zoom speed (and the expand ratio)
 frame_rate = 30                  # fps of the output video
 output_file = "zoom.mp4"         # name of output file (this will be saved in the folder with the key frames)
 preview_output = False           # if enabled this will show a preview of the video in a window as it renders
-zoom_out = False                 # if enabled this will zoom out instead of zooming in
+zoom_out = True                  # if enabled this will zoom out instead of zooming in
 rotate_speed = 0.                # change from 0. if you _really_ want to barf
-acceleration_smoothing = 0. #1.8 # if > 0. this slows the start and stop, good values are 1 to 3
-video_size = (1920*2, 1080*2)    # video output resolution
+acceleration_smoothing = 1.3     # if > 0. this slows the start and stop, good values are 1 to 3
+video_size = (1920, 1080)        # video output resolution
 encode_lossless = False          # set to True to make an uncompressed video file (this will take a lot of disk space)
 
 # *****************************************************************
@@ -37,7 +37,7 @@ encode_lossless = False          # set to True to make an uncompressed video fil
 # find keyframes and sort them
 print("Loading keyframes from {0}...".format(DEFAULT_PATHS.outputs+"/"+frames_path))
 frame_filenames = sorted(glob.glob(DEFAULT_PATHS.outputs+"/"+frames_path+"/*.png"), reverse=True)
-#frame_filenames = frame_filenames[0:3] # limit to 20 frames for testing
+#frame_filenames = frame_filenames[0:10] # limit to 20 frames for testing
 num_keyframes = len(frame_filenames)
 
 frame0_cv2_image = cv2.imread(frame_filenames[0])
@@ -61,7 +61,11 @@ frame_textures = []
 for f in range(num_keyframes):
     print("Generating textures {0}/{1}...".format(f+1, num_keyframes))
     cv2_image = cv2.imread(frame_filenames[f])
-    np_image = gdl.expand_image(cv2_image, expand_top, expand_right, expand_bottom, expand_left, expand_softness, expand_space)
+    if (f > 0) or start_in_black_void:
+        np_image = gdl.expand_image(cv2_image, expand_top, expand_right, expand_bottom, expand_left, expand_softness, expand_space)
+    else:
+        np_image = gdl.expand_image(cv2_image, expand_top, expand_right, expand_bottom, expand_left, 0., 0.)
+
     frame_textures.append(glGenTextures(1))
     glBindTexture(GL_TEXTURE_2D, frame_textures[f])
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
@@ -86,7 +90,7 @@ frame_pixels = (GLubyte * (3*video_size[0]*video_size[1]))(0)
 if preview_output: # show video window if preview is enabled
     pygame.display.set_mode(video_size, SHOWN|DOUBLEBUF|OPENGL, vsync=0)
 if start_in_black_void: start_offset = 0 # start by zooming in from a black screen if enabled
-else: start_offset = 4 # otherwise start very slightly pulled back from the first keyframe
+else: start_offset = 2.5  # otherwise start very slightly pulled back from the first keyframe
 
 # create a schedule of time values for each rendered video frame
 if acceleration_smoothing > 0.:
