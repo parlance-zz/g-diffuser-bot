@@ -24,67 +24,49 @@ SOFTWARE.
 
 
 g_diffuser_bot.py - discord bot interface for g-diffuser-lib
-                  - Oct 2022 Update: I am in the process of rebuilding this bot from the ground up on top of the
-                  the new g-diffuser-lib code / framework. I intend to add all the CLI functions, img2img, outpainting,
-                  GUI buttons and much more but will need time to put it all back together. Thank you.
 
 """
 
 import modules.g_diffuser_lib as gdl
-from g_diffuser_config import DEFAULT_PATHS, DISCORD_BOT_SETTINGS
-from g_diffuser_defaults import DEFAULT_SAMPLE_SETTINGS
+gdl.load_config()
 
-import os; os.chdir(DEFAULT_PATHS.root)
+import os; os.chdir(gdl.DEFAULT_PATHS.root)
 
+import sys
 import datetime
 import pathlib
-import urllib
 import json
 from typing import Optional
-#import glob
 import aiohttp
-#import datetime
 import argparse
 import threading
 from threading import Thread
 import asyncio
 
 import discord
-#from discord.ext import commands
-#from discord.ext import tasks
 from discord import app_commands
 
-import numpy as np
-import cv2
+# redirect default paths to the designated bot path
+gdl.DEFAULT_PATHS.inputs = gdl.DEFAULT_PATHS.bot+"/inputs"
+gdl.DEFAULT_PATHS.outputs = gdl.DEFAULT_PATHS.bot+"/outputs"
+gdl.DEFAULT_PATHS.temp = gdl.DEFAULT_PATHS.bot+"/temp"
 
-# redirect default paths to designated bot root path
-DEFAULT_PATHS.inputs = DEFAULT_PATHS.bot+"/inputs"
-DEFAULT_PATHS.outputs = DEFAULT_PATHS.bot+"/outputs"
-
-DISCORD_BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN", "")
-
-# help and about strings, these must be 2000 characters or less
-ABOUT_TXT = """
-"""
-HELP_TXT = """
-"""
-EXAMPLES_TXT = """
-"""
+gdl.start_grpc_server()
+available_models = gdl.get_model_ids()
+print("Available models: {0}".format(available_models))
+print ("Please see models.yaml for more information")
+MODEL_CHOICES = []
+for model in available_models:
+    MODEL_CHOICES.append(app_commands.Choice(name=model, value=model))
 
 SAMPLER_CHOICES = []
 for sampler in gdl.SUPPORTED_SAMPLERS_LIST:
     SAMPLER_CHOICES.append(app_commands.Choice(name=sampler, value=sampler))
 
-MODEL_CHOICES = []
-for model in DISCORD_BOT_SETTINGS.model_list:
-    MODEL_CHOICES.append(app_commands.Choice(name=model, value=model))
-
 GRPC_SERVER_LOCK = asyncio.Lock()
 
 class G_DiffuserBot(discord.Client):
     def __init__(self):
-        global DISCORD_BOT_SETTINGS
-        self.settings = DISCORD_BOT_SETTINGS
         intents = discord.Intents(
             messages=True,
             dm_messages=True,
@@ -100,13 +82,12 @@ class G_DiffuserBot(discord.Client):
 
         self.saved_state = argparse.Namespace()
         self.saved_state.users_total_elapsed_time = {}
-        if DISCORD_BOT_SETTINGS.state_file_path: # load existing data if we have state file path
+        if gdl.DISCORD_BOT_SETTINGS.state_file_path: # load existing data if we have state file path
             try: self.load_state()
             except Exception as e:
-                #print("Error loading '"+DISCORD_BOT_SETTINGS.state_file_path+"' - "+str(e))
+                #print("Error loading '{0}' - {1}".format(gdl.DISCORD_BOT_SETTINGS.state_file_path, str(e)))
                 pass
 
-        gdl.start_grpc_server(gdl.get_default_args())
         return
 
     async def setup_hook(self):
@@ -115,127 +96,74 @@ class G_DiffuserBot(discord.Client):
         for app_command in app_commands:
             await app_command.edit(dm_permission=True)
 
-        # explicitly sync all commands with all guilds
-        bot_guilds = [discord.Object(guild) for guild in self.settings.guilds]
-        print("Synchronizing app commands with servers/guilds: " + str([vars(x) for x in bot_guilds]) + "...\n")
+        # explicitly sync all commands with all guilds / servers bot has joined
+        bot_guilds = client.guilds
+        print("Synchronizing app commands with servers/guilds: {0}...\n".format(str([vars(x) for x in bot_guilds])))
         for guild in bot_guilds:
             self.tree.copy_global_to(guild=guild)
             await self.tree.sync(guild=guild)
-        print("Bot app-command tree: " + str(vars(self.tree)) + "\n\n")
+        print("Bot app-command tree: {0}\n\n".format(str(vars(self.tree))))
         return
 
     def load_state(self):
-        with open(self.settings.state_file_path, 'r') as dfile:
+        with open(gdl.DISCORD_BOT_SETTINGS.state_file_path, 'r') as dfile:
             self.saved_state = argparse.Namespace(**json.load(dfile))
-            dfile.close()
-        print("Loaded " + self.settings.state_file_path + "...")
+        print("Loaded {0}...".format(gdl.DISCORD_BOT_SETTINGS.state_file_path))
         return
 
     def save_state(self):
         try:
-            (pathlib.Path(self.settings.state_file_path).parents[0]).mkdir(exist_ok=True, parents=True)
-            with open(self.settings.state_file_path, "w") as dfile:
+            (pathlib.Path(gdl.DISCORD_BOT_SETTINGS.state_file_path).parents[0]).mkdir(exist_ok=True, parents=True)
+            with open(gdl.DISCORD_BOT_SETTINGS.state_file_path, "w") as dfile:
                 json.dump(self.saved_state, dfile)
-                dfile.close()
-            print("Saved " + self.settings.state_file_path + "...")
+            print("Saved {0}...".format(gdl.DISCORD_BOT_SETTINGS.state_file_path))
         except Exception as e:
-            print("Error saving '" + self.settings.state_file_path + "' - " + str(e))
+            raise("Error saving '{0}' - {1}".format(gdl.DISCORD_BOT_SETTINGS.state_file_path, str(e)))
         return
-                
-    async def add_new(self, ctx): # add a new command to the queue
-        rejected = (self.restart_now != None) or (self.shutdown_now != None)
-        rejected |= (len(self.cmd_list) >= self.settings.max_queue_length)
+
+
+class DiscordBotLogger(object):
+    def __init__(self, log_path):
+        self.terminal = sys.stdout
+        try:
+            self.log = open(log_path, "a") # append to existing log file
+        except:
+            self.log = None
+        return
+
+    def write(self, message):
+        self.terminal.write(message)
+        if self.log: self.log.write(message)
         return
 
 if __name__ == "__main__":
+    sys.stdout = DiscordBotLogger("g_diffuser_bot.log")
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         "--token",
         type=str,
-        default=DISCORD_BOT_TOKEN,
-        help="if you want to override the discord bot token in g_diffuser_config.py you can supply an alternate here",
-    )
-    parser.add_argument(
-        "--guilds",
-        type=int,
-        nargs="+",
-        default=DISCORD_BOT_SETTINGS.guilds,
-        help="if you want to override the guild id(s) in g_diffuser_config.py you can supply alternate(s) here",
+        default=gdl.DISCORD_BOT_SETTINGS.token,
+        help="if you want to override the discord bot token in config you can supply an alternate here",
     )
     args = parser.parse_args()
-    DISCORD_BOT_SETTINGS.token = args.token
-    DISCORD_BOT_SETTINGS.guilds = args.guilds
-    # if we don't have a valid discord bot token or guild id let's not go any further
-    if (not DISCORD_BOT_SETTINGS.token) or (DISCORD_BOT_SETTINGS.token == "{your discord bot token}"):
-        print("Fatal error: Cannot start discord bot with token '" + DISCORD_BOT_SETTINGS.token + "'")
-        print("Please update DISCORD_BOT_SETTINGS.token in g_diffuser_config.py and try again.")
-        exit(1)
+    gdl.DISCORD_BOT_SETTINGS.token = args.token
+    # if we don't have a valid discord bot token let's not go any further
+    if (not gdl.DISCORD_BOT_SETTINGS.token) or (gdl.DISCORD_BOT_SETTINGS.token == "{your discord bot token}"):
+        print("Fatal error: Cannot start discord bot with token '{0}'".format(gdl.DISCORD_BOT_SETTINGS.token))
+        print("Please update DISCORD_BOT_TOKEN in config. Press enter to continue...")
+        input(); exit(1)
     else:
-        if len(DISCORD_BOT_SETTINGS.guilds) < 1:
-            print("Fatal error: Cannot start discord bot with no guild ids")
-            print("Please update DISCORD_BOT_SETTINGS.guilds in g_diffuser_config.py and try again.")
-            exit(1)
-        else:
-            client = G_DiffuserBot()
+        client = G_DiffuserBot()
 
-@client.tree.command(
-    name="expand",
-    description="resize an input image canvas, filling the new area with transparency",
-)
-@app_commands.describe(
-    top='expand top by how much (in %)?',
-    right='expand right by how much (in %)?',
-    bottom='expand bottom by how much (in %)?',
-    left='expand left by how much (in %)?',
-    input_image_url='input image url for expansion',
-    softness='amount to soften the resulting mask (in %)',
-    space='distance erased from the edge of the original image',
-)
-async def expand(
-    interaction: discord.Interaction,
-    input_image_url: str,
-    top: Optional[app_commands.Range[float, 0.0, 1000.0]] = 25.,
-    right: Optional[app_commands.Range[float, 0.0, 1000.0]] = 25.,
-    bottom: Optional[app_commands.Range[float, 0.0, 1000.0]] = 25.,
-    left: Optional[app_commands.Range[float, 0.0, 1000.0]] = 25.,
-    softness: Optional[app_commands.Range[float, 0.0, 1000.0]] = 85.,
-    space: Optional[app_commands.Range[float, 0.1, 100.0]] = 1.,
-):
-    global DEFAULT_PATHS
-
-    try: await interaction.response.defer(thinking=True, ephemeral=False) # start by requesting more time to respond
-    except Exception as e: print("exception in await interaction - " + str(e))
-    
-    if not input_image_url:
-        try: await interaction.followup.send(content="sorry @"+interaction.user.display_name+", please enter an input_image_url", ephemeral=True)
-        except Exception as e: print("exception in await interaction - " + str(e))
-        return
-
-    try:
-        init_img = await download_attachment(input_image_url)
-        init_img_fullpath = DEFAULT_PATHS.inputs+"/"+init_img
-        cv2_img = cv2.imread(init_img_fullpath)
-
-        new_img = gdl.expand_image(cv2_img, top, right, bottom, left, softness, space)
-        new_img_fullpath = DEFAULT_PATHS.outputs+"/"+init_img+".expanded.png"
-        gdl.save_image(new_img, new_img_fullpath)
-        print("Saved " + new_img_fullpath)
-        await interaction.followup.send(content="@"+interaction.user.display_name+" - here's your expanded image:", file=discord.File(new_img_fullpath), ephemeral=True)
-
-    except Exception as e:
-        print("error - " + str(e))
-        try: await interaction.followup.send(content="sorry, something went wrong :(", ephemeral=True)
-        except Exception as e: print("exception in await interaction - " + str(e))
-        return
-    return
 
 @client.tree.command(
     name="g",
     description="create something",
-#    nsfw=(GRPC_SERVER_SETTINGS.nsfw_behaviour != "block"),
+#    nsfw=(gdl.GRPC_SERVER_SETTINGS.nsfw_behaviour != "block"),
 )
 @app_commands.describe(
-    prompt='what do you want to create today?',
+    prompt='what do you want to create today? use a single space for no prompt',
+    n='number of images to generate at once',
     model_name='which model to use',
     sampler='which sampling algorithm to use',
     width='width of each output image',
@@ -247,7 +175,12 @@ async def expand(
     guidance_strength='clip guidance (only affects clip models)',
     input_image_url='optional input image url for in/out-painting or img2img',
     img2img_strength='amount to change the input image (only affects img2img, not in/out-painting)',
-    n='number of images to generate at once',
+    top='expand input image top by how much (in %)?',
+    right='expand input image right by how much (in %)?',
+    bottom='expand input image bottom by how much (in %)?',
+    left='expand input image left by how much (in %)?',
+    softness='amount to soften the resulting input image mask (in %)',
+    space='distance erased from the edge of the original input image',    
 )
 @app_commands.choices(
     sampler=SAMPLER_CHOICES,
@@ -255,31 +188,31 @@ async def expand(
 )
 async def g(
     interaction: discord.Interaction,
-    #prompt: str,
-    prompt: Optional[str] = "",
-    model_name: Optional[app_commands.Choice[str]] = DEFAULT_SAMPLE_SETTINGS.model_name,
-    sampler: Optional[app_commands.Choice[str]] = DEFAULT_SAMPLE_SETTINGS.sampler,
-    width: Optional[app_commands.Range[int, 64, DEFAULT_SAMPLE_SETTINGS.max_resolution[0]]] = DEFAULT_SAMPLE_SETTINGS.resolution[0],
-    height: Optional[app_commands.Range[int, 64, DEFAULT_SAMPLE_SETTINGS.max_resolution[1]]] = DEFAULT_SAMPLE_SETTINGS.resolution[1],
-    scale: Optional[app_commands.Range[float, 0.0, 100.0]] = DEFAULT_SAMPLE_SETTINGS.scale,
+    prompt: str,
+    n: Optional[app_commands.Range[int, 1, gdl.DISCORD_BOT_SETTINGS.max_output_limit]] = gdl.DISCORD_BOT_SETTINGS.default_output_n,
+    model_name: Optional[app_commands.Choice[str]] = gdl.DEFAULT_SAMPLE_SETTINGS.model_name,
+    sampler: Optional[app_commands.Choice[str]] = gdl.DEFAULT_SAMPLE_SETTINGS.sampler,
+    width: Optional[app_commands.Range[int, 64, gdl.DEFAULT_SAMPLE_SETTINGS.max_resolution[0]]] = gdl.DEFAULT_SAMPLE_SETTINGS.resolution[0],
+    height: Optional[app_commands.Range[int, 64, gdl.DEFAULT_SAMPLE_SETTINGS.max_resolution[1]]] = gdl.DEFAULT_SAMPLE_SETTINGS.resolution[1],
+    scale: Optional[app_commands.Range[float, 0.0, 100.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.scale,
     seed: Optional[app_commands.Range[int, 1, 2000000000]] = 0,
-    steps: Optional[app_commands.Range[int, 1, DISCORD_BOT_SETTINGS.max_steps_limit]] = DEFAULT_SAMPLE_SETTINGS.steps,
-    negative_prompt: Optional[str] = DEFAULT_SAMPLE_SETTINGS.negative_prompt,
-    guidance_strength: Optional[app_commands.Range[float, 0.0, 1.0]] = DEFAULT_SAMPLE_SETTINGS.guidance_strength,
+    steps: Optional[app_commands.Range[int, 1, gdl.DISCORD_BOT_SETTINGS.max_steps_limit]] = gdl.DEFAULT_SAMPLE_SETTINGS.steps,
+    negative_prompt: Optional[str] = gdl.DEFAULT_SAMPLE_SETTINGS.negative_prompt,
+    guidance_strength: Optional[app_commands.Range[float, 0.0, 1.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.guidance_strength,
     input_image_url: Optional[str] = "",
-    img2img_strength: Optional[app_commands.Range[float, 0.0, 2.0]] = DEFAULT_SAMPLE_SETTINGS.noise_start,
-    n: Optional[app_commands.Range[int, 1, DISCORD_BOT_SETTINGS.max_output_limit]] = DISCORD_BOT_SETTINGS.default_output_n,
+    img2img_strength: Optional[app_commands.Range[float, 0.0, 2.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.noise_start,
+    top: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
+    right: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
+    bottom: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
+    left: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
+    softness: Optional[app_commands.Range[float, 0.0, 1000.0]] = 100.,
+    space: Optional[app_commands.Range[float, 0.1, 100.0]] = 1.,
+    
 ):
-    global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS, GRPC_SERVER_LOCK
+    global GRPC_SERVER_LOCK
 
     try: await interaction.response.defer(thinking=True, ephemeral=False) # start by requesting more time to respond
     except Exception as e: print("exception in await interaction - " + str(e))
-    
-    if not prompt:
-        prompt = " "
-        #try: await interaction.followup.send(content="sorry @"+interaction.user.display_name+", please enter a prompt", ephemeral=True)
-        #except Exception as e: print("exception in await interaction - " + str(e))
-        #return
 
     if input_image_url != "":
         init_img = await download_attachment(input_image_url)
@@ -390,40 +323,36 @@ async def g(
 
     print("elapsed time: " + str(datetime.datetime.now() - start_time) + "s")
     return
-    
-def get_file_extension_from_url(url):
-    tokens = os.path.splitext(os.path.basename(urllib.parse.urlsplit(url).path))
-    if len(tokens) > 1: return tokens[1].strip().lower()
-    else: return ""
 
-async def download_attachment(url):
-    global DEFAULT_PATHS, DISCORD_BOT_SETTINGS
+async def download_attachment(url):   
+    mime_types ={
+        "image/png" : ".png",
+        "image/jpeg" : ".jpg",
+        "image/gif" : ".gif",
+        "image/bmp" : ".bmp",
+    }
     try:
-        attachment_extension = get_file_extension_from_url(url)
-        sanitized_attachment_name = gdl.get_default_output_name(url)
-        download_path = sanitized_attachment_name+attachment_extension
-        full_download_path = DEFAULT_PATHS.inputs+"/"+download_path
-
-        print("Downloading '" + url + "' to '" + full_download_path + "'...")
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 attachment_type = response.content_type
-                if attachment_type not in DISCORD_BOT_SETTINGS.accepted_attachments:
-                    raise Exception("attachment type '"+attachment_type+"' not found in allowed attachment list '"+str(DISCORD_BOT_SETTINGS.accepted_attachments)+"'")
-                                 
+                if attachment_type not in mime_types:
+                    raise Exception("attachment type '{0}' not found in allowed attachment list '{1}'".format(attachment_type, mime_types))
+
                 if response.status == 200:
+                    attachment_extension = mime_types[attachment_type]
+                    sanitized_attachment_name = gdl.get_default_output_name(url)
+                    download_path = sanitized_attachment_name+attachment_extension
+                    full_download_path = gdl.DEFAULT_PATHS.inputs+"/"+download_path
+                    print("Downloading '" + url + "' to '" + full_download_path + "'...")
                     with open(full_download_path, "wb") as out_file:
                         out_file.write(await response.read())
-                        out_file.close()
                 else:
-                    print("Error downloading url, status = " + str(response.status))
-                    return ""
+                    raise("Error downloading url, status = {0}".format(str(response.status)))
         
     except Exception as e:
-        print("Error downloading url - " + str(e))
-        return ""
+        raise("Error downloading url - {0}".format(str(e)))
         
     return download_path
 
 if __name__ == "__main__":
-    client.run(DISCORD_BOT_SETTINGS.token, reconnect=True)
+    client.run(gdl.DISCORD_BOT_SETTINGS.token, reconnect=True)
