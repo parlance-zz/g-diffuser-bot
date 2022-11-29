@@ -16,6 +16,7 @@ import logging
 import time
 import mimetypes
 #import signal
+from argparse import Namespace
 
 import grpc
 from argparse import ArgumentParser #, Namespace
@@ -31,6 +32,8 @@ sys.path.append(str(genPath))
 
 import generation_pb2 as generation
 import generation_pb2_grpc as generation_grpc
+import engines_pb2 as engines
+import engines_pb2_grpc as engines_grpc
 
 logger = logging.getLogger(__name__)
 logger.setLevel(level=logging.INFO)
@@ -204,6 +207,20 @@ class StabilityInference:
         if verbose:
             logger.info(f"Channel opened to {host}")
         self.stub = generation_grpc.GenerationServiceStub(channel)
+        self.engines_stub = engines_grpc.EnginesServiceStub(channel)
+
+    def list_engines(self):
+        rq = engines.ListEnginesRequest()
+        _engines = self.engines_stub.ListEngines(rq, **self.grpc_args)
+        engines_list = []
+        for i in range(len(_engines.engine)):
+            _engine = { "id": str(_engines.engine[i].id),
+                        "name": str(_engines.engine[i].name),
+                        "description": str(_engines.engine[i].description),
+                        "ready": bool(_engines.engine[i].ready),
+                      }
+            engines_list.append(Namespace(**_engine))
+        return engines_list
 
     def generate(
         self,
