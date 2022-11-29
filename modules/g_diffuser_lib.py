@@ -44,18 +44,21 @@ import re
 import glob
 import socket
 
+import yaml
+from yaml import CLoader as Loader
+
 import numpy as np
 import cv2
 
 from modules import sdgrpcserver_client as grpc_client
 from modules import g_diffuser_utilities as gdl_utils
 
-global SUPPORTED_SAMPLERS_LIST
+#global SUPPORTED_SAMPLERS_LIST
 SUPPORTED_SAMPLERS_LIST = list(grpc_client.SAMPLERS.keys())
 
 def start_grpc_server():
-    port = os.environ.get("SD_GRPC_PORT", "50051")
-    host = "{0}:{1}".format(os.environ.get("SD_GRPC_HOST", "localhost"), port)
+    global GRPC_SERVER_SETTINGS
+    host = "{0}:{1}".format(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.port)
     if get_socket_listening_status(host):
         print("Found running SDGRPC server listening on {0}".format(host))
     else:
@@ -74,13 +77,71 @@ def get_socket_listening_status(host_str):
         return False
 
 def load_config():
-    DISCORD_BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN", "")
-    #from g_diffuser_config import DEFAULT_PATHS, GRPC_SERVER_SETTINGS, CLI_SETTINGS
-    #from g_diffuser_defaults import DEFAULT_SAMPLE_SETTINGS
+    global DEFAULT_PATHS
+    global GRPC_SERVER_SETTINGS
+    global DISCORD_BOT_SETTINGS
+    global DEFAULT_SAMPLE_SETTINGS
+
+    # default paths and main settings are located in the config file and passed as environment variables
+    DEFAULT_PATHS = argparse.Namespace()
+    DEFAULT_PATHS.root = str(os.environ.get("GDIFFUSER_PATH_ROOT", "g-diffuser"))
+    DEFAULT_PATHS.inputs = str(os.environ.get("GDIFFUSER_PATH_INPUTS", "inputs"))
+    DEFAULT_PATHS.outputs = str(os.environ.get("GDIFFUSER_OUTPUTS_PATH", "outputs"))
+    DEFAULT_PATHS.temp = str(os.environ.get("GDIFFUSER_TEMP_PATH", "temp"))
+    DEFAULT_PATHS.bot = str(os.environ.get("GDIFFUSER_BOT_PATH", "bot"))
+    DEFAULT_PATHS.defaults_file = str(os.environ.get("GDIFFUSER_DEFAULTS_FILE", "defaults.yaml"))
+
+    GRPC_SERVER_SETTINGS = argparse.Namespace()
+    GRPC_SERVER_SETTINGS.host = os.environ.get("SD_GRPC_HOST", "localhost")
+    GRPC_SERVER_SETTINGS.port = int(os.environ.get("SD_GRPC_PORT", "50051"))
+    GRPC_SERVER_SETTINGS.nsfw_behavior = os.environ.get("SD_NSFW_BEHAVIOUR", "block")
+    GRPC_SERVER_SETTINGS.vram_optimization_level = int(os.environ.get("SD_VRAM_OPTIMISATION_LEVEL", "2"))
+
+    DISCORD_BOT_SETTINGS = argparse.Namespace()
+    DISCORD_BOT_SETTINGS.token = str(os.environ.get("DISCORD_BOT_TOKEN", ""))
+    DISCORD_BOT_SETTINGS.state_file_path = str(os.environ.get("DISCORD_BOT_STATE_FILE", "g_diffuser_bot.json"))
+    DISCORD_BOT_SETTINGS.default_output_n = int(os.environ.get("DISCORD_BOT_DEFAULT_OUTPUT_N", "1"))
+    DISCORD_BOT_SETTINGS.max_output_limit = int(os.environ.get("DISCORD_BOT_MAX_OUTPUT_LIMIT", "3"))
+    DISCORD_BOT_SETTINGS.max_steps_limit = int(os.environ.get("DISCORD_BOT_MAX_STEPS_LIMIT", "100"))
+
+    # try loading sampling defaults from the defaults.yaml file
+    try:
+        with open(DEFAULT_PATHS.defaults_file, "r") as file:
+            defaults = yaml.load(file, Loader=Loader)
+    except:
+        print("Could not load defaults file {0}".format(DEFAULT_PATHS.defaults))
+        defaults = {}
+    DEFAULT_SAMPLE_SETTINGS = argparse.Namespace()
+    DEFAULT_SAMPLE_SETTINGS.model_name = str(defaults.get("model_name", "default"))
+    DEFAULT_SAMPLE_SETTINGS.n_samples = int(defaults.get("n_samples", 1))
+    DEFAULT_SAMPLE_SETTINGS.sampler = str(defaults.get("sampler", "dpmspp_2"))
+    DEFAULT_SAMPLE_SETTINGS.steps = int(defaults.get("steps", 50))
+    DEFAULT_SAMPLE_SETTINGS.max_steps = int(defaults.get("max_steps", 150))    
+    DEFAULT_SAMPLE_SETTINGS.cfg_scale = float(defaults.get("cfg_scale", 14.))
+    DEFAULT_SAMPLE_SETTINGS.guidance_strength = float(defaults.get("guidance_strength", 0.5))
+    DEFAULT_SAMPLE_SETTINGS.negative_prompt = str(defaults.get("negative_prompt", ""))
+
+    DEFAULT_SAMPLE_SETTINGS.width = int(defaults.get("default_resolution", {}).get("width", 512))
+    DEFAULT_SAMPLE_SETTINGS.height = int(defaults.get("default_resolution", {}).get("height", 512))
+    DEFAULT_SAMPLE_SETTINGS.max_width = int(defaults.get("max_resolution", {}).get("width", 960))
+    DEFAULT_SAMPLE_SETTINGS.max_height = int(defaults.get("max_resolution", {}).get("height", 960))
+    DEFAULT_SAMPLE_SETTINGS.img2img_strength = float(defaults.get("img2img_strength", 0.65))
+    DEFAULT_SAMPLE_SETTINGS.start_schedule = float(defaults.get("start_schedule", 0.5))
+    DEFAULT_SAMPLE_SETTINGS.end_schedule = float(defaults.get("end_schedule", 0.01))
     
+    DEFAULT_SAMPLE_SETTINGS.auto_seed_low = int(defaults.get("auto_seed_range", {}).get("low", 10000))
+    DEFAULT_SAMPLE_SETTINGS.auto_seed_high = int(defaults.get("auto_seed_range", {}).get("high", 99999))
+
+    DEFAULT_SAMPLE_SETTINGS.expand_softness = float(defaults.get("expand_image", {}).get("softness", 100.))
+    DEFAULT_SAMPLE_SETTINGS.expand_space = float(defaults.get("expand_image", {}).get("space", 15.))
+    DEFAULT_SAMPLE_SETTINGS.expand_top = float(defaults.get("expand_image", {}).get("top", 0.))
+    DEFAULT_SAMPLE_SETTINGS.expand_bottom = float(defaults.get("expand_image", {}).get("bottom", 0.))
+    DEFAULT_SAMPLE_SETTINGS.expand_left = float(defaults.get("expand_image", {}).get("left", 0.))
+    DEFAULT_SAMPLE_SETTINGS.expand_right = float(defaults.get("expand_image", {}).get("right", 0.))
     return
 
 def get_model_ids():
+    
 
     return
 
