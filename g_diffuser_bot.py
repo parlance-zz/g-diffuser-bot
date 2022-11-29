@@ -60,7 +60,7 @@ for model in available_models:
     MODEL_CHOICES.append(app_commands.Choice(name=model, value=model))
 
 SAMPLER_CHOICES = []
-for sampler in gdl.SUPPORTED_SAMPLERS_LIST:
+for sampler in gdl.GRPC_SERVER_SUPPORTED_SAMPLERS_LIST:
     SAMPLER_CHOICES.append(app_commands.Choice(name=sampler, value=sampler))
 
 GRPC_SERVER_LOCK = asyncio.Lock()
@@ -237,7 +237,7 @@ async def g(
     args.noise_start = img2img_strength
     args.n = n
     args.interactive = True
-    gdl.print_namespace(args, debug=0, verbosity_level=1)
+    gdl.print_args(args, verbosity_level=1)
 
     try:
         await GRPC_SERVER_LOCK.acquire()
@@ -260,7 +260,7 @@ async def g(
             await asyncio.sleep(0.05)
         sample_thread.join() # it's the only way to be sure
     except Exception as e:
-        print("error - " + str(e)); gdl.print_namespace(args, debug=1)
+        print("error - " + str(e)); gdl.print_args(args)
         try: await interaction.followup.send(content="sorry, something went wrong :(", ephemeral=True)
         except Exception as e: print("exception in await interaction - " + str(e))
         return
@@ -316,7 +316,7 @@ async def g(
         try: await interaction.followup.send(files=attachment_files, content=message)
         except Exception as e: print("exception in await interaction - " + str(e))
     else:
-        print("error - " + args.err_txt); gdl.print_namespace(args, debug=1)
+        print("error - " + args.err_txt); gdl.print_args(args)
         try: await interaction.followup.send(content="sorry, something went wrong :(", ephemeral=True)
         except Exception as e: print("exception in await interaction - " + str(e))
         return

@@ -39,12 +39,14 @@ import code
 import glob
 import pathlib
 
+import yaml
+from yaml import CLoader as Loader
+
 import numpy as np
 import cv2
 
 VERSION_STRING = "g-diffuser-cli v2.0"
-INTERACTIVE_MODE_BANNER_STRING = """
-Interactive mode:
+INTERACTIVE_MODE_BANNER_STRING = """Interactive mode:
     call sample() with keyword arguments and use the up/down arrow-keys to browse command history:
 
 sample("pillars of creation", n=3, scale=15)                        # batch of 3 samples with scale 15
@@ -153,14 +155,13 @@ def cli_get_samples(prompt=None, **kwargs):
     except Exception as e:
         if args.debug: print("Error saving sample args - " + str(e))
 
-    if args.debug: gdl.print_namespace(args, debug=0, verbosity_level=1)
     return args
     
 def cli_show_args(level=None):
     global INTERACTIVE_CLI_ARGS
     if level != None: verbosity_level = level
     else: verbosity_level = 1
-    gdl.print_namespace(INTERACTIVE_CLI_ARGS, debug=INTERACTIVE_CLI_ARGS.debug, verbosity_level=verbosity_level)
+    gdl.print_args(INTERACTIVE_CLI_ARGS, verbosity_level=verbosity_level)
     return
     
 def cli_load_args(name=""):
@@ -171,7 +172,7 @@ def cli_load_args(name=""):
         else: json_path = DEFAULT_PATHS.inputs+"/json/"+name+".json"
         saved_args_dict = gdl.load_json(json_path)
         INTERACTIVE_CLI_ARGS = argparse.Namespace(**(vars(INTERACTIVE_CLI_ARGS) | saved_args_dict))  # merge with keyword args
-        gdl.print_namespace(INTERACTIVE_CLI_ARGS, debug=INTERACTIVE_CLI_ARGS.debug, verbosity_level=1)
+        gdl.print_args(INTERACTIVE_CLI_ARGS, verbosity_level=1)
     except Exception as e:
         print("Error loading last args from file - " + str(e))
     return
@@ -308,13 +309,14 @@ def cli_run_script(script_name, args=None):
     return
 
 def cli_show_samplers():
-    for sampler in gdl.SUPPORTED_SAMPLERS_LIST:
+    for sampler in gdl.GRPC_SERVER_SUPPORTED_SAMPLERS_LIST:
         print("sampler='"+sampler+"'")
     return
 
 def cli_show_models():
-    for model in gdl.get_models():
-        gdl.print_namespace(model)
+    models = gdl.get_models()
+    print("Found {0} model(s) on the SDGRPC server:".format(len(models)))
+    print(yaml.dump(models, sort_keys=False))
     return
 
 if __name__ == "__main__":

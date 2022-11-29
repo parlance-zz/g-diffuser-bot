@@ -53,15 +53,29 @@ import cv2
 from modules import sdgrpcserver_client as grpc_client
 from modules import g_diffuser_utilities as gdl_utils
 
-#global SUPPORTED_SAMPLERS_LIST
-SUPPORTED_SAMPLERS_LIST = list(grpc_client.SAMPLERS.keys())
+GRPC_SERVER_SUPPORTED_SAMPLERS_LIST = list(grpc_client.SAMPLERS.keys())
+GRPC_SERVER_ENGINE_STATUS = []
 
 def start_grpc_server():
     global GRPC_SERVER_SETTINGS
     if get_socket_listening_status(GRPC_SERVER_SETTINGS.host):
-        print("Found running SDGRPC server listening on {0}".format(GRPC_SERVER_SETTINGS.host))
+        print("\nFound running SDGRPC server listening on {0}".format(GRPC_SERVER_SETTINGS.host))
     else:
         raise Exception("Could not connect to SDGRPC server at {0}, is the server running?".format(GRPC_SERVER_SETTINGS.host))
+
+    try:
+        models = get_models()
+        print("Found {0} model(s) on the SDGRPC server:".format(len(models)))
+        print(yaml.dump(models, sort_keys=False))
+        all_models_ready = True
+        for model in models:
+            all_models_ready &= model["ready"]
+        if not all_models_ready:
+            print("Not all models are ready yet, the server may still be starting up...")
+
+    except Exception as e:
+        raise Exception("Unable to query server status at {0} with key'{1}', is the host/key correct?".format(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.grpc_key))
+
     return
 
 def get_socket_listening_status(host_str):
@@ -108,12 +122,14 @@ def load_config():
 
     # try loading sampling defaults from the defaults.yaml file
     try:
-        with open(DEFAULT_PATHS.defaults_file, "r") as file:
-            defaults = yaml.load(file, Loader=Loader)
+        defaults = load_yaml(DEFAULT_PATHS.defaults_file)
     except:
-        print("Could not load defaults file {0}".format(DEFAULT_PATHS.defaults))
+        print("Warning: Could not load defaults file {0}".format(DEFAULT_PATHS.defaults))
         defaults = {}
+
     DEFAULT_SAMPLE_SETTINGS = argparse.Namespace()
+    DEFAULT_SAMPLE_SETTINGS.prompt = ""
+    DEFAULT_SAMPLE_SETTINGS.seed = 0 # 0 means use auto seed    
     DEFAULT_SAMPLE_SETTINGS.model_name = str(defaults.get("model_name", "default"))
     DEFAULT_SAMPLE_SETTINGS.num_samples = int(defaults.get("num_samples", 1))
     DEFAULT_SAMPLE_SETTINGS.sampler = str(defaults.get("sampler", "dpmspp_2"))
@@ -127,10 +143,13 @@ def load_config():
     DEFAULT_SAMPLE_SETTINGS.height = int(defaults.get("default_resolution", {}).get("height", 512))
     DEFAULT_SAMPLE_SETTINGS.max_width = int(defaults.get("max_resolution", {}).get("width", 960))
     DEFAULT_SAMPLE_SETTINGS.max_height = int(defaults.get("max_resolution", {}).get("height", 960))
+    DEFAULT_SAMPLE_SETTINGS.init_image = "" # used to supply an input image for in/out-painting or img2img
     DEFAULT_SAMPLE_SETTINGS.img2img_strength = float(defaults.get("img2img_strength", 0.65))
     DEFAULT_SAMPLE_SETTINGS.start_schedule = float(defaults.get("start_schedule", 0.5))
     DEFAULT_SAMPLE_SETTINGS.end_schedule = float(defaults.get("end_schedule", 0.01))
     
+    DEFAULT_SAMPLE_SETTINGS.auto_seed = 0 # if auto_seed is 0, at sampling time this is replaced with a random seed
+                                          # from the auto_seed_range. if auto_seed is not 0 it is incremented by 1 instead
     DEFAULT_SAMPLE_SETTINGS.auto_seed_low = int(defaults.get("auto_seed_range", {}).get("low", 10000))
     DEFAULT_SAMPLE_SETTINGS.auto_seed_high = int(defaults.get("auto_seed_range", {}).get("high", 99999))
 
@@ -140,36 +159,46 @@ def load_config():
     DEFAULT_SAMPLE_SETTINGS.expand_bottom = float(defaults.get("expand_image", {}).get("bottom", 0.))
     DEFAULT_SAMPLE_SETTINGS.expand_left = float(defaults.get("expand_image", {}).get("left", 0.))
     DEFAULT_SAMPLE_SETTINGS.expand_right = float(defaults.get("expand_image", {}).get("right", 0.))
+
+    DEFAULT_SAMPLE_SETTINGS.start_time = ""
+    DEFAULT_SAMPLE_SETTINGS.end_time = ""
+    DEFAULT_SAMPLE_SETTINGS.elapsed_time = ""
+    DEFAULT_SAMPLE_SETTINGS.uuid = ""             # randomly generated string unique to the sample(s)
+    DEFAULT_SAMPLE_SETTINGS.status = 0            # waiting to be processed
+    DEFAULT_SAMPLE_SETTINGS.error_message = ""    # if there is an error, this will have relevant information
+    DEFAULT_SAMPLE_SETTINGS.output_path = ""      # by default an output path based on the prompt will be used
+    DEFAULT_SAMPLE_SETTINGS.output_name = ""      # by default an output name based on the prompt will be used
+    DEFAULT_SAMPLE_SETTINGS.output_file = ""      # if sampling is successful this is the path to the output image file
+    DEFAULT_SAMPLE_SETTINGS.args_file = ""        # path to a file containing the arguments used for sampling
+    DEFAULT_SAMPLE_SETTINGS.no_args_file = False  # if True do not save a separate args file for the output sample
+    DEFAULT_SAMPLE_SETTINGS.debug = False
+
     return
 
 def get_models():
-    global GRPC_SERVER_SETTINGS
+    global GRPC_SERVER_SETTINGS, GRPC_SERVER_ENGINE_STATUS
     stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.grpc_key)
-    return stability_api.list_engines()
+    GRPC_SERVER_ENGINE_STATUS = stability_api.list_engines()
+    return GRPC_SERVER_ENGINE_STATUS
 
-def save_json(_dict, file_path):
-    assert(file_path); (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
+def save_yaml(_dict, file_path):
+    (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
     with open(file_path, "w") as file:
-        json.dump(_dict, file, indent=4)
+        yaml.dump(_dict, file, sort_keys=False)
     return
 
-def load_json(file_path):
-    assert(file_path); (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
+def load_yaml(file_path):
     with open(file_path, "r") as file:
-        data = json.load(file)
+        data = yaml.load(file, Loader=Loader)
     return data
 
 def get_random_string(digits=8):
     uuid_str = str(uuid.uuid4())
     return uuid_str[0:digits] # shorten uuid, don't need that many digits usually
 
-def print_namespace(namespace, debug=False, verbosity_level=0, indent=4):
-    namespace_dict = vars(strip_args(namespace, level=verbosity_level))
-    if debug:
-        for arg in namespace_dict:
-            print("{0}='{1}' {2}".format(arg, str(namespace_dict[arg]), str(type(namespace_dict[arg]))))
-    else:
-        print(json.dumps(namespace_dict, indent=indent))
+def print_args(args, verbosity_level=0):
+    namespace_dict = vars(strip_args(args, level=verbosity_level))
+    print(yaml.dump(namespace_dict, sort_keys=False))
     return
 
 def get_default_output_name(name, truncate_length=100, force_ascii=True):
@@ -185,54 +214,48 @@ def get_noclobber_checked_path(base_path, file_path):
     existing_count = len(glob.glob(base_path+"/"+file_path_noext+"*"+file_path_ext))
     return file_path_noext+"_x"+str(existing_count).zfill(clobber_num_padding)+file_path_ext
 
-def strip_args(args, level=0): # remove args we wouldn't want to print or serialize, higher levels strip additional irrelevant fields
-    args_stripped = argparse.Namespace(**(vars(args).copy()))
+def strip_args(args, level=1): # remove args we wouldn't want to print or serialize, higher levels strip additional irrelevant fields
+    stripped = argparse.Namespace(**(vars(args).copy()))
 
     if level >=1: # keep just the basics for most printing
-        if "debug" in args_stripped:
-            if not args_stripped.debug: del args_stripped.debug
+        if "debug" in stripped:
+            if not stripped.debug: del stripped.debug
+        if "seed" in stripped:
+            if stripped.seed == 0: del stripped.seed
+        if "auto_seed" in stripped:
+            if stripped.auto_seed == 0: del stripped.auto_seed            
+        if "elapsed_time" in stripped:
+            if stripped.elapsed_time != "": del stripped.elapsed_time
+        if "output_path" in stripped:
+            if stripped.output_path == "": del stripped.output_path
+        if "output_name" in stripped:
+            if stripped.output_name == "": del stripped.output_name
+        if "output_file" in stripped:
+            if stripped.output_file == "": del stripped.output_file
+        if "error_message" in stripped:
+            if stripped.error_message == "": del stripped.error_message
+        if "args_file" in stripped:
+            if stripped.args_file == "": del stripped.args_file
 
-        if "seed" in args_stripped:
-            if args_stripped.seed == 0: del args_stripped.seed
+        if "start_time" in stripped: del stripped.start_time
+        if "end_time" in stripped: del stripped.end_time
+        if "no_args_file" in stripped: del stripped.no_args_file
+        if "uuid" in stripped: del stripped.uuid
+        if "status" in stripped: del stripped.status
+        if "start_schedule" in stripped: del stripped.start_schedule
+        if "end_schedule" in stripped: del stripped.end_schedule
+        if "auto_seed_low" in stripped: del stripped.auto_seed_low
+        if "auto_seed_high" in stripped: del stripped.auto_seed_high
+        if "max_width" in stripped: del stripped.max_width
+        if "max_height" in stripped: del stripped.max_height
 
-        if "command" in args_stripped: del args_stripped.command
-        if "interactive" in args_stripped: del args_stripped.interactive
-        if "load_args" in args_stripped: del args_stripped.load_args
-        
-        if "init_time" in args_stripped: del args_stripped.init_time
-        if "start_time" in args_stripped: del args_stripped.start_time
-        if "end_time" in args_stripped: del args_stripped.end_time
-        if "elapsed_time" in args_stripped: del args_stripped.elapsed_time
+        if "init_image" in stripped:
+            if stripped.init_image == "": # if there was no input image these fields are not relevant
+                del stripped.init_image
+        if "init_image" not in stripped:                
+            if "img2img_strength" in stripped: del stripped.img2img_strength
 
-        if "output_path" in args_stripped: del args_stripped.output_path
-        if "final_output_path" in args_stripped: del args_stripped.final_output_path
-        if "output_name" in args_stripped: del args_stripped.output_name
-        if "final_output_name" in args_stripped: del args_stripped.final_output_name
-        if "output_file" in args_stripped: del args_stripped.output_file
-        if "output_file_type" in args_stripped: del args_stripped.output_file_type
-        if "grid_image" in args_stripped: del args_stripped.grid_image
-        if "args_file" in args_stripped: del args_stripped.args_file
-        if "no_json" in args_stripped: del args_stripped.no_json
-
-        if "uuid_str" in args_stripped: del args_stripped.uuid_str
-        if "status" in args_stripped: del args_stripped.status
-        if "err_txt" in args_stripped: del args_stripped.err_txt
-
-        if "noise_q" in args_stripped: del args_stripped.noise_q
-        if "noise_end" in args_stripped: del args_stripped.noise_end
-        if "noise_eta" in args_stripped: del args_stripped.noise_eta
-
-        if "init_img" in args_stripped:
-            if args_stripped.init_img == "": # if there was no input image these fields are not relevant
-                del args_stripped.init_img
-                if "noise_start" in args_stripped: del args_stripped.noise_start
-
-        if "model_name" in args_stripped:
-            if "clip" not in args_stripped.model_name:
-                if "guidance_strength" in args_stripped: del args_stripped.guidance_strength
-
-
-    return args_stripped
+    return stripped
 
 def get_args_parser():
     global DEFAULT_SAMPLE_SETTINGS
