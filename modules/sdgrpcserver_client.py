@@ -7,7 +7,6 @@
 #   - Supports negative prompt by setting a prompt with negative weight
 #   - Supports sending key to machines on local network over HTTP (not HTTPS)
 
-import pathlib
 import sys
 import os
 import uuid
@@ -16,24 +15,18 @@ import io
 import logging
 import time
 import mimetypes
-import signal
+#import signal
 
 import grpc
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser #, Namespace
 from typing import Dict, Generator, List, Optional, Union, Any, Sequence, Tuple
 from google.protobuf.json_format import MessageToJson
 from PIL import Image
 
-try:
-    from dotenv import load_dotenv
-except ModuleNotFoundError:
-    pass
-else:
-    load_dotenv()
-
 # this is necessary because of how the auto-generated code constructs its imports
-thisPath = pathlib.Path(__file__).parent.resolve()
-genPath = thisPath / "sdgrpcserver/generated"
+thisPath = os.path.dirname(os.path.abspath(__file__))
+genPath = thisPath +"/sdgrpcserver/generated"
+
 sys.path.append(str(genPath))
 
 import generation_pb2 as generation
