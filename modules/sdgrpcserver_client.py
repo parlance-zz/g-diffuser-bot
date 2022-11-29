@@ -218,7 +218,7 @@ class StabilityInference:
                         "description": str(_engines.engine[i].description),
                         "ready": bool(_engines.engine[i].ready),
                       }
-            engines_list.append(Namespace(**_engine))
+            engines_list.append(_engine)
         return engines_list
 
     def generate(
