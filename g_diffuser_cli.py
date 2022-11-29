@@ -293,10 +293,10 @@ def cli_save_comparison_grid(*paths, **kwargs):
     print("Saved " + grid_filename)
     return
 
-def cli_run_script(script_name, debug=False, **kwargs):
-    assert(script_name)
-    global DEFAULT_PATHS, cli_locals
-    script_path = DEFAULT_PATHS.inputs+"/scripts/"+script_name+".py"
+def cli_run_script(script_name, args=None):
+    global cli_locals
+    script_path = gdl.DEFAULT_PATHS.inputs+"/scripts/"+script_name+".py"
+    # if args == None: args = get_default_args()
     try:
         exec(open(script_path).read(), dict(globals(), **vars(cli_locals)))
     except KeyboardInterrupt:

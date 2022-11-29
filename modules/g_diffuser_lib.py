@@ -144,7 +144,7 @@ def load_config():
 
 def get_models():
     global GRPC_SERVER_SETTINGS
-    stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host)
+    stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.grpc_key)
     return stability_api.list_engines()
 
 def save_json(_dict, file_path):
@@ -629,7 +629,7 @@ def get_samples(args, write=True, no_grid=False):
         return [],[]
 
     samples = []; sample_files = []
-    stability_api = grpc_client.StabilityInference("localhost:50051", None, engine=args.model_name, verbose=False)
+    stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.grpc_key, engine=args.model_name, verbose=False)
     while True: # watch out! a wild shrew!
         try:
             request_dict = build_grpc_request_dict(args, init_image, mask_image)
