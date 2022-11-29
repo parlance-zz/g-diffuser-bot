@@ -16,10 +16,9 @@ import logging
 import time
 import mimetypes
 #import signal
-from argparse import Namespace
 
 import grpc
-from argparse import ArgumentParser #, Namespace
+from argparse import ArgumentParser, Namespace
 from typing import Dict, Generator, List, Optional, Union, Any, Sequence, Tuple
 from google.protobuf.json_format import MessageToJson
 from PIL import Image
