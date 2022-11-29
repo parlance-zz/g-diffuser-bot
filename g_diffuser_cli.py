@@ -112,7 +112,7 @@ def main():
     cli_locals.la = cli_load_args
     cli_locals.save_args = cli_save_args
     cli_locals.sa = cli_save_args
-    cli_locals.default_args = cli_default_args
+    #cli_locals.default_args = cli_default_args
     cli_locals.resample = cli_resample
     cli_locals.compare = cli_save_comparison_grid
     cli_locals.run_script = cli_run_script
@@ -313,8 +313,8 @@ def cli_show_samplers():
     return
 
 def cli_show_models():
-    for model in gdl.get_model_ids():
-        print("model_name='"+model+"'")
+    for model in gdl.get_models():
+        gdl.print_namespace(model)
     return
 
 if __name__ == "__main__":

@@ -58,11 +58,10 @@ SUPPORTED_SAMPLERS_LIST = list(grpc_client.SAMPLERS.keys())
 
 def start_grpc_server():
     global GRPC_SERVER_SETTINGS
-    host = "{0}:{1}".format(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.port)
-    if get_socket_listening_status(host):
-        print("Found running SDGRPC server listening on {0}".format(host))
+    if get_socket_listening_status(GRPC_SERVER_SETTINGS.host):
+        print("Found running SDGRPC server listening on {0}".format(GRPC_SERVER_SETTINGS.host))
     else:
-        raise Exception("Could not connect to SDGRPC server at {0}, is the server running?".format(host))
+        raise Exception("Could not connect to SDGRPC server at {0}, is the server running?".format(GRPC_SERVER_SETTINGS.host))
     return
 
 def get_socket_listening_status(host_str):
@@ -92,10 +91,13 @@ def load_config():
     DEFAULT_PATHS.defaults_file = str(os.environ.get("GDIFFUSER_DEFAULTS_FILE", "defaults.yaml"))
 
     GRPC_SERVER_SETTINGS = argparse.Namespace()
-    GRPC_SERVER_SETTINGS.host = os.environ.get("SD_GRPC_HOST", "localhost")
-    GRPC_SERVER_SETTINGS.port = int(os.environ.get("SD_GRPC_PORT", "50051"))
+    GRPC_SERVER_SETTINGS.host = str(os.environ.get("SD_GRPC_HOST", "localhost"))
+    GRPC_SERVER_SETTINGS.grpc_port = int(os.environ.get("SD_GRPC_PORT", "50051"))
+    GRPC_SERVER_SETTINGS.grpc_key = str(os.environ.get("SD_GRPC_KEY", ""))
     GRPC_SERVER_SETTINGS.nsfw_behavior = os.environ.get("SD_NSFW_BEHAVIOUR", "block")
     GRPC_SERVER_SETTINGS.vram_optimization_level = int(os.environ.get("SD_VRAM_OPTIMISATION_LEVEL", "2"))
+    if GRPC_SERVER_SETTINGS.host == "localhost":
+        GRPC_SERVER_SETTINGS.host = "localhost:{0}".format(GRPC_SERVER_SETTINGS.grpc_port)
 
     DISCORD_BOT_SETTINGS = argparse.Namespace()
     DISCORD_BOT_SETTINGS.token = str(os.environ.get("DISCORD_BOT_TOKEN", ""))
@@ -113,7 +115,7 @@ def load_config():
         defaults = {}
     DEFAULT_SAMPLE_SETTINGS = argparse.Namespace()
     DEFAULT_SAMPLE_SETTINGS.model_name = str(defaults.get("model_name", "default"))
-    DEFAULT_SAMPLE_SETTINGS.n_samples = int(defaults.get("n_samples", 1))
+    DEFAULT_SAMPLE_SETTINGS.num_samples = int(defaults.get("num_samples", 1))
     DEFAULT_SAMPLE_SETTINGS.sampler = str(defaults.get("sampler", "dpmspp_2"))
     DEFAULT_SAMPLE_SETTINGS.steps = int(defaults.get("steps", 50))
     DEFAULT_SAMPLE_SETTINGS.max_steps = int(defaults.get("max_steps", 150))    
@@ -140,10 +142,10 @@ def load_config():
     DEFAULT_SAMPLE_SETTINGS.expand_right = float(defaults.get("expand_image", {}).get("right", 0.))
     return
 
-def get_model_ids():
-    
-
-    return
+def get_models():
+    global GRPC_SERVER_SETTINGS
+    stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host)
+    return stability_api.list_engines()
 
 def save_json(_dict, file_path):
     assert(file_path); (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
