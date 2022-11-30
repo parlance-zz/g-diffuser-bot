@@ -37,12 +37,15 @@ else:
 
 import datetime
 import argparse
+from argparse import Namespace
 import uuid
 import pathlib
-import json
 import re
 import glob
 import socket
+import asyncio
+import threading
+from threading import Thread
 
 import yaml
 from yaml import CLoader as Loader
@@ -55,6 +58,7 @@ from modules import g_diffuser_utilities as gdl_utils
 
 GRPC_SERVER_SUPPORTED_SAMPLERS_LIST = list(grpc_client.SAMPLERS.keys())
 GRPC_SERVER_ENGINE_STATUS = []
+GRPC_SERVER_LOCK = asyncio.Lock()
 
 def start_grpc_server():
     global GRPC_SERVER_SETTINGS
@@ -145,8 +149,6 @@ def load_config():
     DEFAULT_SAMPLE_SETTINGS.max_height = int(defaults.get("max_resolution", {}).get("height", 960))
     DEFAULT_SAMPLE_SETTINGS.init_image = "" # used to supply an input image for in/out-painting or img2img
     DEFAULT_SAMPLE_SETTINGS.img2img_strength = float(defaults.get("img2img_strength", 0.65))
-    DEFAULT_SAMPLE_SETTINGS.start_schedule = float(defaults.get("start_schedule", 0.5))
-    DEFAULT_SAMPLE_SETTINGS.end_schedule = float(defaults.get("end_schedule", 0.01))
     
     DEFAULT_SAMPLE_SETTINGS.auto_seed = 0 # if auto_seed is 0, at sampling time this is replaced with a random seed
                                           # from the auto_seed_range. if auto_seed is not 0 it is incremented by 1 instead
@@ -215,7 +217,7 @@ def get_noclobber_checked_path(base_path, file_path):
     return file_path_noext+"_x"+str(existing_count).zfill(clobber_num_padding)+file_path_ext
 
 def strip_args(args, level=1): # remove args we wouldn't want to print or serialize, higher levels strip additional irrelevant fields
-    stripped = argparse.Namespace(**(vars(args).copy()))
+    stripped = argparse.Namespace(**(vars(args)))
 
     if level >=1: # keep just the basics for most printing
         if "debug" in stripped:
@@ -225,7 +227,9 @@ def strip_args(args, level=1): # remove args we wouldn't want to print or serial
         if "auto_seed" in stripped:
             if stripped.auto_seed == 0: del stripped.auto_seed            
         if "elapsed_time" in stripped:
-            if stripped.elapsed_time != "": del stripped.elapsed_time
+            if stripped.elapsed_time == "": del stripped.elapsed_time
+        if "negative_prompt" in stripped:
+            if stripped.negative_prompt == "": del stripped.negative_prompt            
         if "output_path" in stripped:
             if stripped.output_path == "": del stripped.output_path
         if "output_name" in stripped:
@@ -242,8 +246,6 @@ def strip_args(args, level=1): # remove args we wouldn't want to print or serial
         if "no_args_file" in stripped: del stripped.no_args_file
         if "uuid" in stripped: del stripped.uuid
         if "status" in stripped: del stripped.status
-        if "start_schedule" in stripped: del stripped.start_schedule
-        if "end_schedule" in stripped: del stripped.end_schedule
         if "auto_seed_low" in stripped: del stripped.auto_seed_low
         if "auto_seed_high" in stripped: del stripped.auto_seed_high
         if "max_width" in stripped: del stripped.max_width
@@ -254,200 +256,18 @@ def strip_args(args, level=1): # remove args we wouldn't want to print or serial
                 del stripped.init_image
         if "init_image" not in stripped:                
             if "img2img_strength" in stripped: del stripped.img2img_strength
+            if "expand_softness" in stripped: del stripped.expand_softness
+            if "expand_space" in stripped: del stripped.expand_space
+            if "expand_top" in stripped: del stripped.expand_top
+            if "expand_bottom" in stripped: del stripped.expand_bottom
+            if "expand_left" in stripped: del stripped.expand_left
+            if "expand_right" in stripped: del stripped.expand_right
 
     return stripped
-
-def get_args_parser():
-    global DEFAULT_SAMPLE_SETTINGS
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument(
-        "--prompt",
-        type=str,
-        nargs="?",
-        default="",
-        help="the text to condition sampling on",
-    )
-    parser.add_argument(
-        "--model-name",
-        type=str,
-        default=DEFAULT_SAMPLE_SETTINGS.model_name,
-        help="model id as defined in models.yaml",
-    )
-    parser.add_argument(
-        "--sampler",
-        type=str,
-        default=DEFAULT_SAMPLE_SETTINGS.sampler,
-        help="sampler to use (ddim, plms, k_euler, k_euler_ancestral, k_heun, k_dpm_2, k_dpm_2_ancestral, k_lms)"
-    )  
-    parser.add_argument(
-        "--command",
-        type=str,
-        default="sample",
-        help="command to execute",
-    )    
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=0,
-        help="random starting seed for sampling (0 for random)",
-    )
-    parser.add_argument(
-        "--steps",
-        type=int,
-        default=DEFAULT_SAMPLE_SETTINGS.steps,
-        help="number of sampling steps (number of times to refine image)",
-    )
-    parser.add_argument(
-        "--scale",
-        type=float,
-        default=DEFAULT_SAMPLE_SETTINGS.scale,
-        help="classifier-free guidance scale (~amount of change per step)",
-    )
-    parser.add_argument(
-        "--noise_q",
-        type=float,
-        default=DEFAULT_SAMPLE_SETTINGS.noise_q,
-        help="falloff of shaped noise distribution for in/out-painting ( > 0), 1 is matched, lower values mean smaller features and higher means larger features",
-    )
-    parser.add_argument(
-        "--noise_start",
-        type=float,
-        default=DEFAULT_SAMPLE_SETTINGS.noise_start,
-        help="formerly known as strength, this is the overall amount of change for img2img",
-    )
-    parser.add_argument(
-        "--noise_end",
-        type=float,
-        default=DEFAULT_SAMPLE_SETTINGS.noise_end,
-        help="this param affects the sampler noise schedule",
-    )
-    parser.add_argument(
-        "--noise_eta",
-        type=float,
-        default=DEFAULT_SAMPLE_SETTINGS.noise_eta,
-        help="this param affects the sampler noise schedule",
-    )
-    parser.add_argument(
-        "--negative_prompt",
-        type=str,
-        default=DEFAULT_SAMPLE_SETTINGS.negative_prompt,
-        help="the 'negative' prompt guides generation the same way prompt does, but with a weight of -1.",
-    )
-    parser.add_argument(
-        "--guidance_strength",
-        type=float,
-        default=DEFAULT_SAMPLE_SETTINGS.guidance_strength,
-        help="this param controls 'clip guided' generation models only",
-    )
-    parser.add_argument(
-        "--n",
-        type=int,
-        default=DEFAULT_SAMPLE_SETTINGS.n,
-        help="number of samples to generate",
-    )
-    parser.add_argument(
-        "--w",
-        type=int,
-        default=None,
-        help="set output width or override width of input image",
-    )
-    parser.add_argument(
-        "--h",
-        type=int,
-        default=None,
-        help="set output height or override height of input image",
-    )
-    parser.add_argument(
-        "--init-img",
-        type=str,
-        default="",
-        help="path to the input image",
-    )
-    parser.add_argument(
-        "--output_path",
-        type=str,
-        help="path to store output samples (relative to root outputs path, by default this uses the prompt)",
-        default="",
-    )
-    parser.add_argument(
-        "--output_name",
-        type=str,
-        help="use a specified output file name instead of one based on the prompt",
-        default="",
-    )
-    """
-    parser.add_argument(
-        "--show",
-        action='store_true',
-        default=False,
-        help="show the output after sample is completed",
-    )  
-    """  
-    parser.add_argument(
-        "--interactive",
-        action='store_true',
-        default=False,
-        help="enters an interactive command line mode to generate multiple samples",
-    )
-    parser.add_argument(
-        "--load-args",
-        type=str,
-        default="",
-        help="load and use a saved set of arguments from ./inputs/json",
-    )
-    parser.add_argument(
-        "--no-json",
-        action='store_true',
-        default=False,
-        help="disable saving arg files for each sample output in ./outputs/output_path/json",
-    )
-    parser.add_argument(
-        "--debug",
-        action='store_true',
-        default=False,
-        help="enable verbose CLI output and debug file dumps",
-    )
-    return parser
     
 def get_default_args():
-    return get_args_parser().parse_args([])
-    
-def build_grpc_request_dict(args, init_image, mask_image):
     global DEFAULT_SAMPLE_SETTINGS
-    # use auto-seed if none provided
-    if args.seed: seed = args.seed
-    else:
-        args.auto_seed
-        seed = args.auto_seed
-    
-    if init_image is None: init_image_bytes = None
-    else: init_image_bytes = np.array(cv2.imencode(".png", init_image)[1]).tobytes()
-    if mask_image is None: mask_image_bytes = None
-    else: mask_image_bytes = np.array(cv2.imencode(".png", mask_image)[1]).tobytes()
-
-    # if repeating just use a giant batch size for now
-    if args.n <= 0: n = int(1e10)
-    else: n = args.n
-
-    return {
-        "prompt": args.prompt,
-        "height": args.h,
-        "width": args.w,
-        "start_schedule": args.noise_start,
-        "end_schedule": args.noise_end,
-        "cfg_scale": args.scale,
-        "eta": args.noise_eta,
-        "sampler": grpc_client.get_sampler_from_str(args.sampler),
-        "steps": args.steps,
-        "seed": seed,
-        "samples": n,
-        "init_image": init_image_bytes,
-        "mask_image": mask_image_bytes,
-        "negative_prompt": args.negative_prompt,
-        "guidance_preset": grpc_client.generation.GUIDANCE_PRESET_SIMPLE if args.guidance_strength > 0. else grpc_client.generation.GUIDANCE_PRESET_NONE,
-        "guidance_strength": args.guidance_strength,
-        "guidance_prompt": args.prompt,   
-    }
+    return Namespace(**vars(DEFAULT_SAMPLE_SETTINGS)) # copy the default settings
 
 def validate_resolution(width, height, init_image_dims):  # clip output dimensions at max_resolution, while keeping the correct resolution granularity,
                                                           # while roughly preserving aspect ratio. if width or height are None they are taken from the init_image
@@ -570,16 +390,15 @@ def get_annotated_image(image, args):
     return image_copy
 
 def save_image(cv2_image, file_path):
-    assert(file_path); (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
+    (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
     cv2.imwrite(file_path, cv2_image)
     return
 
 def load_image(args):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
-    assert(DEFAULT_PATHS.inputs)
     MASK_CUTOFF_THRESHOLD = 250. #225. #240.     # this will force the image mask to 0 if opacity falls below a threshold. set to 255. to disable
 
-    final_init_img_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_img).as_posix()
+    final_init_img_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_image).as_posix()
     
     # load and resize input image to multiple of 8x8
     init_image = cv2.imread(final_init_img_path, cv2.IMREAD_UNCHANGED) #.astype(np.float64)
@@ -615,66 +434,111 @@ def load_image(args):
 
     return init_image, mask_image
 
-def build_sample_args(args):
-    global DEFAULT_SAMPLE_SETTINGS
-    if not args.output_name: args.final_output_name = get_default_output_name(args.prompt)
-    else: args.final_output_name = args.output_name
-    if not args.output_path: args.final_output_path = args.final_output_name
-    else: args.final_output_path = args.output_path
-        
-    if not args.seed: # no seed provided
-        if not ("auto_seed" in args): # no existing auto-seed
-            args.auto_seed = int(np.random.randint(DEFAULT_SAMPLE_SETTINGS.auto_seed_range[0], DEFAULT_SAMPLE_SETTINGS.auto_seed_range[1])) # new random auto-seed
-    else:
-        if ("auto_seed" in args): del args.auto_seed # if a seed is provided just strip out the auto_seed entirely
+async def get_samples(args):
+    global DEFAULT_PATHS, GRPC_SERVER_SETTINGS
 
-    if args.init_img != "": # load input image if we have one
+    global GRPC_SERVER_LOCK
+    async with GRPC_SERVER_LOCK:
+
+        def get_samples_wrapper(args):
+            thread = threading.current_thread()
+            thread.args = Namespace(**vars(args)) # preserve old args in case of an exception
+            thread.args = _get_samples(args)
+            return
+
+        sample_thread = Thread(target = get_samples_wrapper, args=[args], daemon=True)
+        sample_thread.start()
+        try:
+            while True:
+                sample_thread.join(0.0001)
+                if not sample_thread.is_alive(): break
+                await asyncio.sleep(0.05)
+            sample_thread.join() # it's the only way to be sure
+        except KeyboardInterrupt:
+            print("Okay, cancelling...")
+            sample_thread.raise_exception(KeyboardInterrupt)
+            sample_thread.join()
+            sample_thread.args.status = -1 # cancelled
+            sample_thread.error_message = "Cancelled by user"
+
+    return sample_thread.args
+
+def build_grpc_request_dict(args, init_image_bytes, mask_image_bytes):
+    # use auto-seed if none provided
+    if args.seed: seed = args.seed
+    else: seed = args.auto_seed
+
+    return {
+        "prompt": args.prompt if args.prompt != "" else " ",
+        "height": args.height,
+        "width": args.width,
+        "start_schedule": args.img2img_strength,
+        "end_schedule": 0.01,
+        "cfg_scale": args.cfg_scale,
+        "eta": 0.0,
+        "sampler": grpc_client.get_sampler_from_str(args.sampler),
+        "steps": args.steps,
+        "seed": seed,
+        "samples": 1,
+        "init_image": init_image_bytes,
+        "mask_image": mask_image_bytes,
+        "negative_prompt": args.negative_prompt,
+        "guidance_preset": grpc_client.generation.GUIDANCE_PRESET_SIMPLE if args.guidance_strength > 0. else grpc_client.generation.GUIDANCE_PRESET_NONE,
+        "guidance_strength": args.guidance_strength,
+        "guidance_prompt": args.prompt,   
+    }
+
+def _get_samples(args):
+    global DEFAULT_SAMPLE_SETTINGS
+    
+    # set auto-seed if no seed provided
+    if args.seed == 0:
+        if args.auto_seed == 0: # no existing auto-seed, use new seed from auto-seed range
+            args.auto_seed = int(np.random.randint(DEFAULT_SAMPLE_SETTINGS.auto_seed_low, DEFAULT_SAMPLE_SETTINGS.auto_seed_high)) # new random auto-seed
+    else:
+        args.auto_seed = 0 # seed provided, disable auto-seed
+
+    if args.init_image != "": # load input image if we have one
         init_image, mask_image = load_image(args)
     else:
         init_image, mask_image = (None, None)
-        if not args.w: args.w = DEFAULT_SAMPLE_SETTINGS.resolution[0] # if we don't have an input image, it's size can't be used as the default resolution
-        if not args.h: args.h = DEFAULT_SAMPLE_SETTINGS.resolution[1]
+    if init_image is None: init_image_bytes = None # encode images for grpc request
+    else: init_image_bytes = np.array(cv2.imencode(".png", init_image)[1]).tobytes()
+    if mask_image is None: mask_image_bytes = None
+    else: mask_image_bytes = np.array(cv2.imencode(".png", mask_image)[1]).tobytes()
 
-    if "grid_image" in args: del args.grid_image
-
-    return init_image, mask_image
-
-def get_samples(args, write=True, no_grid=False):
-    global DEFAULT_PATHS, GRPC_SERVER_SETTINGS
-    assert((args.n > 0) or write) # repeating forever without writing to disk wouldn't make much sense
-
-    try:
-        init_image, mask_image = build_sample_args(args)
-    except Exception as e:
-        args.status = -1; args.err_txt = str(e) # error status
-        if args.debug: raise
-        else: print("Error: " + args.err_txt)
-        return [],[]
-
-    samples = []; sample_files = []
+    output_args = []
     stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.grpc_key, engine=args.model_name, verbose=False)
     while True: # watch out! a wild shrew!
         try:
+            args.status = 1 # in progress
+            args.error_message = ""
+            args.output_file = ""
+            args.args_file = ""
+
+            start_time = datetime.datetime.now()
+            args.start_time = str(start_time)
+            args.uuid_str = get_random_string(digits=16) # new uuid for new sample
+
             request_dict = build_grpc_request_dict(args, init_image, mask_image)
             answers = stability_api.generate(**request_dict)
             grpc_samples = grpc_client.process_artifacts_from_answers("", answers, write=False, verbose=False)
 
-            start_time = datetime.datetime.now(); args.start_time = str(start_time)
             for path, artifact in grpc_samples:
-                end_time = datetime.datetime.now(); args.end_time = str(end_time); args.elapsed_time = str(end_time-start_time)
-                args.status = 2; args.err_txt = "" # completed successfully
-
                 image = cv2.imdecode(np.fromstring(artifact.binary, dtype="uint8"), cv2.IMREAD_UNCHANGED)
-                if not (mask_image is None): # blend original image back in for in/out-painting, this is required due to decoding artifacts
+
+                if not (mask_image is None): # blend original image back in for in/out-painting, this is required due to vae decoding artifacts
                     mask_rgb = 1.-gdl_utils.np_img_grey_to_rgb(mask_image/255.)
                     image = np.clip(image*(1.-mask_rgb) + init_image*mask_rgb, 0., 255.)
 
                 if "annotation" in args: image = get_annotated_image(image, args)
-                samples.append(image)
 
-                if write:
-                    args.uuid_str = get_random_string(digits=16) # new uuid for new sample
-                    sample_files.append(save_sample(image, args))
+                end_time = datetime.datetime.now()
+                args.end_time = str(end_time)
+                args.elapsed_time = str(end_time-start_time)
+                args.status = 2 # completed successfully
+
+                save_sample(image, args)
 
                 if args.seed: args.seed += 1 # increment seed or random seed if none was given as we go through the batch
                 else: args.auto_seed += 1
@@ -689,29 +553,35 @@ def get_samples(args, write=True, no_grid=False):
             else: print("Error: " + args.err_txt)
             return samples, sample_files
 
-    if write and len(samples) > 1 and (not no_grid):
-        save_samples_grid(samples, args) # if batch size > 1 and write to disk is enabled, save composite "grid image"
-    return samples, sample_files
+    return output_args
 
 def save_sample(sample, args):
-    global DEFAULT_PATHS, CLI_SETTINGS
-    assert(DEFAULT_PATHS.outputs)
+    global DEFAULT_PATHS
+
+    # get filesystem output paths / base filenames
+    if not args.prompt: prompt = " "
+    else: prompt = args.prompt
+    if not args.output_name: fs_output_name = get_default_output_name(prompt)
+    else: fs_output_name = get_default_output_name(args.output_name)
+    if not args.output_path: fs_output_path = fs_output_name
+    else: fs_output_path = get_default_output_name(args.output_path)
+
     if args.seed: seed = args.seed
     else: seed = args.auto_seed
-
     seed_num_padding = 5
-    filename = args.final_output_name+"_s"+str(seed).zfill(seed_num_padding)+".png"
-    args.output_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.final_output_path+"/"+filename)
-    args.output_file_type = "img"
+    
+    filename = fs_output_name+"_s"+str(seed).zfill(seed_num_padding)+".png"
+    args.output_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, fs_output_path+"/"+filename)
+    full_output_path = DEFAULT_PATHS.outputs+"/"+args.output_file
+    save_image(sample, full_output_path)
+    print("Saved {0}".format(full_output_path))
 
-    final_path = DEFAULT_PATHS.outputs+"/"+args.output_file
-    save_image(sample, final_path)
-    print("Saved " + final_path)
-
-    if not args.no_json:
-        args.args_file = args.final_output_path+"/json/"+args.final_output_name+"_s"+str(seed).zfill(seed_num_padding)+".json"
+    if not args.no_args_file:
+        args.args_file = fs_output_path+"/args/"+args.final_output_name+"_s"+str(seed).zfill(seed_num_padding)+".yaml"
         args.args_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.args_file) # add suffix if filename already exists
-        save_json(vars(strip_args(args)), DEFAULT_PATHS.outputs+"/"+args.args_file)
+        full_args_path = DEFAULT_PATHS.outputs+"/"+args.args_file
+        save_yaml(vars(strip_args(args)), full_args_path)
+        print("Saved {0}".format(full_args_path))
     return args.output_file
 
 def save_samples_grid(samples, args):

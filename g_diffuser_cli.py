@@ -35,12 +35,11 @@ import os; os.chdir(gdl.DEFAULT_PATHS.root)
 import sys
 import datetime
 import argparse
+from argparse import Namespace
 import code
 import glob
 import pathlib
-
 import yaml
-from yaml import CLoader as Loader
 
 import numpy as np
 import cv2
@@ -49,30 +48,30 @@ VERSION_STRING = "g-diffuser-cli v2.0"
 INTERACTIVE_MODE_BANNER_STRING = """Interactive mode:
     call sample() with keyword arguments and use the up/down arrow-keys to browse command history:
 
-sample("pillars of creation", n=3, scale=15)                        # batch of 3 samples with scale 15
-sample("greg rutkowski", init_img="my_image.png", n=0)              # setting n <=0 repeats until stopped
+sample("pillars of creation", num_samples=3, cfg_scale=15)          # batch of 3 samples with cfg scale 15
+sample("greg rutkowski", init_image="my_image.png", num_samples=0)  # setting n <=0 repeats until stopped
 sample("something's wrong with the g-diffuser", sampler="k_euler")  # uses the k_euler sampler
                                                                     # any parameters unspecified will use defaults
 
 show_args(default_args())        # show default arguments and sampling parameters
-my_args = default_args(scale=15) # you can assign a collection of arguments to a variable
+my_args = default_args(cfg_scale=15) # you can assign a collection of arguments to a variable
 my_args.prompt = "art by frank"  # and modify them before passing them to sample()
 result_args = sample(my_args)    # sample returns the arguments used for the sample with result info
 show_args(result_args)           # you can show the result args to verify the results and output path
 
 show_samplers() # show all available sampler names
-show_models()   # show avaiable model ids in the grpc server (check ./models.yaml for more info)
-save_args("my_fav_args", my_args)  # you can save your arguments in ./inputs/args
+show_models()   # show available model ids on the grpc server (check models.yaml for more info)
+save_args(my_args, "my_fav_args")  # you can save your arguments in /inputs/args
 args = load_args("my_fav_args")    # you can load those saved arguments by name
 
-run_script("zoom_maker", my_zoom_args)    # you can save cli scripts(.py) in ./inputs/scripts and run them in the cli
+run_script("zoom_maker", my_zoom_args)    # you can save cli scripts(.py) in /inputs/scripts and run them in the cli
 run("zoom_composite", my_composite_args)  # run is shorthand for run_script, you can also pass an args object to the script
 
-resample("old_path", "new_path", scale=20)  # regenerate all saved outputs in ./outputs/old_path into ./outputs/new_path
+resample("old_path", "new_path", scale=20)  # regenerate all saved outputs in /outputs/old_path into /outputs/new_path
                                             # with optional replacement / substituted arguments
 compare("path1", "path2", "path3")          # make a comparison grid from all images in the specified output paths
 compare("a", "b", mode="rows")              # arrange each output path's images into rows instead
-compare("a", "b", file="my_compare.jpg")    # the comparison image will be saved by default as ./outputs/compare.jpg
+compare("a", "b", file="my_compare.jpg")    # the comparison image will be saved by default as /outputs/compare.jpg
                                             # use 'file' to specify an alternate filename
 
 clear()        # clear the command window history
@@ -90,10 +89,16 @@ class CLILogger(object):
         except:
             self.log = None
         return
-
+    def __del__(self):
+        sys.stdout = self.terminal
+        if self.log: self.log.close()
+        return
     def write(self, message):
         self.terminal.write(message)
         if self.log: self.log.write(message)
+        return
+    def flush(self):
+        if self.log: self.log.flush()
         return
 
 def main():
@@ -114,7 +119,7 @@ def main():
     cli_locals.la = cli_load_args
     cli_locals.save_args = cli_save_args
     cli_locals.sa = cli_save_args
-    #cli_locals.default_args = cli_default_args
+    cli_locals.default_args = cli_default_args
     cli_locals.resample = cli_resample
     cli_locals.compare = cli_save_comparison_grid
     cli_locals.run_script = cli_run_script
@@ -130,13 +135,21 @@ def main():
 
     return
     
-def cli_get_samples(prompt=None, **kwargs):
-    global INTERACTIVE_CLI_ARGS, LAST_ARGS_PATH
-    args = argparse.Namespace(**(vars(INTERACTIVE_CLI_ARGS) | kwargs)) # merge with keyword args
+def cli_get_samples(prompt, **kwargs):
+    global LAST_ARGS_PATH
+    if type(prompt) == argparse.Namespace:
+        args = prompt
+        prompt = args.prompt
+    elif type(prompt) == str:
+        args = cli_default_args(prompt=prompt)
+    else:
+        raise Exception("Invalid prompt type: {0} - '{1}'".format(str(type(prompt)), str(prompt)))
+
+    args = argparse.Namespace(**(vars(args) | kwargs)) # merge with keyword args
     if prompt: args.prompt = prompt
     else: args.prompt = " "
 
-    if args.n <= 0: print("Repeating sample, press ctrl+c to stop...")
+    if args.num_samples <= 0: print("Repeating sample, press ctrl+c to stop...")
     
     args.init_time = str(datetime.datetime.now()) # time the command was created / queued
     args_copy = argparse.Namespace(**vars(args))  # preserve args, if sampling is aborted part way through
@@ -147,46 +160,42 @@ def cli_get_samples(prompt=None, **kwargs):
     except Exception as e:
         print("Error in gdl.get_samples '" + str(e) + "'")
         args = args_copy
-        if args.debug: raise
+        raise
 
-    INTERACTIVE_CLI_ARGS = args    # preserve args for next call to sample() if everything went ok
-    try:                           # try to save the used args in a json tmp file for convenience
-        gdl.save_json(vars(gdl.strip_args(args)), LAST_ARGS_PATH)
+    try:  # try to save the last used args in a file for convenience
+        gdl.save_yaml(vars(gdl.strip_args(args)), LAST_ARGS_PATH)
     except Exception as e:
-        if args.debug: print("Error saving sample args - " + str(e))
-
+        print("Warning: Could not save last used args in {0} - {1}".format(LAST_ARGS_PATH, str(e)))
     return args
     
-def cli_show_args(level=None):
-    global INTERACTIVE_CLI_ARGS
+def cli_show_args(args, level=None):
     if level != None: verbosity_level = level
     else: verbosity_level = 1
-    gdl.print_args(INTERACTIVE_CLI_ARGS, verbosity_level=verbosity_level)
+    gdl.print_args(args, verbosity_level=verbosity_level)
     return
     
 def cli_load_args(name=""):
-    global DEFAULT_PATHS, LAST_ARGS_PATH
-    global INTERACTIVE_CLI_ARGS
+    global LAST_ARGS_PATH
     try:
-        if not name: json_path = LAST_ARGS_PATH
-        else: json_path = DEFAULT_PATHS.inputs+"/json/"+name+".json"
-        saved_args_dict = gdl.load_json(json_path)
-        INTERACTIVE_CLI_ARGS = argparse.Namespace(**(vars(INTERACTIVE_CLI_ARGS) | saved_args_dict))  # merge with keyword args
-        gdl.print_args(INTERACTIVE_CLI_ARGS, verbosity_level=1)
+        if not name: args_path = LAST_ARGS_PATH
+        else: args_path = gdl.DEFAULT_PATHS.inputs+"/args/"+name+".yaml"
+        saved_args = Namespace(**gdl.load_yaml(args_path))
+        gdl.print_args(saved_args, verbosity_level=1)
     except Exception as e:
-        print("Error loading last args from file - " + str(e))
+        print("Error loading args from file - " + str(e))
     return
     
-def cli_save_args(name):
-    global INTERACTIVE_CLI_ARGS
-    global DEFAULT_PATHS
+def cli_save_args(args, name):
     try:
-        json_path = DEFAULT_PATHS.inputs+"/json/"+name+".json"
-        saved_path = gdl.save_json(vars(gdl.strip_args(INTERACTIVE_CLI_ARGS)), json_path)
-        print("Saved " + saved_path)
+        args_path = gdl.DEFAULT_PATHS.inputs+"/args/"+name+".yaml"
+        gdl.save_yaml(vars(gdl.strip_args(args, verbosity_level=0)), args_path)
+        print("Saved {0}".format(args_path))
     except Exception as e:
-        if INTERACTIVE_CLI_ARGS.debug: print("Error saving args - " + str(e))
+        print("Error saving args - " + str(e))
     return
+
+def cli_default_args(**kwargs):
+    return Namespace(**(vars(gdl.DEFAULT_SAMPLE_SETTINGS) | kwargs))
 
 def cli_resample(old_path, new_path, **kwargs):
     resample_args = argparse.Namespace(**kwargs)
@@ -222,19 +231,6 @@ def cli_resample(old_path, new_path, **kwargs):
 
     gdl.save_samples_grid(all_resampled_samples, resample_args) # lastly, save a summary grid of all the resampled outputs
     return
-
-def cli_clear():
-    if os.name == "nt": os.system("cls")
-    else: os.system("clear")
-    return
-    
-def cli_help():
-    global VERSION_STRING, INTERACTIVE_MODE_BANNER_STRING
-    print(VERSION_STRING+INTERACTIVE_MODE_BANNER_STRING+"\n")
-    return
-    
-def cli_exit():
-    exit(0)
     
 def cli_save_comparison_grid(*paths, **kwargs):
     global DEFAULT_PATHS
@@ -294,19 +290,19 @@ def cli_save_comparison_grid(*paths, **kwargs):
     print("Saved " + grid_filename)
     return
 
-def cli_run_script(script_name, args=None):
+def cli_run_script(script_name, args=None, **kwargs):
     global cli_locals
     script_path = gdl.DEFAULT_PATHS.inputs+"/scripts/"+script_name+".py"
-    # if args == None: args = get_default_args()
+    if args == None: args = cli_default_args()
+    args = argparse.Namespace(**(vars(args) | kwargs))
+    args_dict = {"args": args}
     try:
-        exec(open(script_path).read(), dict(globals(), **vars(cli_locals)))
+        exec(open(script_path).read(), dict(globals(), **(vars(cli_locals) | args_dict)))
     except KeyboardInterrupt:
         print("Okay, cancelling...")
     except Exception as e:
-        print("Error running user script - " + str(e))
-        if debug: raise
-
-    return
+        raise
+    return args_dict["args"]
 
 def cli_show_samplers():
     for sampler in gdl.GRPC_SERVER_SUPPORTED_SAMPLERS_LIST:
@@ -319,5 +315,18 @@ def cli_show_models():
     print(yaml.dump(models, sort_keys=False))
     return
 
+def cli_clear():
+    if os.name == "nt": os.system("cls")
+    else: os.system("clear")
+    return
+    
+def cli_help():
+    global VERSION_STRING, INTERACTIVE_MODE_BANNER_STRING
+    print(VERSION_STRING+INTERACTIVE_MODE_BANNER_STRING+"\n")
+    return
+    
+def cli_exit():
+    exit(0)
+    
 if __name__ == "__main__":
     main()

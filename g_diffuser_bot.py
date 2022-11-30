@@ -35,13 +35,11 @@ import os; os.chdir(gdl.DEFAULT_PATHS.root)
 import sys
 import datetime
 import pathlib
-import json
+import yaml
 from typing import Optional
 import aiohttp
 import argparse
-import threading
-from threading import Thread
-import asyncio
+from argparse import Namespace
 
 import discord
 from discord import app_commands
@@ -52,18 +50,15 @@ gdl.DEFAULT_PATHS.outputs = gdl.DEFAULT_PATHS.bot+"/outputs"
 gdl.DEFAULT_PATHS.temp = gdl.DEFAULT_PATHS.bot+"/temp"
 
 gdl.start_grpc_server()
-available_models = gdl.get_model_ids()
-print("Available models: {0}".format(available_models))
-print ("Please see models.yaml for more information")
+models = gdl.get_models()
+
 MODEL_CHOICES = []
-for model in available_models:
-    MODEL_CHOICES.append(app_commands.Choice(name=model, value=model))
+for model in models:
+    MODEL_CHOICES.append(app_commands.Choice(name=model["id"], value=model["id"]))
 
 SAMPLER_CHOICES = []
 for sampler in gdl.GRPC_SERVER_SUPPORTED_SAMPLERS_LIST:
     SAMPLER_CHOICES.append(app_commands.Choice(name=sampler, value=sampler))
-
-GRPC_SERVER_LOCK = asyncio.Lock()
 
 class G_DiffuserBot(discord.Client):
     def __init__(self):
@@ -130,10 +125,16 @@ class DiscordBotLogger(object):
         except:
             self.log = None
         return
-
+    def __del__(self):
+        sys.stdout = self.terminal
+        if self.log: self.log.close()
+        return
     def write(self, message):
         self.terminal.write(message)
         if self.log: self.log.write(message)
+        return
+    def flush(self):
+        if self.log: self.log.flush()
         return
 
 if __name__ == "__main__":
@@ -155,6 +156,129 @@ if __name__ == "__main__":
     else:
         client = G_DiffuserBot()
 
+
+@client.tree.command(
+    name="img",
+    description="use an input image for img2img, inpainting, or outpainting",
+#    nsfw=(gdl.GRPC_SERVER_SETTINGS.nsfw_behaviour != "block"),
+)
+@app_commands.describe(
+    input_image_url="url of input image (you can right-click an image in discord chat to get a link)",
+    prompt='what do you want to create today?',
+    num_samples='number of images to generate at once',
+    model_name='which model to use',
+    sampler='which sampling algorithm to use',
+    cfg_scale='classifier-free guidance scale',
+    seed='seed for the random generator',
+    steps='number of sampling steps',
+    negative_prompt='has the effect of an anti-prompt',
+    guidance_strength='clip guidance (only affects clip models)',
+    input_image_url='optional input image url for in/out-painting or img2img',
+    img2img_strength='amount to change the input image (only affects img2img, not in/out-painting)',
+    expand_top='expand input image top by how much (in %)?',
+    expand_right='expand input image right by how much (in %)?',
+    expand_bottom='expand input image bottom by how much (in %)?',
+    expand_left='expand input image left by how much (in %)?',
+    expand_softness='amount to soften the resulting input image mask (in %)',
+    expand_space='distance erased from the edge of the original input image',    
+)
+@app_commands.choices(
+    sampler=SAMPLER_CHOICES,
+    model_name=MODEL_CHOICES,
+)
+async def img(
+    interaction: discord.Interaction,
+    input_image_url: str,
+    prompt: Optional[str]= "",
+    num_samples: Optional[app_commands.Range[int, 1, gdl.DISCORD_BOT_SETTINGS.max_output_limit]] = gdl.DISCORD_BOT_SETTINGS.default_output_n,
+    model_name: Optional[app_commands.Choice[str]] = gdl.DEFAULT_SAMPLE_SETTINGS.model_name,
+    sampler: Optional[app_commands.Choice[str]] = gdl.DEFAULT_SAMPLE_SETTINGS.sampler,
+    cfg_scale: Optional[app_commands.Range[float, 0.0, 100.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.cfg_scale,
+    seed: Optional[app_commands.Range[int, 1, 2000000000]] = 0,
+    steps: Optional[app_commands.Range[int, 1, gdl.DISCORD_BOT_SETTINGS.max_steps_limit]] = gdl.DEFAULT_SAMPLE_SETTINGS.steps,
+    negative_prompt: Optional[str] = gdl.DEFAULT_SAMPLE_SETTINGS.negative_prompt,
+    guidance_strength: Optional[app_commands.Range[float, 0.0, 1.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.guidance_strength,
+    img2img_strength: Optional[app_commands.Range[float, 0.0, 2.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.img2img_strength,
+    expand_top: Optional[app_commands.Range[float, 0.0, 1000.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.expand_top,
+    expand_bottom: Optional[app_commands.Range[float, 0.0, 1000.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.expand_bottom,
+    expand_left: Optional[app_commands.Range[float, 0.0, 1000.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.expand_left,
+    expand_right: Optional[app_commands.Range[float, 0.0, 1000.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.expand_right,
+    expand_softness: Optional[app_commands.Range[float, 0.0, 1000.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.expand_softness,
+    expand_space: Optional[app_commands.Range[float, 0., 200.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.expand_space,
+    
+):
+    # build sample args from app command params
+    args = locals().copy()
+    del args.interaction
+    args["model_name"] = args["model_name"].value
+    args["sampler"] = args["sampler"].value
+    
+    args = Namespace(**(vars(gdl.get_default_args()) | args))
+    init_image = await download_attachment(input_image_url)
+    args.init_image = init_image
+    gdl.print_args(args, verbosity_level=1)
+
+    try: await interaction.response.defer(thinking=True, ephemeral=False) # start by requesting more time to respond
+    except Exception as e: print("exception in await interaction - " + str(e))
+
+    # ...
+
+    if "output_file" in args:
+        attachment_files = []
+        for sample_file in sample_thread.sample_files:
+            sample_filename = DEFAULT_PATHS.outputs + "/" + sample_file
+            attachment_files.append(discord.File(sample_filename))
+
+        args_prompt = args.prompt; del args.prompt # extract and re-attach the prompt for formatting we can keep apostrophes and commas
+        if args.seed != 0: args_seed = args.seed-args.n # only need to show the seed as seed for simplicity
+        else: args_seed = args.auto_seed-args.n
+        del args.seed
+        if "auto_seed" in vars(args): del args.auto_seed
+
+        args_width = args.w; args_height = args.h # replace w and h with width and height for copy/paste and consistency
+        del args.w; del args.h
+        args.width = args_width
+        args.height = args_height
+
+        # don't echo parameters if they have a default value
+        if args.model_name == DEFAULT_SAMPLE_SETTINGS.model_name: del args.model_name
+        if args.sampler == DEFAULT_SAMPLE_SETTINGS.sampler: del args.sampler
+        if args.steps == DEFAULT_SAMPLE_SETTINGS.steps: del args.steps
+        if args.scale == DEFAULT_SAMPLE_SETTINGS.scale: del args.scale
+        if args.noise_q == DEFAULT_SAMPLE_SETTINGS.noise_q: del args.noise_q
+        if args.noise_start == DEFAULT_SAMPLE_SETTINGS.noise_start: del args.noise_start
+        if args.noise_end == DEFAULT_SAMPLE_SETTINGS.noise_end: del args.noise_end
+        if args.noise_eta == DEFAULT_SAMPLE_SETTINGS.noise_eta: del args.noise_eta
+        if args.n == DEFAULT_SAMPLE_SETTINGS.n: del args.n
+        if width == DEFAULT_SAMPLE_SETTINGS.resolution[0]: del args.width
+        if height == DEFAULT_SAMPLE_SETTINGS.resolution[1]: del args.height
+        if args.negative_prompt == DEFAULT_SAMPLE_SETTINGS.negative_prompt: del args.negative_prompt
+        if args.guidance_strength == DEFAULT_SAMPLE_SETTINGS.guidance_strength: del args.guidance_strength
+        if args.init_img != "":
+             del args.init_img
+             args.input_image_url = input_image_url
+        if "noise_start" in args:
+            noise_start = args.noise_start
+            del args.noise_start
+            if noise_start != DEFAULT_SAMPLE_SETTINGS.min_outpaint_noise:
+                args.img2img_strength = noise_start
+
+        # construct args string for echo / acknowledgement
+        args_dict = vars(gdl.strip_args(args, level=1))
+        args_str = str(args_dict).replace("{","").replace("}","").replace('"', "").replace("'", "").replace(",", " ")
+        args_str = "prompt: " + args_prompt + "  " + args_str + "  seed: " + str(args_seed)
+        message = "@" + interaction.user.display_name + ":  /g "+ args_str
+
+        try: await interaction.followup.send(files=attachment_files, content=message)
+        except Exception as e: print("exception in await interaction - " + str(e))
+    else:
+        print("error - " + args.err_txt); gdl.print_args(args)
+        try: await interaction.followup.send(content="sorry, something went wrong :(", ephemeral=True)
+        except Exception as e: print("exception in await interaction - " + str(e))
+        return
+
+    print("elapsed time: " + str(datetime.datetime.now() - start_time) + "s")
+    return
 
 @client.tree.command(
     name="g",
