@@ -28,21 +28,23 @@ g_diffuser_cli.py - interactive command line interface for g-diffuser
 """
 
 import modules.g_diffuser_lib as gdl
+from modules.g_diffuser_lib import SimpleLogger
 gdl.load_config()
 
 import os; os.chdir(gdl.DEFAULT_PATHS.root)
 
-import sys
-import datetime
 import argparse
 from argparse import Namespace
 import code
 import glob
 import pathlib
 import yaml
+import asyncio
 
 import numpy as np
 import cv2
+
+LAST_ARGS_PATH = gdl.DEFAULT_PATHS.inputs+"/args/last_args.yaml"
 
 VERSION_STRING = "g-diffuser-cli v2.0"
 INTERACTIVE_MODE_BANNER_STRING = """Interactive mode:
@@ -79,33 +81,9 @@ help()         # display this message
 exit()         # exit interactive mode
 """
 
-LAST_ARGS_PATH = gdl.DEFAULT_PATHS.inputs+"/args/last_args.yaml"
-
-class CLILogger(object):
-    def __init__(self, log_path):
-        self.terminal = sys.stdout
-        try:
-            self.log = open(log_path, "w") # overwrite log file on startup
-        except:
-            self.log = None
-        return
-    def __del__(self):
-        sys.stdout = self.terminal
-        if self.log: self.log.close()
-        return
-    def write(self, message):
-        self.terminal.write(message)
-        if self.log: self.log.write(message)
-        return
-    def flush(self):
-        if self.log: self.log.flush()
-        return
-
 def main():
-    sys.stdout = CLILogger("g_diffuser_cli.log")
-
-    global VERSION_STRING, INTERACTIVE_MODE_BANNER_STRING, LAST_ARGS_PATH
-    global INTERACTIVE_CLI_ARGS, INTERACTIVE_CLI_INTERPRETER
+    logger = SimpleLogger("g_diffuser_cli.log")
+    global INTERACTIVE_MODE_BANNER_STRING
 
     gdl.start_grpc_server()
     
@@ -130,39 +108,25 @@ def main():
     cli_locals.help = cli_help
     cli_locals.exit = cli_exit
     
-    INTERACTIVE_CLI_INTERPRETER = code.InteractiveConsole(locals=dict(globals(), **vars(cli_locals)))
-    INTERACTIVE_CLI_INTERPRETER.interact(banner=INTERACTIVE_MODE_BANNER_STRING, exitmsg="")
+    interpreter = code.InteractiveConsole(locals=dict(globals(), **vars(cli_locals)))
+    interpreter.interact(banner=INTERACTIVE_MODE_BANNER_STRING, exitmsg="")
 
     return
     
 def cli_get_samples(prompt, **kwargs):
     global LAST_ARGS_PATH
-    if type(prompt) == argparse.Namespace:
+
+    if type(prompt) == argparse.Namespace: # prompt can be a prompt string or an args namespace
         args = prompt
-        prompt = args.prompt
     elif type(prompt) == str:
         args = cli_default_args(prompt=prompt)
     else:
         raise Exception("Invalid prompt type: {0} - '{1}'".format(str(type(prompt)), str(prompt)))
-
     args = argparse.Namespace(**(vars(args) | kwargs)) # merge with keyword args
-    if prompt: args.prompt = prompt
-    else: args.prompt = " "
 
-    if args.num_samples <= 0: print("Repeating sample, press ctrl+c to stop...")
-    
-    args.init_time = str(datetime.datetime.now()) # time the command was created / queued
-    args_copy = argparse.Namespace(**vars(args))  # preserve args, if sampling is aborted part way through
-    try:                                          # anything could happen to the data
-        gdl.get_samples(args)
-    except KeyboardInterrupt:           # if sampling is aborted with ctrl+c or an error, restore the args we started with
-        args = args_copy
-    except Exception as e:
-        print("Error in gdl.get_samples '" + str(e) + "'")
-        args = args_copy
-        raise
+    asyncio.run(gdl.get_samples(args))
 
-    try:  # try to save the last used args in a file for convenience
+    try:  # on success, try to save the last used args in a file for convenience
         gdl.save_yaml(vars(gdl.strip_args(args)), LAST_ARGS_PATH)
     except Exception as e:
         print("Warning: Could not save last used args in {0} - {1}".format(LAST_ARGS_PATH, str(e)))
@@ -327,6 +291,7 @@ def cli_help():
     
 def cli_exit():
     exit(0)
+    
     
 if __name__ == "__main__":
     main()
