@@ -28,11 +28,11 @@ g_diffuser_bot.py - discord bot interface for g-diffuser-lib
 """
 
 import modules.g_diffuser_lib as gdl
+from modules.g_diffuser_lib import SimpleLogger
 gdl.load_config()
 
 import os; os.chdir(gdl.DEFAULT_PATHS.root)
 
-import sys
 import datetime
 import pathlib
 import yaml
@@ -117,28 +117,8 @@ class G_DiffuserBot(discord.Client):
         return
 
 
-class DiscordBotLogger(object):
-    def __init__(self, log_path):
-        self.terminal = sys.stdout
-        try:
-            self.log = open(log_path, "a") # append to existing log file
-        except:
-            self.log = None
-        return
-    def __del__(self):
-        sys.stdout = self.terminal
-        if self.log: self.log.close()
-        return
-    def write(self, message):
-        self.terminal.write(message)
-        if self.log: self.log.write(message)
-        return
-    def flush(self):
-        if self.log: self.log.flush()
-        return
-
 if __name__ == "__main__":
-    sys.stdout = DiscordBotLogger("g_diffuser_bot.log")
+    logger = SimpleLogger("g_diffuser_bot.log")
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         "--token",
@@ -157,6 +137,7 @@ if __name__ == "__main__":
         client = G_DiffuserBot()
 
 
+# img command for generating with an input image (img2img, in/outpainting)
 @client.tree.command(
     name="img",
     description="use an input image for img2img, inpainting, or outpainting",
@@ -477,6 +458,7 @@ async def download_attachment(url):
         raise("Error downloading url - {0}".format(str(e)))
         
     return download_path
+
 
 if __name__ == "__main__":
     client.run(gdl.DISCORD_BOT_SETTINGS.token, reconnect=True)
