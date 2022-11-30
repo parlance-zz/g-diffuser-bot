@@ -21,7 +21,7 @@ import grpc
 from argparse import ArgumentParser, Namespace
 from typing import Dict, Generator, List, Optional, Union, Any, Sequence, Tuple
 from google.protobuf.json_format import MessageToJson
-from PIL import Image
+#from PIL import Image
 
 # this is necessary because of how the auto-generated code constructs its imports
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -64,30 +64,6 @@ def get_sampler_from_str(s: str) -> generation.DiffusionSampler:
         raise ValueError(f"unknown sampler {s}")
     
     return algorithm
-   
-def open_images(
-    images: Union[
-        Sequence[Tuple[str, generation.Artifact]],
-        Generator[Tuple[str, generation.Artifact], None, None],
-    ],
-    verbose: bool = False,
-) -> Generator[Tuple[str, generation.Artifact], None, None]:
-    """
-    Open the images from the filenames and Artifacts tuples.
-
-    :param images: The tuples of Artifacts and associated images to open.
-    :return:  A Generator of tuples of image filenames and Artifacts, intended
-     for passthrough.
-    """
-    from PIL import Image
-
-    for path, artifact in images:
-        if artifact.type == generation.ARTIFACT_IMAGE:
-            if verbose:
-                logger.info(f"opening {path}")
-            img = Image.open(io.BytesIO(artifact.binary))
-            img.show()
-        yield [path, artifact]
 
 def image_to_prompt(im, init: bool = False, mask: bool = False) -> generation.Prompt:
     if init and mask:
@@ -225,8 +201,8 @@ class StabilityInference:
         self,
         prompt: Union[str, List[str], generation.Prompt, List[generation.Prompt]],
         negative_prompt: str = None,
-        init_image: Optional[Image.Image] = None,
-        mask_image: Optional[Image.Image] = None,
+        init_image = None,
+        mask_image = None,
         height: int = 512,
         width: int = 512,
         start_schedule: float = 1.0,
@@ -417,159 +393,3 @@ class StabilityInference:
 
             yield answer
             start = time.time()
-
-
-if __name__ == "__main__":
-    # Set up logging for output to console.
-    fh = logging.StreamHandler()
-    fh_formatter = logging.Formatter(
-        "%(asctime)s %(levelname)s %(filename)s(%(process)d) - %(message)s"
-    )
-    fh.setFormatter(fh_formatter)
-    logger.addHandler(fh)
-
-    STABILITY_HOST = os.getenv("STABILITY_HOST", "grpc.stability.ai:443")
-    STABILITY_KEY = os.getenv("STABILITY_KEY", "")
-
-    if not STABILITY_HOST:
-        logger.warning("STABILITY_HOST environment variable needs to be set.")
-        sys.exit(1)
-
-    if not STABILITY_KEY:
-        logger.warning(
-            "STABILITY_KEY environment variable needs to be set. You may"
-            " need to login to the Stability website to obtain the"
-            " API key."
-        )
-        sys.exit(1)
-
-    # CLI parsing
-    parser = ArgumentParser()
-    parser.add_argument(
-        "--height", "-H", type=int, default=512, help="[512] height of image"
-    )
-    parser.add_argument(
-        "--width", "-W", type=int, default=512, help="[512] width of image"
-    )
-    parser.add_argument(
-        "--start_schedule",
-        type=float, 
-        default=0.5, 
-        help="[0.5] start schedule for init image (must be greater than 0, 1 is full strength text prompt, no trace of image)"
-    )
-    parser.add_argument(
-        "--end_schedule",
-        type=float, 
-        default=0.01, 
-        help="[0.01] end schedule for init image"
-    )
-    parser.add_argument(
-        "--cfg_scale", "-C", type=float, default=7.0, help="[7.0] CFG scale factor"
-    )
-    parser.add_argument(
-        "--guidance_strength", 
-        "-G", 
-        type=float, 
-        default=0, 
-        help="[0.0] CLIP Guidance scale factor. We recommend values in range [0.0,1.0]. A good default is 0.25"
-    )
-    parser.add_argument(
-        "--sampler",
-        "-A",
-        type=str,
-        default="k_lms",
-        help="[k_lms] (" + ", ".join(SAMPLERS.keys()) + ")",
-    )
-    parser.add_argument(
-        "--eta", "-E", type=float, default=0.0, help="[0.0] ETA factor (for DDIM scheduler)"
-    )
-    parser.add_argument(
-        "--steps", "-s", type=int, default=50, help="[50] number of steps"
-    )
-    parser.add_argument("--seed", "-S", type=int, default=0, help="random seed to use")
-    parser.add_argument(
-        "--prefix",
-        "-p",
-        type=str,
-        default="generation_",
-        help="output prefixes for artifacts",
-    )
-    parser.add_argument(
-        "--no-store", action="store_true", help="do not write out artifacts"
-    )
-    parser.add_argument(
-        "--num_samples", "-n", type=int, default=1, help="number of samples to generate"
-    )
-    parser.add_argument("--show", action="store_true", help="open artifacts using PIL")
-    parser.add_argument(
-        "--engine",
-        "-e",
-        type=str,
-        help="engine to use for inference",
-        default="stable-diffusion-v1-5",
-    )
-    parser.add_argument(
-        "--init_image",
-        "-i",
-        type=str,
-        help="Init image",
-    )
-    parser.add_argument(
-        "--mask_image",
-        "-m",
-        type=str,
-        help="Mask image",
-    )
-    parser.add_argument(
-        "--negative_prompt", "-N",
-        type=str,
-        help="Negative Prompt",
-    )
-    parser.add_argument("prompt", nargs="*")
-
-    args = parser.parse_args()
-    if not args.prompt and not args.init_image:
-        logger.warning("prompt or init image must be provided")
-        parser.print_help()
-        sys.exit(1)
-    else:
-        args.prompt = " ".join(args.prompt)
-        
-    if args.init_image:
-        args.init_image = Image.open(args.init_image)
-        
-    if args.mask_image:
-        args.mask_image = Image.open(args.mask_image)
-
-    request =  {
-        "negative_prompt": args.negative_prompt,
-        "height": args.height,
-        "width": args.width,
-        "start_schedule": args.start_schedule,
-        "end_schedule": args.end_schedule,
-        "cfg_scale": args.cfg_scale,
-        "guidance_preset": generation.GUIDANCE_PRESET_SIMPLE if args.guidance_strength > 0 else generation.GUIDANCE_PRESET_NONE,
-        "guidance_strength": args.guidance_strength,
-        "sampler": get_sampler_from_str(args.sampler),
-        "eta": args.eta,
-        "steps": args.steps,
-        "seed": args.seed,
-        "samples": args.num_samples,
-        "init_image": args.init_image,
-        "mask_image": args.mask_image,
-    }
-
-    stability_api = StabilityInference(
-        STABILITY_HOST, STABILITY_KEY, engine=args.engine, verbose=True
-    )
-
-    answers = stability_api.generate(args.prompt, **request)
-    artifacts = process_artifacts_from_answers(
-        args.prefix, answers, write=not args.no_store, verbose=True
-    )
-    if args.show:
-        for artifact in open_images(artifacts, verbose=True):
-            pass
-    else:
-        for artifact in artifacts:
-            pass
