@@ -35,6 +35,7 @@ if os.name == "nt": # this kludge can help make long file paths on windows more 
 else:
     import readline # required on linux for functional arrow keys in the python interactive interpreter =\
 
+import sys
 import datetime
 import argparse
 from argparse import Namespace
@@ -59,6 +60,58 @@ from modules import g_diffuser_utilities as gdl_utils
 GRPC_SERVER_SUPPORTED_SAMPLERS_LIST = list(grpc_client.SAMPLERS.keys())
 GRPC_SERVER_ENGINE_STATUS = []
 GRPC_SERVER_LOCK = asyncio.Lock()
+
+"""
+class SimpleLogger(object):
+    def __init__(self, log_path, mode="a"):
+        self.terminal = sys.stdout
+        try:
+            self.log = open(log_path, mode) # append to existing log file
+        except:
+            self.log = None
+        return
+    def __del__(self):
+        sys.stdout = self.terminal
+        if self.log: self.log.close()
+        return
+    def write(self, message):
+        self.terminal.write(message)
+        if self.log:
+            self.log.write(message)
+            self.log.flush()
+        return
+    def flush(self):
+        if self.log: self.log.flush()
+        return
+"""
+class SimpleLogger(object):
+    def __init__(self, log_path, mode="a"):
+        try: self.log = open(log_path, mode)
+        except: return
+        # hijack stdout, stdin, stderr
+        sys.stdout = self
+        sys.stdin = self
+        sys.stderr = self
+        return
+    def __del__(self):
+        # restore original stream values
+        sys.stdout = sys.__stdout__
+        sys.stdin = sys.__stdin__
+        sys.stderr = sys.__stderr__
+        if self.log: self.log.close()
+    def write(self, data):
+        self.log.write(data)
+        self.log.flush()
+        sys.__stdout__.write(data)
+        sys.__stdout__.flush()
+    def readline(self):
+        s = sys.__stdin__.readline()
+        sys.__stdin__.flush()
+        self.log.write(s)
+        self.log.flush()
+        return s
+    def flush(foo):
+        return
 
 def start_grpc_server():
     global GRPC_SERVER_SETTINGS
@@ -165,14 +218,16 @@ def load_config():
     DEFAULT_SAMPLE_SETTINGS.start_time = ""
     DEFAULT_SAMPLE_SETTINGS.end_time = ""
     DEFAULT_SAMPLE_SETTINGS.elapsed_time = ""
-    DEFAULT_SAMPLE_SETTINGS.uuid = ""             # randomly generated string unique to the sample(s)
-    DEFAULT_SAMPLE_SETTINGS.status = 0            # waiting to be processed
-    DEFAULT_SAMPLE_SETTINGS.error_message = ""    # if there is an error, this will have relevant information
-    DEFAULT_SAMPLE_SETTINGS.output_path = ""      # by default an output path based on the prompt will be used
-    DEFAULT_SAMPLE_SETTINGS.output_name = ""      # by default an output name based on the prompt will be used
-    DEFAULT_SAMPLE_SETTINGS.output_file = ""      # if sampling is successful this is the path to the output image file
-    DEFAULT_SAMPLE_SETTINGS.args_file = ""        # path to a file containing the arguments used for sampling
-    DEFAULT_SAMPLE_SETTINGS.no_args_file = False  # if True do not save a separate args file for the output sample
+    DEFAULT_SAMPLE_SETTINGS.uuid = ""              # randomly generated string unique to the sample(s), not used
+    DEFAULT_SAMPLE_SETTINGS.status = 0             # waiting to be processed
+    DEFAULT_SAMPLE_SETTINGS.error_message = ""     # if there is an error, this will have relevant information
+    DEFAULT_SAMPLE_SETTINGS.output_path = ""       # by default an output path based on the prompt will be used
+    DEFAULT_SAMPLE_SETTINGS.output_name = ""       # by default an output name based on the prompt will be used
+    DEFAULT_SAMPLE_SETTINGS.output_file = ""       # if sampling is successful this is the path to the output image file
+    DEFAULT_SAMPLE_SETTINGS.output_sample = None   # cv2 image of the output sample if sampling is successful (or None)
+    DEFAULT_SAMPLE_SETTINGS.no_output_file = False # if True do not save an output file for the sample
+    DEFAULT_SAMPLE_SETTINGS.args_file = ""         # path to a file containing the arguments used for sampling
+    DEFAULT_SAMPLE_SETTINGS.no_args_file = False   # if True do not save a separate args file for the output sample
     DEFAULT_SAMPLE_SETTINGS.debug = False
 
     return
@@ -219,6 +274,9 @@ def get_noclobber_checked_path(base_path, file_path):
 def strip_args(args, level=1): # remove args we wouldn't want to print or serialize, higher levels strip additional irrelevant fields
     stripped = argparse.Namespace(**(vars(args)))
 
+    if "output_sample" in stripped:
+        del stripped.output_sample
+
     if level >=1: # keep just the basics for most printing
         if "debug" in stripped:
             if not stripped.debug: del stripped.debug
@@ -243,6 +301,7 @@ def strip_args(args, level=1): # remove args we wouldn't want to print or serial
 
         if "start_time" in stripped: del stripped.start_time
         if "end_time" in stripped: del stripped.end_time
+        if "no_output_file" in stripped: del stripped.no_output_file
         if "no_args_file" in stripped: del stripped.no_args_file
         if "uuid" in stripped: del stripped.uuid
         if "status" in stripped: del stripped.status
@@ -269,41 +328,37 @@ def get_default_args():
     global DEFAULT_SAMPLE_SETTINGS
     return Namespace(**vars(DEFAULT_SAMPLE_SETTINGS)) # copy the default settings
 
-def validate_resolution(width, height, init_image_dims):  # clip output dimensions at max_resolution, while keeping the correct resolution granularity,
-                                                          # while roughly preserving aspect ratio. if width or height are None they are taken from the init_image
-    global DEFAULT_SAMPLE_SETTINGS
+def validate_resolution(args):      # clip output dimensions at max_resolution, while keeping the correct resolution granularity,
+    global DEFAULT_SAMPLE_SETTINGS  # while roughly preserving aspect ratio.
+    RESOLUTION_GRANULARITY = 8      # hard-coding this for now, not likely to change any time soon
 
-    if init_image_dims == None:
-        if not width: width = DEFAULT_SAMPLE_SETTINGS.resolution[0]
-        if not height: height = DEFAULT_SAMPLE_SETTINGS.resolution[1]
-    else:
-        if not width: width = init_image_dims[0]
-        if not height: height = init_image_dims[1]
-        
+    width, height = (args.width, args.height)
     aspect_ratio = width / height 
-    if width > DEFAULT_SAMPLE_SETTINGS.max_resolution[0]:
-        width = DEFAULT_SAMPLE_SETTINGS.max_resolution[0]
-        height = int(width / aspect_ratio + .5)
-    if height > DEFAULT_SAMPLE_SETTINGS.max_resolution[1]:
-        height = DEFAULT_SAMPLE_SETTINGS.max_resolution[1]
-        width = int(height * aspect_ratio + .5)
+    if width > DEFAULT_SAMPLE_SETTINGS.max_width:
+        width = DEFAULT_SAMPLE_SETTINGS.max_width
+        height = int(width / aspect_ratio)
+    if height > DEFAULT_SAMPLE_SETTINGS.max_height:
+        height = DEFAULT_SAMPLE_SETTINGS.max_height
+        width = int(height * aspect_ratio)
         
-    width = int(width / float(DEFAULT_SAMPLE_SETTINGS.resolution_granularity) + 0.5) * DEFAULT_SAMPLE_SETTINGS.resolution_granularity
-    height = int(height / float(DEFAULT_SAMPLE_SETTINGS.resolution_granularity) + 0.5) * DEFAULT_SAMPLE_SETTINGS.resolution_granularity
-    width = np.clip(width, DEFAULT_SAMPLE_SETTINGS.resolution_granularity, DEFAULT_SAMPLE_SETTINGS.max_resolution[0])
-    height = np.clip(height, DEFAULT_SAMPLE_SETTINGS.resolution_granularity, DEFAULT_SAMPLE_SETTINGS.max_resolution[1])
+    width = int(width / RESOLUTION_GRANULARITY) * RESOLUTION_GRANULARITY
+    height = int(height / RESOLUTION_GRANULARITY) * RESOLUTION_GRANULARITY
+    width = np.clip(width, RESOLUTION_GRANULARITY, DEFAULT_SAMPLE_SETTINGS.max_width)
+    height = np.clip(height, RESOLUTION_GRANULARITY, DEFAULT_SAMPLE_SETTINGS.max_height)
 
-    return int(width), int(height)
+    args.width, args.height = (width, height)
+    return
 
-def soften_mask(np_rgba_image, softness, space):
+def soften_mask(np_rgba_image, softness):
     if softness == 0: return np_rgba_image
+    original_max_opacity = np.max(np_rgba_image[:,:,3])
     out_mask = np_rgba_image[:,:,3] <= 0.
     blurred_mask = gdl_utils.gaussian_blur(np_rgba_image[:,:,3], 3.14/softness)
-    blurred_mask = np.maximum(blurred_mask - np.max(blurred_mask[out_mask]), 0.)
-    blurred_mask /= np.max(blurred_mask)
-    blurred_mask **= np.maximum(space, 1.)
-    np_rgba_image[:,:,3] = blurred_mask
-    return np_rgba_image
+    blurred_mask = np.maximum(blurred_mask - np.max(blurred_mask[out_mask]), 0.) 
+    np_rgba_image[:,:,3] *= blurred_mask  # preserve partial opacity in original input mask
+    np_rgba_image[:,:,3] /= np.max(np_rgba_image[:,:,3]) # renormalize
+    np_rgba_image[:,:,3] *= original_max_opacity # restore original max opacity
+    return np_rgba_image                 
 
 def expand_image(cv2_img, top, right, bottom, left, softness, space):
     top = int(top / 100. * cv2_img.shape[0])
@@ -320,108 +375,47 @@ def expand_image(cv2_img, top, right, bottom, left, softness, space):
     elif cv2_img.shape[2] == 4: # rgba input image
         new_img[top:top+cv2_img.shape[0], left:left+cv2_img.shape[1]] = cv2_img
     else:
-        raise Exception("Unsupported image format: " + str(cv2_img.shape[2]) + " channels")
+        raise Exception("Unsupported image format: {0} channels".format(cv2_img.shape[2]))
         
     if softness > 0.:
         new_img = soften_mask(new_img/255., softness/100., space)
+        mask_cutoff_threshold = np.clip(space/255., 0., 1.)
+        if mask_cutoff_threshold > 0.:
+            new_img[:,:,3] *= (new_img[:,:,3] >= mask_cutoff_threshold)
         new_img = (np.clip(new_img, 0., 1.)*255.).astype(np.uint8)
 
     return new_img
 
-def get_grid_layout(num_samples):
-    def factorize(num):
-        return [n for n in range(1, num + 1) if num % n == 0]
-    factors = factorize(num_samples)
-    median_factor = factors[len(factors)//2]
-    rows = median_factor
-    columns = num_samples // rows
-    return (columns, rows)
-    
-def get_image_grid(imgs, layout, mode="columns"): # make an image grid out of a set of images
-    assert len(imgs) == layout[0]*layout[1]
-    width, height = (imgs[0].shape[0], imgs[0].shape[1])
-
-    np_grid = np.zeros((layout[0]*width, layout[1]*height, 3), dtype="uint8")
-    for i, img in enumerate(imgs):
-        if mode != "rows":
-            paste_x = i // layout[1] * width
-            paste_y = i % layout[1] * height
-        else:
-            paste_x = i % layout[0] * width
-            paste_y = i // layout[0] * height
-        np_grid[paste_x:paste_x+width, paste_y:paste_y+height, :] = img[:]
-
-    return np_grid
-
-def get_annotated_image(image, args):
-    if "annotation" not in args: return image
-    if not args.annotation: return image
-
-    annotation_font = cv2.FONT_HERSHEY_SIMPLEX
-    annotation_position = (8, 31) # todo: hard-coding top-left with small offset for now
-    annotation_scale = 7/8.
-    annotation_linetype = cv2.LINE_8 | cv2.LINE_AA
-    annotation_linethickness = 2
-    annotation_outline_radius = 4
-
-    image_copy = image.copy()
-    try:
-        annotation_color = (0,0,0)
-        for x in range(-annotation_outline_radius, annotation_outline_radius+1, annotation_linethickness):
-            for y in range(-annotation_outline_radius, annotation_outline_radius+1, annotation_linethickness):
-                cv2.putText(image_copy, args.annotation, 
-                    (annotation_position[0]+x, annotation_position[1]+y),
-                    annotation_font, 
-                    annotation_scale,
-                    (0,0,0),
-                    annotation_linethickness,
-                    annotation_linetype)
-        annotation_color = (175,175,175)
-        cv2.putText(image_copy, args.annotation, 
-            annotation_position,
-            annotation_font, 
-            annotation_scale,
-            (255,255,255),
-            annotation_linethickness,
-            annotation_linetype)
-    except Exception as e:
-        print("Error annotating sample - " + str(e))
-        return image
-    return image_copy
 
 def save_image(cv2_image, file_path):
     (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
     cv2.imwrite(file_path, cv2_image)
     return
 
-def load_image(args):
-    global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
-    MASK_CUTOFF_THRESHOLD = 250. #225. #240.     # this will force the image mask to 0 if opacity falls below a threshold. set to 255. to disable
+def load_image(cv2_image, file_path):
+    (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
+    cv2.imwrite(file_path, cv2_image)
+    return
 
-    final_init_img_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_image).as_posix()
+def prepare_init_image(args):
+    global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
+
+    fs_init_image_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_image).as_posix()
     
     # load and resize input image to multiple of 8x8
-    init_image = cv2.imread(final_init_img_path, cv2.IMREAD_UNCHANGED) #.astype(np.float64)
-    init_image_dims = (init_image.shape[1], init_image.shape[0])
-    width, height = validate_resolution(args.w, args.h, init_image_dims)
-    if (width, height) != (init_image.shape[1], init_image.shape[0]):
-        if args.debug: print("Resizing input image to (" + str(width) + ", " + str(height) + ")")
-        #init_image = cv2.resize(init_image, (width, height), interpolation=cv2.INTER_CUBIC)
-        init_image = np.clip(cv2.resize(init_image, (width, height), interpolation=cv2.INTER_LANCZOS4), 0, 255)
-    args.w = width
-    args.h = height
+    init_image = cv2.imread(fs_init_image_path, cv2.IMREAD_UNCHANGED) #.astype(np.float64)
+    args.width, args.height = (init_image.shape[1], init_image.shape[0])
+    validate_resolution(args)
+
+    if (args.width, args.height) != (init_image.shape[1], init_image.shape[0]):
+        print("Resizing input image to ({0}, {1})".format(args.width, args.height)) # todo: implement mask-aware rescaler
+        init_image = np.clip(cv2.resize(init_image, (args.width, args.height), interpolation=cv2.INTER_LANCZOS4), 0, 255)
     
     num_channels = init_image.shape[2]
     if num_channels == 4:     # input image has an alpha channel, setup mask for in/out-painting
         args.noise_start = np.maximum(DEFAULT_SAMPLE_SETTINGS.min_outpaint_noise, args.noise_start) # override img2img "strength" if it is < 1., for in/out-painting this should at least 1.
         mask_image = 255. - init_image[:,:,3] # extract mask from alpha channel and invert
         init_image = 0. + init_image[:,:,0:3]      # strip mask from init_img / convert to rgb
-
-        # apply mask cutoff threshold, this is required because bad paint programs corrupt color data by premultiplying alpha
-        # using the 8-bit opacity mask, resulting in unexpected artifacts in areas that are almost but not completely erased
-        if MASK_CUTOFF_THRESHOLD < 255.:
-            mask_image = mask_image*(mask_image < MASK_CUTOFF_THRESHOLD) + (mask_image >= MASK_CUTOFF_THRESHOLD)*255.
-            init_image *= gdl_utils.np_img_grey_to_rgb(mask_image) < 255. # force color data in erased areas to 0
 
         if args.sampler == "k_euler":
             print("Warning: k_euler is not currently supported for in-painting, switching to sampler=k_euler_ancestral")
@@ -430,7 +424,7 @@ def load_image(args):
     elif num_channels == 3: # rgb image, regular img2img without a mask
         mask_image = None
     else:
-        raise Exception("Error loading init_image "+final_init_img_path+": unsupported image format")
+        raise Exception("Error loading init_image "+fs_init_image_path+": unsupported image format")
 
     return init_image, mask_image
 
@@ -499,7 +493,7 @@ def _get_samples(args):
         args.auto_seed = 0 # seed provided, disable auto-seed
 
     if args.init_image != "": # load input image if we have one
-        init_image, mask_image = load_image(args)
+        init_image, mask_image = prepare_init_image(args)
     else:
         init_image, mask_image = (None, None)
     if init_image is None: init_image_bytes = None # encode images for grpc request
@@ -514,13 +508,16 @@ def _get_samples(args):
             args.status = 1 # in progress
             args.error_message = ""
             args.output_file = ""
+            args.output_sample = None
             args.args_file = ""
 
             start_time = datetime.datetime.now()
             args.start_time = str(start_time)
+            args.end_time = ""
+            args.elapsed_time = ""
             args.uuid_str = get_random_string(digits=16) # new uuid for new sample
 
-            request_dict = build_grpc_request_dict(args, init_image, mask_image)
+            request_dict = build_grpc_request_dict(args, init_image_bytes, mask_image_bytes)
             answers = stability_api.generate(**request_dict)
             grpc_samples = grpc_client.process_artifacts_from_answers("", answers, write=False, verbose=False)
 
@@ -543,7 +540,8 @@ def _get_samples(args):
                 if args.seed: args.seed += 1 # increment seed or random seed if none was given as we go through the batch
                 else: args.auto_seed += 1
                 if (len(samples) < args.n) or (args.n <= 0): # reset start time for next sample if we still have samples left
-                    start_time = datetime.datetime.now(); args.start_time = str(start_time)
+                    start_time = datetime.datetime.now()
+                    args.start_time = str(start_time)
 
             if args.n > 0: break # if we had a set number of samples then we are done
 
@@ -569,7 +567,7 @@ def save_sample(sample, args):
     if args.seed: seed = args.seed
     else: seed = args.auto_seed
     seed_num_padding = 5
-    
+
     filename = fs_output_name+"_s"+str(seed).zfill(seed_num_padding)+".png"
     args.output_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, fs_output_path+"/"+filename)
     full_output_path = DEFAULT_PATHS.outputs+"/"+args.output_file
@@ -598,3 +596,64 @@ def save_samples_grid(samples, args):
     print("Saved grid " + final_path)
     args.output_file = output_file
     return args.output_file
+
+def get_grid_layout(num_samples):
+    def factorize(num):
+        return [n for n in range(1, num + 1) if num % n == 0]
+    factors = factorize(num_samples)
+    median_factor = factors[len(factors)//2]
+    rows = median_factor
+    columns = num_samples // rows
+    return (columns, rows)
+    
+def get_image_grid(imgs, layout, mode="columns"): # make an image grid out of a set of images
+    assert len(imgs) == layout[0]*layout[1]
+    width, height = (imgs[0].shape[0], imgs[0].shape[1])
+
+    np_grid = np.zeros((layout[0]*width, layout[1]*height, 3), dtype="uint8")
+    for i, img in enumerate(imgs):
+        if mode != "rows":
+            paste_x = i // layout[1] * width
+            paste_y = i % layout[1] * height
+        else:
+            paste_x = i % layout[0] * width
+            paste_y = i // layout[0] * height
+        np_grid[paste_x:paste_x+width, paste_y:paste_y+height, :] = img[:]
+
+    return np_grid
+
+def get_annotated_image(image, args):
+    if "annotation" not in args: return image
+    if not args.annotation: return image
+
+    annotation_font = cv2.FONT_HERSHEY_SIMPLEX
+    annotation_position = (8, 31) # todo: hard-coding top-left with small offset for now
+    annotation_scale = 7/8.
+    annotation_linetype = cv2.LINE_8 | cv2.LINE_AA
+    annotation_linethickness = 2
+    annotation_outline_radius = 4
+
+    image_copy = image.copy()
+    try:
+        annotation_color = (0,0,0)
+        for x in range(-annotation_outline_radius, annotation_outline_radius+1, annotation_linethickness):
+            for y in range(-annotation_outline_radius, annotation_outline_radius+1, annotation_linethickness):
+                cv2.putText(image_copy, args.annotation, 
+                    (annotation_position[0]+x, annotation_position[1]+y),
+                    annotation_font, 
+                    annotation_scale,
+                    (0,0,0),
+                    annotation_linethickness,
+                    annotation_linetype)
+        annotation_color = (175,175,175)
+        cv2.putText(image_copy, args.annotation, 
+            annotation_position,
+            annotation_font, 
+            annotation_scale,
+            (255,255,255),
+            annotation_linethickness,
+            annotation_linetype)
+    except Exception as e:
+        print("Error annotating sample - " + str(e))
+        return image
+    return image_copy
