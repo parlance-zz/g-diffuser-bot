@@ -91,7 +91,7 @@ class SimpleLogger(object):
         return
 
 def start_grpc_server():
-    global GRPC_SERVER_SETTINGS
+    global GRPC_SERVER_SETTINGS, DEFAULT_SAMPLE_SETTINGS
     if get_socket_listening_status(GRPC_SERVER_SETTINGS.host):
         print("\nFound running SDGRPC server listening on {0}".format(GRPC_SERVER_SETTINGS.host))
     else:
@@ -100,10 +100,17 @@ def start_grpc_server():
     try:
         models = show_models()
         all_models_ready = True
+        model_ids = {}
         for model in models:
             all_models_ready &= model["ready"]
+            model_ids[model["id"]] = True
         if not all_models_ready:
             print("Not all models are ready yet, the server may still be starting up...")
+
+        if not model_ids.get(DEFAULT_SAMPLE_SETTINGS.model_name, False): # check that the selected default model exists on the server
+            new_default_model_id = models[0]["id"]
+            print ("Warning: Default model {0} is not available on server, using first available model {1} instead.".format(DEFAULT_SAMPLE_SETTINGS.model_name, new_default_model_id))
+            DEFAULT_SAMPLE_SETTINGS.model_name = new_default_model_id
 
     except Exception as e:
         raise Exception("Unable to query server status at {0} with key'{1}', is the host/key correct?".format(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.grpc_key))
@@ -388,16 +395,24 @@ def prepare_init_image(args):
         init_image = expand_image(init_image, args.expand_top, args.expand_right, args.expand_bottom, args.expand_left, args.expand_softness, args.expand_space)
     args.width, args.height = (init_image.shape[1], init_image.shape[0])
     validate_resolution(args)
+    num_channels = init_image.shape[2]
 
     if (args.width, args.height) != (init_image.shape[1], init_image.shape[0]):  # todo: implement mask-aware rescaler
         print("Resizing input image from {0}x{1} to {2}x{3}".format(init_image.shape[1], init_image.shape[0], args.width, args.height))
-        init_image = np.clip(cv2.resize(init_image, (args.width, args.height), interpolation=cv2.INTER_LANCZOS4), 0, 255)
+        
+        if num_channels == 3: # rgb input image, normal resize is fine
+            init_image = np.clip(cv2.resize(init_image, (args.width, args.height), interpolation=cv2.INTER_LANCZOS4), 0, 255)
+        else:
+            # resize rgb and mask separately because filtering the alpha channel can cause artifacts
+            alpha_channel = cv2.resize(init_image[:,:,3], (args.width, args.height), interpolation=cv2.INTER_NEAREST)
+            init_image = np.clip(cv2.resize(init_image, (args.width, args.height), interpolation=cv2.INTER_LANCZOS4), 0, 255)
+            init_image[:,:,3] = alpha_channel
     
-    num_channels = init_image.shape[2]
     if num_channels == 4:  # input image has an alpha channel, setup mask for in/out-painting
         args.img2img_strength = float(np.maximum(MINIMUM_OUTPAINT_IMG2IMG_STRENGTH, args.img2img_strength))
         mask_image = 255. - init_image[:,:,3] # extract mask from alpha channel and invert
         init_image = 0. + init_image[:,:,0:3] # strip mask from init_img leaving only rgb channels
+        init_image *= gdl_utils.np_img_grey_to_rgb(mask_image) < 255. # force color data in erased areas to 0
 
         if args.sampler == "k_euler": # k_euler currently does not add noise during sampling
             print("Warning: k_euler is not currently supported for in-painting, switching to sampler=k_euler_ancestral")
