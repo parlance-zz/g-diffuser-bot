@@ -1,77 +1,78 @@
 # zoom and  E N H A N C E
 
-import os
 import shutil
-import cv2
 import numpy as np
+from argparse import Namespace
 
-from g_diffuser_defaults import DEFAULT_SAMPLE_SETTINGS
-from g_diffuser_config import DEFAULT_PATHS
+_cli_args = args
 
-# put your prompt for sampling here
-my_prompts = [
-   #"Face portrait of a retrofuturistic assassin surrounded by advanced brutalist architecture. highly detailed fantasy, trending on artstation an ultrafine hyperdetailed colorfull illustration by kim jung gi, moebius, irakli nadar, alphonse mucha, ayami kojima, amano, greg hildebrandt",
-   #"a wooden shed, many green plant and flower gowing on it, illustration key visual trending pixiv fanbox by wlop and greg rutkowski and makoto shinkai and studio ghibli",
-   #"Face portrait of a retrofuturistic assassin surrounded by advanced brutalist architecture. highly detailed fantasy, rich colors, high contrast, gloomy atmosphere, dark background. trending on artstation an ultrafine hyperdetailed colorfull illustration by kim jung gi, moebius, irakli nadar, alphonse mucha, ayami kojima, amano, greg hildebrandt",
-   #"Face portrait of a retrofuturistic assassin surrounded by advanced brutalist architecture. highly detailed science fiction, rich colors, high contrast, gloomy atmosphere, dark background. trending on artstation an ultrafine hyperdetailed colorfull illustration by kim jung gi, moebius, irakli nadar, alphonse mucha, ayami kojima, amano, greg hildebrandt",
-   "entrance of the huge castle surrounded by advanced brutalist architecture, art by moebius, irakli nadar, overdetailed art, colorful, artistic record jacket design",
+args = cli_default_args()
+args.zoom_prompt_schedule = [
+    #"Face portrait of a retrofuturistic assassin surrounded by advanced brutalist architecture. highly detailed fantasy, trending on artstation an ultrafine hyperdetailed colorfull illustration by kim jung gi, moebius, irakli nadar, alphonse mucha, ayami kojima, amano, greg hildebrandt",
+    #"a wooden shed, many green plant and flower gowing on it, illustration key visual trending pixiv fanbox by wlop and greg rutkowski and makoto shinkai and studio ghibli",
+    #"Face portrait of a retrofuturistic assassin surrounded by advanced brutalist architecture. highly detailed fantasy, rich colors, high contrast, gloomy atmosphere, dark background. trending on artstation an ultrafine hyperdetailed colorfull illustration by kim jung gi, moebius, irakli nadar, alphonse mucha, ayami kojima, amano, greg hildebrandt",
+    #"Face portrait of a retrofuturistic assassin surrounded by advanced brutalist architecture. highly detailed science fiction, rich colors, high contrast, gloomy atmosphere, dark background. trending on artstation an ultrafine hyperdetailed colorfull illustration by kim jung gi, moebius, irakli nadar, alphonse mucha, ayami kojima, amano, greg hildebrandt",
+    #"entrance of the huge castle surrounded by advanced brutalist architecture, art by moebius, irakli nadar, overdetailed art, colorful, artistic record jacket design",
+    "Shattered glass retro stylized, cracked obsidian geometric fantasy art, splattering black gold iridescent bubbly underwater scenery, greg rutkowski, lois van baarle, ilya kuvshinov",
 ]
-prompt_reset_interval = 2   # the prompt is switched to the next prompt in the list every n samples
-prompt_schedule = "linear"  # rotate through the prompt list in order
-#prompt_schedule = "random" # uncomment this line to use prompts in random order
+args.zoom_prompt_reset_interval = 2   # the prompt is switched to the next prompt in the list every n samples
+#args.zoom_prompt_schedule_order = "linear"  # rotate through the prompt list in order
+args.zoom_prompt_schedule_order = "random" # uncomment this line to use prompts in random order
 
-init_img = "endzoom.png"  # starting (or rather, ending image)
-num_frames = 100000       # number of discrete zoom images to sample
-                          # (you can abort / close the program at any time to use the keyframes you have already generated)
+args.num_samples = 1
+args.zoom_num_frames = 1000 # number of discrete zoom images to sample
+                            # (you can abort / close the program at any time to use the keyframes you have already generated)
 
-expand_softness = 100.
-expand_space = 1.
-expand_top = 30           # amount to expand in each direction in each step
-expand_bottom = 30        # these values are in % of the original image size
-expand_left = 30          # exceeding 50% in any direction is not recommended for recursive zooms / pans
-expand_right = 30
+args.expand_softness = 100.
+args.expand_space = 15.     # distance to hard erase from source image edge
+args.expand_top = 40        # amount to expand in each direction in each step
+args.expand_bottom = 40     # these values are in % of the original image size
+args.expand_left = 40       # exceeding 50% in any direction is not recommended for recursive zooms / pans
+args.expand_right = 40
 
-args = gdl.get_default_args() # sampling params
-args.init_img = init_img
-args.output_path = "zoom_maker"
+args.init_image = "endzoom.png"  # starting (or rather, ending image file, relative to inputs path)
+args.output_path = "zoom_maker"  # output path, relative to outputs
 args.output_name = "zoom_maker"
-args.steps = 60 #12 
-args.scale = 14.#14. 
+args.steps = 12 #60
+args.cfg_scale = 14.
 args.guidance_strength = 0.5   # try lowering clip guidance_strength if you have problems with zooms "exploding"
-args.noise_start = 2.
 #args.negative_prompt = "frame, comic book, collage, cropped, oversaturated, signed, greyscale, monotone, vignette, title, text, logo, watermark"
 args.negative_prompt = "watermark, title, label, logo, collage, cropped, oversaturated, monotone, vignette"
-
 #args.sampler = "k_euler_ancestral"
+#args.sampler = "k_dpm_2_ancestral"
 #args.sampler = "dpmspp_2"
 args.sampler = "dpmspp_3"
 
+if _cli_args: # if an args object was passed in the cli run() command merge those parameters into the defaults
+    args = Namespace(**(vars(args) | vars(_cli_args)))
+
 # *****************************************************************
 
-expanded_img = os.path.splitext(init_img)[0]+".expanded.png"
-cv2_image = cv2.imread(DEFAULT_PATHS.inputs+"/"+init_img)
-original_size = cv2_image.shape
+recycle_image = "zoom_maker.png" # this file/path is used to copy the last output image to the inputs folder
 
 # create zoom frames
-for i in range(num_frames):
-    print("Starting iteration {0} of {1}...".format(i+1, num_frames))
-    expand(args.init_img, expand_top, expand_right, expand_bottom, expand_left, expand_softness, expand_space, output_file=expanded_img)
+for i in range(args.zoom_num_frames):
+    print("Starting iteration {0} of {1}...".format(i+1, args.zoom_num_frames))
 
-    if ((i % prompt_reset_interval) == 0) or (i == 0):
-        if prompt_schedule == "linear":
-            prompt_index = (i // prompt_reset_interval) % len(my_prompts)
-        elif prompt_schedule == "random":
-            prompt_index = np.random.randint(0, len(my_prompts))
+    # update the prompt according to the multi-prompt schedule
+    if ((i % args.zoom_prompt_reset_interval) == 0) or (i == 0):
+        if args.zoom_prompt_schedule_order == "linear":
+            prompt_index = (i // args.zoom_prompt_reset_interval) % len(args.zoom_prompt_schedule)
+        elif args.zoom_prompt_schedule_order == "random":
+            prompt_index = np.random.randint(0, len(args.zoom_prompt_schedule))
         else:
-            raise Exception("Unknown prompt schedule '{0}'".format(prompt_schedule))
-        args.prompt = my_prompts[prompt_index]
+            raise Exception("Unknown prompt schedule order '{0}'".format(args.zoom_prompt_schedule_order))
+        args.prompt = args.zoom_prompt_schedule[prompt_index]
         print("prompt: {0}".format(args.prompt))
 
-    args.init_img = expanded_img
-    args = sample(**vars(args))
+    args = sample(args)
+    if not args.output_file:
+        break # cancelled or error
 
-    output_file = DEFAULT_PATHS.outputs+"/"+args.output_file
-    input_file = DEFAULT_PATHS.inputs+"/"+args.init_img
+    # recycle the output back into the next input init_image for a recursive zoom effect
+    args.init_image = recycle_image
+    output_file = gdl.DEFAULT_PATHS.outputs+"/"+args.output_file
+    input_file = gdl.DEFAULT_PATHS.inputs+"/"+args.init_image
     print("Copying from {0} to {1}...".format(output_file, input_file))
     shutil.copyfile(output_file, input_file)
 

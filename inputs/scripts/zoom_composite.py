@@ -3,34 +3,32 @@ import cv2
 import glob
 import numpy as np
 
-from g_diffuser_config import DEFAULT_PATHS
-from modules import g_diffuser_utilities as gdu
-
 import pygame
 from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
-# this is the folder relative to the output path where the keyframes are stored
-frames_path = "zoom_maker"
+if args == None:
+    # this is the folder relative to the output path where the keyframes are stored
+    frames_path = "zoom_maker"
 
-expand_softness = 100. # **the expand values here should match the values used to create the frames in zoom_maker**
-expand_space = 1. 
-expand_top = 30
-expand_bottom = 30
-expand_left = 30
-expand_right = 30
+    expand_softness = 100. # **the expand values here should match the values used to create the frames in zoom_maker**
+    expand_space = 1. 
+    expand_top = 30
+    expand_bottom = 30
+    expand_left = 30
+    expand_right = 30
 
-start_in_black_void = False      # enabled to start zooming out from a black void instead of starting on the first frame
-num_interpolated_frames = 20     # number of interpolated frames per keyframe, controls zoom speed (and the expand ratio)
-frame_rate = 30                  # fps of the output video
-output_file = "zoom.mp4"         # name of output file (this will be saved in the folder with the key frames)
-preview_output = False           # if enabled this will show a preview of the video in a window as it renders
-zoom_out = True                  # if enabled this will zoom out instead of zooming in
-rotate_speed = 0.                # change from 0. if you _really_ want to barf
-acceleration_smoothing = 1.3     # if > 0. this slows the start and stop, good values are 1 to 3
-video_size = (1920, 1080)        # video output resolution
-encode_lossless = False          # set to True to make an uncompressed video file (this will take a lot of disk space)
+    start_in_black_void = False      # enabled to start zooming out from a black void instead of starting on the first frame
+    num_interpolated_frames = 20     # number of interpolated frames per keyframe, controls zoom speed (and the expand ratio)
+    frame_rate = 30                  # fps of the output video
+    output_file = "zoom.mp4"         # name of output file (this will be saved in the folder with the key frames)
+    preview_output = False           # if enabled this will show a preview of the video in a window as it renders
+    zoom_out = True                  # if enabled this will zoom out instead of zooming in
+    rotate_speed = 0.                # change from 0. if you _really_ want to barf
+    acceleration_smoothing = 1.3     # if > 0. this slows the start and stop, good values are 1 to 3
+    video_size = (1920, 1080)        # video output resolution
+    encode_lossless = False          # set to True to make an uncompressed video file (this will take a lot of disk space)
 
 # *****************************************************************
 
