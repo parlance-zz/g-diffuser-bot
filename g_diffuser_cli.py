@@ -257,14 +257,21 @@ def cli_save_comparison_grid(*paths, **kwargs):
 def cli_run_script(script_name, args=None, **kwargs):
     global cli_locals
     script_path = gdl.DEFAULT_PATHS.inputs+"/scripts/"+script_name+".py"
-    args_dict = {"args": args, "kwargs": kwargs}
+    args_dict = {"cli_args": args, "kwargs": kwargs}
+    script_locals = dict(globals(), **(vars(cli_locals) | args_dict))
     try:
-        exec(open(script_path).read(), dict(globals(), **(vars(cli_locals) | args_dict)))
+        with open(script_path, "r") as script_file:
+            exec(script_file.read(), script_locals)
     except KeyboardInterrupt:
         print("Okay, cancelling...")
     except Exception as e:
         raise
-    return args_dict["args"]
+
+    if args: # if an args object was passed, update the object with the results from the script
+        result_args = script_locals.get("args", None)
+        if type(result_args) == Namespace:
+            args.__dict__ = result_args.__dict__    
+    return
 
 def cli_show_samplers():
     for sampler in gdl.GRPC_SERVER_SUPPORTED_SAMPLERS_LIST:
