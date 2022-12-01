@@ -61,29 +61,6 @@ GRPC_SERVER_SUPPORTED_SAMPLERS_LIST = list(grpc_client.SAMPLERS.keys())
 GRPC_SERVER_ENGINE_STATUS = []
 GRPC_SERVER_LOCK = asyncio.Lock()
 
-"""
-class SimpleLogger(object):
-    def __init__(self, log_path, mode="a"):
-        self.terminal = sys.stdout
-        try:
-            self.log = open(log_path, mode) # append to existing log file
-        except:
-            self.log = None
-        return
-    def __del__(self):
-        sys.stdout = self.terminal
-        if self.log: self.log.close()
-        return
-    def write(self, message):
-        self.terminal.write(message)
-        if self.log:
-            self.log.write(message)
-            self.log.flush()
-        return
-    def flush(self):
-        if self.log: self.log.flush()
-        return
-"""
 class SimpleLogger(object):
     def __init__(self, log_path, mode="a"):
         try: self.log = open(log_path, mode)
@@ -121,9 +98,7 @@ def start_grpc_server():
         raise Exception("Could not connect to SDGRPC server at {0}, is the server running?".format(GRPC_SERVER_SETTINGS.host))
 
     try:
-        models = get_models()
-        print("Found {0} model(s) on the SDGRPC server:".format(len(models)))
-        print(yaml.dump(models, sort_keys=False))
+        models = show_models()
         all_models_ready = True
         for model in models:
             all_models_ready &= model["ready"]
@@ -133,7 +108,7 @@ def start_grpc_server():
     except Exception as e:
         raise Exception("Unable to query server status at {0} with key'{1}', is the host/key correct?".format(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.grpc_key))
 
-    return
+    return models
 
 def get_socket_listening_status(host_str):
     _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -146,6 +121,23 @@ def get_socket_listening_status(host_str):
     except:
         return False
 
+def get_models():
+    global GRPC_SERVER_SETTINGS, GRPC_SERVER_ENGINE_STATUS
+    stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.grpc_key, wait_for_ready=False)
+    try:
+        GRPC_SERVER_ENGINE_STATUS = stability_api.list_engines()
+    except Exception as e:
+        print("Error: Could not query SDGRPC server - {0}".format(e))
+        return None
+    return GRPC_SERVER_ENGINE_STATUS
+
+def show_models(models=None):
+    if models == None: models = get_models()
+    if models == None: return None
+    print("Found {0} model(s) on the SDGRPC server:".format(len(models)))
+    print(yaml.dump(models, sort_keys=False))
+    return models
+        
 def load_config():
     global DEFAULT_PATHS
     global GRPC_SERVER_SETTINGS
@@ -232,11 +224,15 @@ def load_config():
 
     return
 
-def get_models():
-    global GRPC_SERVER_SETTINGS, GRPC_SERVER_ENGINE_STATUS
-    stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.grpc_key)
-    GRPC_SERVER_ENGINE_STATUS = stability_api.list_engines()
-    return GRPC_SERVER_ENGINE_STATUS
+def get_default_args():
+    global DEFAULT_SAMPLE_SETTINGS
+    default_args = Namespace(**vars(DEFAULT_SAMPLE_SETTINGS))
+    del default_args.auto_seed_low
+    del default_args.auto_seed_high
+    del default_args.max_width
+    del default_args.max_height
+    del default_args.max_steps
+    return default_args # copy the default settings minus irrelevant fields
 
 def save_yaml(_dict, file_path):
     (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
@@ -253,23 +249,17 @@ def get_random_string(digits=8):
     uuid_str = str(uuid.uuid4())
     return uuid_str[0:digits] # shorten uuid, don't need that many digits usually
 
-def print_args(args, verbosity_level=0):
-    namespace_dict = vars(strip_args(args, level=verbosity_level))
+def print_args(args, verbosity_level=1):
+    if type(args) == Namespace:
+        namespace_dict = vars(strip_args(args, level=verbosity_level))
+    elif type(args) == list:
+        namespace_dict = []
+        for arg in args:
+            namespace_dict.append(vars(strip_args(arg, level=verbosity_level)))
+    else:
+        raise("args must be an arguments Namespace or list of Namespaces")
     print(yaml.dump(namespace_dict, sort_keys=False))
     return
-
-def get_default_output_name(name, truncate_length=100, force_ascii=True):
-    if force_ascii: name = str(name.encode('utf-8').decode('ascii', 'ignore'))
-    sanitized_name = re.sub(r'[\\/*?:"<>|]',"", name).replace(".","").replace("'","").replace("\t"," ").replace(" ","_").strip()
-    if (truncate_length > len(sanitized_name)) or (truncate_length==0): truncate_length = len(sanitized_name)
-    if truncate_length < len(sanitized_name):  sanitized_name = sanitized_name[0:truncate_length]
-    return sanitized_name
-
-def get_noclobber_checked_path(base_path, file_path):
-    clobber_num_padding = 2
-    file_path_noext, file_path_ext = os.path.splitext(file_path)
-    existing_count = len(glob.glob(base_path+"/"+file_path_noext+"*"+file_path_ext))
-    return file_path_noext+"_x"+str(existing_count).zfill(clobber_num_padding)+file_path_ext
 
 def strip_args(args, level=1): # remove args we wouldn't want to print or serialize, higher levels strip additional irrelevant fields
     stripped = argparse.Namespace(**(vars(args)))
@@ -305,10 +295,6 @@ def strip_args(args, level=1): # remove args we wouldn't want to print or serial
         if "no_args_file" in stripped: del stripped.no_args_file
         if "uuid" in stripped: del stripped.uuid
         if "status" in stripped: del stripped.status
-        if "auto_seed_low" in stripped: del stripped.auto_seed_low
-        if "auto_seed_high" in stripped: del stripped.auto_seed_high
-        if "max_width" in stripped: del stripped.max_width
-        if "max_height" in stripped: del stripped.max_height
 
         if "init_image" in stripped:
             if stripped.init_image == "": # if there was no input image these fields are not relevant
@@ -323,10 +309,6 @@ def strip_args(args, level=1): # remove args we wouldn't want to print or serial
             if "expand_right" in stripped: del stripped.expand_right
 
     return stripped
-    
-def get_default_args():
-    global DEFAULT_SAMPLE_SETTINGS
-    return Namespace(**vars(DEFAULT_SAMPLE_SETTINGS)) # copy the default settings
 
 def validate_resolution(args):      # clip output dimensions at max_resolution, while keeping the correct resolution granularity,
     global DEFAULT_SAMPLE_SETTINGS  # while roughly preserving aspect ratio.
@@ -343,8 +325,8 @@ def validate_resolution(args):      # clip output dimensions at max_resolution, 
         
     width = int(width / RESOLUTION_GRANULARITY) * RESOLUTION_GRANULARITY
     height = int(height / RESOLUTION_GRANULARITY) * RESOLUTION_GRANULARITY
-    width = np.clip(width, RESOLUTION_GRANULARITY, DEFAULT_SAMPLE_SETTINGS.max_width)
-    height = np.clip(height, RESOLUTION_GRANULARITY, DEFAULT_SAMPLE_SETTINGS.max_height)
+    width = int(np.clip(width, RESOLUTION_GRANULARITY, DEFAULT_SAMPLE_SETTINGS.max_width))
+    height = int(np.clip(height, RESOLUTION_GRANULARITY, DEFAULT_SAMPLE_SETTINGS.max_height))
 
     args.width, args.height = (width, height)
     return
@@ -369,6 +351,7 @@ def expand_image(cv2_img, top, right, bottom, left, softness, space):
     new_height = cv2_img.shape[0] + top + bottom
     new_img = np.zeros((new_height, new_width, 4), np.uint8) # expanded image is rgba
 
+    print("Expanding input image from {0}x{1} to {2}x{3}".format(cv2_img.shape[1], cv2_img.shape[0], new_width, new_height))
     if cv2_img.shape[2] == 3: # rgb input image
         new_img[top:top+cv2_img.shape[0], left:left+cv2_img.shape[1], 0:3] = cv2_img
         new_img[top:top+cv2_img.shape[0], left:left+cv2_img.shape[1], 3] = 255 # fully opaque
@@ -378,7 +361,7 @@ def expand_image(cv2_img, top, right, bottom, left, softness, space):
         raise Exception("Unsupported image format: {0} channels".format(cv2_img.shape[2]))
         
     if softness > 0.:
-        new_img = soften_mask(new_img/255., softness/100., space)
+        new_img = soften_mask(new_img/255., softness/100.)
         mask_cutoff_threshold = np.clip(space/255., 0., 1.)
         if mask_cutoff_threshold > 0.:
             new_img[:,:,3] *= (new_img[:,:,3] >= mask_cutoff_threshold)
@@ -386,40 +369,39 @@ def expand_image(cv2_img, top, right, bottom, left, softness, space):
 
     return new_img
 
-
 def save_image(cv2_image, file_path):
     (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
     cv2.imwrite(file_path, cv2_image)
     return
 
-def load_image(cv2_image, file_path):
-    (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
-    cv2.imwrite(file_path, cv2_image)
-    return
+def load_image(file_path, cv2_flags=cv2.IMREAD_UNCHANGED):
+    return cv2.imread(file_path, cv2_flags)
 
 def prepare_init_image(args):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
+    MINIMUM_OUTPAINT_IMG2IMG_STRENGTH = 2. # 1.
 
-    fs_init_image_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_image).as_posix()
-    
     # load and resize input image to multiple of 8x8
-    init_image = cv2.imread(fs_init_image_path, cv2.IMREAD_UNCHANGED) #.astype(np.float64)
+    fs_init_image_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_image).as_posix()
+    init_image = load_image(fs_init_image_path)
+    if args.expand_top or args.expand_bottom or args.expand_left or args.expand_right:
+        init_image = expand_image(init_image, args.expand_top, args.expand_right, args.expand_bottom, args.expand_left, args.expand_softness, args.expand_space)
     args.width, args.height = (init_image.shape[1], init_image.shape[0])
     validate_resolution(args)
 
-    if (args.width, args.height) != (init_image.shape[1], init_image.shape[0]):
-        print("Resizing input image to ({0}, {1})".format(args.width, args.height)) # todo: implement mask-aware rescaler
+    if (args.width, args.height) != (init_image.shape[1], init_image.shape[0]):  # todo: implement mask-aware rescaler
+        print("Resizing input image from {0}x{1} to {2}x{3}".format(init_image.shape[1], init_image.shape[0], args.width, args.height))
         init_image = np.clip(cv2.resize(init_image, (args.width, args.height), interpolation=cv2.INTER_LANCZOS4), 0, 255)
     
     num_channels = init_image.shape[2]
-    if num_channels == 4:     # input image has an alpha channel, setup mask for in/out-painting
-        args.noise_start = np.maximum(DEFAULT_SAMPLE_SETTINGS.min_outpaint_noise, args.noise_start) # override img2img "strength" if it is < 1., for in/out-painting this should at least 1.
+    if num_channels == 4:  # input image has an alpha channel, setup mask for in/out-painting
+        args.img2img_strength = float(np.maximum(MINIMUM_OUTPAINT_IMG2IMG_STRENGTH, args.img2img_strength))
         mask_image = 255. - init_image[:,:,3] # extract mask from alpha channel and invert
-        init_image = 0. + init_image[:,:,0:3]      # strip mask from init_img / convert to rgb
+        init_image = 0. + init_image[:,:,0:3] # strip mask from init_img leaving only rgb channels
 
-        if args.sampler == "k_euler":
+        if args.sampler == "k_euler": # k_euler currently does not add noise during sampling
             print("Warning: k_euler is not currently supported for in-painting, switching to sampler=k_euler_ancestral")
-            args.sampler = "k_euler_ancestral" # k_euler currently does not add noise during sampling
+            args.sampler = "k_euler_ancestral"
         
     elif num_channels == 3: # rgb image, regular img2img without a mask
         mask_image = None
@@ -428,32 +410,71 @@ def prepare_init_image(args):
 
     return init_image, mask_image
 
-async def get_samples(args):
+async def get_samples(args, interactive=False):
     global DEFAULT_PATHS, GRPC_SERVER_SETTINGS
 
-    global GRPC_SERVER_LOCK
-    async with GRPC_SERVER_LOCK:
+    if (not interactive) and (args.num_samples <= 0):
+        raise Exception("Error: num_samples must be > 0 for non-interactive sampling")
+    if args.num_samples <= 0: print("Repeating sample, press ctrl+c to stop...")
 
-        def get_samples_wrapper(args):
-            thread = threading.current_thread()
-            thread.args = Namespace(**vars(args)) # preserve old args in case of an exception
-            thread.args = _get_samples(args)
-            return
+    printed_waiting_message = False
+    while True: # ensure selected model is available and loaded before proceeding
+        models = get_models()
+        if models == None:
+            raise Exception("Error: SDGRPC server is unavailable")
+        model_found = False
+        model_ready = False
+        for model in models:
+            if model["id"] == args.model_name:
+                model_found = True
+                if model["ready"] == True: model_ready = True
+                break
+        if not model_found:
+            show_models(models)
+            raise Exception("Error: model '"+args.model_name+"' not found on server")
+        if not model_ready:
+            if not printed_waiting_message: # once is probably enough
+                print("Waiting for model '{0}' to be ready...".format(args.model_name))
+                printed_waiting_message = True
+            await asyncio.sleep(1.5)
+            continue
+        break
 
-        sample_thread = Thread(target = get_samples_wrapper, args=[args], daemon=True)
-        sample_thread.start()
-        try:
+    def get_samples_wrapper(args):
+        thread = threading.current_thread()
+        thread.args = args # always return at least the original args if _get_samples doesn't return
+        thread.args = _get_samples(args)
+        return
+    sample_thread = Thread(target = get_samples_wrapper, args=[args], daemon=True)
+
+    def cancel_request(unused_signum, unused_frame, sample_thread):
+        print("Okay, cancelling...")
+        if sample_thread.ident:
+            import ctypes        # this is a a bit of a hack to instantly stop the sample thread but it works
+            _stderr = sys.stderr # required to suppress the exception printing from the sample_thread
+            sys.stderr = open('nul', 'w')
+            ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(sample_thread.ident), ctypes.py_object(KeyboardInterrupt))
+            sample_thread.join() # ensure the thread is dead
+            sys.stderr = _stderr # restore stderr
+        else:
+            raise KeyboardInterrupt
+        return
+    import signal, functools # this ugly hack is required because of asyncio and keyboardinterrupt behavior
+    signal.signal(signal.SIGINT, functools.partial(cancel_request, sample_thread=sample_thread))
+
+    try:
+        global GRPC_SERVER_LOCK
+        async with GRPC_SERVER_LOCK: # only one grpc request at a time please (at least, in this process)
+            sample_thread.start()
             while True:
-                sample_thread.join(0.0001)
+                sample_thread.join(0.)
                 if not sample_thread.is_alive(): break
-                await asyncio.sleep(0.05)
+                await asyncio.sleep(0.1)
             sample_thread.join() # it's the only way to be sure
-        except KeyboardInterrupt:
-            print("Okay, cancelling...")
-            sample_thread.raise_exception(KeyboardInterrupt)
-            sample_thread.join()
-            sample_thread.args.status = -1 # cancelled
-            sample_thread.error_message = "Cancelled by user"
+    except Exception as e:
+        raise
+    finally:
+        signal.signal(signal.SIGINT, signal.SIG_DFL) # ensure the original handler is properly restored
 
     return sample_thread.args
 
@@ -462,8 +483,13 @@ def build_grpc_request_dict(args, init_image_bytes, mask_image_bytes):
     if args.seed: seed = args.seed
     else: seed = args.auto_seed
 
+    # sample indefinitely if num_samples is 0
+    if args.num_samples > 0: num_samples = args.num_samples
+    else: num_samples = int(1e6) # effectively infinite
+
+    prompt = args.prompt if args.prompt != "" else " "
     return {
-        "prompt": args.prompt if args.prompt != "" else " ",
+        "prompt": prompt,
         "height": args.height,
         "width": args.width,
         "start_schedule": args.img2img_strength,
@@ -473,13 +499,13 @@ def build_grpc_request_dict(args, init_image_bytes, mask_image_bytes):
         "sampler": grpc_client.get_sampler_from_str(args.sampler),
         "steps": args.steps,
         "seed": seed,
-        "samples": 1,
+        "samples": num_samples,
         "init_image": init_image_bytes,
         "mask_image": mask_image_bytes,
         "negative_prompt": args.negative_prompt,
         "guidance_preset": grpc_client.generation.GUIDANCE_PRESET_SIMPLE if args.guidance_strength > 0. else grpc_client.generation.GUIDANCE_PRESET_NONE,
         "guidance_strength": args.guidance_strength,
-        "guidance_prompt": args.prompt,   
+        "guidance_prompt": prompt,   
     }
 
 def _get_samples(args):
@@ -492,66 +518,88 @@ def _get_samples(args):
     else:
         args.auto_seed = 0 # seed provided, disable auto-seed
 
-    if args.init_image != "": # load input image if we have one
+    # load input image if we have one
+    if args.init_image != "":
         init_image, mask_image = prepare_init_image(args)
     else:
         init_image, mask_image = (None, None)
-    if init_image is None: init_image_bytes = None # encode images for grpc request
+        validate_resolution(args)
+    if init_image is None: init_image_bytes = None # pre-encode images for grpc request
     else: init_image_bytes = np.array(cv2.imencode(".png", init_image)[1]).tobytes()
     if mask_image is None: mask_image_bytes = None
     else: mask_image_bytes = np.array(cv2.imencode(".png", mask_image)[1]).tobytes()
 
     output_args = []
-    stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.grpc_key, engine=args.model_name, verbose=False)
-    while True: # watch out! a wild shrew!
-        try:
-            args.status = 1 # in progress
-            args.error_message = ""
-            args.output_file = ""
-            args.output_sample = None
-            args.args_file = ""
+    stability_api = grpc_client.StabilityInference(GRPC_SERVER_SETTINGS.host, GRPC_SERVER_SETTINGS.grpc_key, engine=args.model_name, verbose=False, wait_for_ready=False)
+    
+    def _reset_args(args):
+        args.status = 1 # in progress
+        args.error_message = ""
+        args.output_file = ""
+        args.output_sample = None
+        args.args_file = ""
 
-            start_time = datetime.datetime.now()
-            args.start_time = str(start_time)
-            args.end_time = ""
-            args.elapsed_time = ""
-            args.uuid_str = get_random_string(digits=16) # new uuid for new sample
+        start_time = datetime.datetime.now()
+        args.start_time = str(start_time)
+        args.end_time = ""
+        args.elapsed_time = ""
+        args.uuid = get_random_string(digits=16) # new uuid for new sample
+        return start_time
 
-            request_dict = build_grpc_request_dict(args, init_image_bytes, mask_image_bytes)
-            answers = stability_api.generate(**request_dict)
-            grpc_samples = grpc_client.process_artifacts_from_answers("", answers, write=False, verbose=False)
+    try:
+        request_dict = build_grpc_request_dict(args, init_image_bytes, mask_image_bytes)
+        answers = stability_api.generate(**request_dict)
+        grpc_samples = grpc_client.process_artifacts_from_answers("", answers, write=False, verbose=False)
 
-            for path, artifact in grpc_samples:
-                image = cv2.imdecode(np.fromstring(artifact.binary, dtype="uint8"), cv2.IMREAD_UNCHANGED)
+        start_time = _reset_args(args)
+        for path, artifact in grpc_samples:
+            image = cv2.imdecode(np.fromstring(artifact.binary, dtype="uint8"), cv2.IMREAD_UNCHANGED)
 
-                if not (mask_image is None): # blend original image back in for in/out-painting, this is required due to vae decoding artifacts
-                    mask_rgb = 1.-gdl_utils.np_img_grey_to_rgb(mask_image/255.)
-                    image = np.clip(image*(1.-mask_rgb) + init_image*mask_rgb, 0., 255.)
+            if not (mask_image is None): # blend original image back in for in/out-painting, this is required due to vae decoding artifacts
+                mask_rgb = 1.-gdl_utils.np_img_grey_to_rgb(mask_image/255.)
+                image = np.clip(image*(1.-mask_rgb) + init_image*mask_rgb, 0., 255.)
 
-                if "annotation" in args: image = get_annotated_image(image, args)
+            if "annotation" in args: image = get_annotated_image(image, args)
 
-                end_time = datetime.datetime.now()
-                args.end_time = str(end_time)
-                args.elapsed_time = str(end_time-start_time)
-                args.status = 2 # completed successfully
+            end_time = datetime.datetime.now()
+            args.end_time = str(end_time)
+            args.elapsed_time = str(end_time-start_time)
+            args.status = 2 # completed successfully
+            args.output_sample = image
 
-                save_sample(image, args)
+            save_sample(image, args)
+            output_args.append(args)
 
-                if args.seed: args.seed += 1 # increment seed or random seed if none was given as we go through the batch
-                else: args.auto_seed += 1
-                if (len(samples) < args.n) or (args.n <= 0): # reset start time for next sample if we still have samples left
-                    start_time = datetime.datetime.now()
-                    args.start_time = str(start_time)
+            if args.seed: args.seed += 1 # increment seed or random seed if none was given as we go through the batch
+            else: args.auto_seed += 1
+            if (len(output_args) < args.num_samples) or (args.num_samples <= 0): 
+                start_time = _reset_args(args) # reset start time and status for next sample if we still have samples left
 
-            if args.n > 0: break # if we had a set number of samples then we are done
+    except KeyboardInterrupt:
+        args.status = 3
+        args.error_message = "Cancelled by user"
+        output_args.append(args)
 
-        except Exception as e:
-            args.status = -1; args.err_txt = str(e) # error status
-            if args.debug: raise
-            else: print("Error: " + args.err_txt)
-            return samples, sample_files
+    except Exception as e:
+        args.status = -1 # error status
+        args.error_message = str(e)
+        print("Error in grpc sample request: ", e)
+        output_args.append(args)
 
     return output_args
+
+def get_default_output_name(name, truncate_length=100, force_ascii=True):
+    if force_ascii: name = str(name.encode('utf-8').decode('ascii', 'ignore'))
+    sanitized_name = re.sub(r'[\\/*?:"<>|]',"", name).replace(".","").replace("'","").replace("\t"," ").replace(" ","_").strip()
+    if (truncate_length > len(sanitized_name)) or (truncate_length==0): truncate_length = len(sanitized_name)
+    if truncate_length < len(sanitized_name):  sanitized_name = sanitized_name[0:truncate_length]
+    return sanitized_name
+
+def get_noclobber_checked_path(base_path, file_path):
+    clobber_num_padding = 2
+    file_path_noext, file_path_ext = os.path.splitext(file_path)
+    existing_count = len(glob.glob(base_path+"/"+file_path_noext+"*"+file_path_ext))
+    return file_path_noext+"_x"+str(existing_count).zfill(clobber_num_padding)+file_path_ext
 
 def save_sample(sample, args):
     global DEFAULT_PATHS
@@ -575,11 +623,11 @@ def save_sample(sample, args):
     print("Saved {0}".format(full_output_path))
 
     if not args.no_args_file:
-        args.args_file = fs_output_path+"/args/"+args.final_output_name+"_s"+str(seed).zfill(seed_num_padding)+".yaml"
+        args.args_file = fs_output_path+"/args/"+fs_output_name+"_s"+str(seed).zfill(seed_num_padding)+".yaml"
         args.args_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, args.args_file) # add suffix if filename already exists
         full_args_path = DEFAULT_PATHS.outputs+"/"+args.args_file
-        save_yaml(vars(strip_args(args)), full_args_path)
-        print("Saved {0}".format(full_args_path))
+        save_yaml(vars(strip_args(args, level=0)), full_args_path)
+        #print("Saved {0}".format(full_args_path)) # make this silent for now, it's a bit spammy
     return args.output_file
 
 def save_samples_grid(samples, args):

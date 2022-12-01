@@ -55,11 +55,11 @@ sample("greg rutkowski", init_image="my_image.png", num_samples=0)  # setting n 
 sample("something's wrong with the g-diffuser", sampler="k_euler")  # uses the k_euler sampler
                                                                     # any parameters unspecified will use defaults
 
-show_args(default_args())        # show default arguments and sampling parameters
+show_args(default_args())            # show default arguments and sampling parameters
 my_args = default_args(cfg_scale=15) # you can assign a collection of arguments to a variable
-my_args.prompt = "art by frank"  # and modify them before passing them to sample()
-result_args = sample(my_args)    # sample returns the arguments used for the sample with result info
-show_args(result_args)           # you can show the result args to verify the results and output path
+my_args.prompt = "art by frank"      # and modify them before passing them to sample()
+result_args = sample(my_args)        # sample modifies the arguments object you pass in and adds output information
+show_args(result_args)               # you can show the result args to verify the results and output path
 
 show_samplers() # show all available sampler names
 show_models()   # show available model ids on the grpc server (check models.yaml for more info)
@@ -113,9 +113,10 @@ def main():
 
     return
     
-def cli_get_samples(prompt, **kwargs):
+def cli_get_samples(prompt=None, **kwargs):
     global LAST_ARGS_PATH
 
+    if prompt is None: prompt = ""
     if type(prompt) == argparse.Namespace: # prompt can be a prompt string or an args namespace
         args = prompt
     elif type(prompt) == str:
@@ -123,13 +124,12 @@ def cli_get_samples(prompt, **kwargs):
     else:
         raise Exception("Invalid prompt type: {0} - '{1}'".format(str(type(prompt)), str(prompt)))
     args = argparse.Namespace(**(vars(args) | kwargs)) # merge with keyword args
+    asyncio.run(gdl.get_samples(args, interactive=True))
 
-    asyncio.run(gdl.get_samples(args))
+    # try to save the last used args in a file for convenience
+    try: gdl.save_yaml(vars(gdl.strip_args(args, level=0)), LAST_ARGS_PATH)
+    except Exception as e: pass
 
-    try:  # on success, try to save the last used args in a file for convenience
-        gdl.save_yaml(vars(gdl.strip_args(args)), LAST_ARGS_PATH)
-    except Exception as e:
-        print("Warning: Could not save last used args in {0} - {1}".format(LAST_ARGS_PATH, str(e)))
     return args
     
 def cli_show_args(args, level=None):
@@ -144,22 +144,22 @@ def cli_load_args(name=""):
         if not name: args_path = LAST_ARGS_PATH
         else: args_path = gdl.DEFAULT_PATHS.inputs+"/args/"+name+".yaml"
         saved_args = Namespace(**gdl.load_yaml(args_path))
-        gdl.print_args(saved_args, verbosity_level=1)
+        gdl.print_args(saved_args)
     except Exception as e:
-        print("Error loading args from file - " + str(e))
-    return
+        print("Error loading args from file - {0}".format(e))
+    return saved_args
     
 def cli_save_args(args, name):
     try:
         args_path = gdl.DEFAULT_PATHS.inputs+"/args/"+name+".yaml"
-        gdl.save_yaml(vars(gdl.strip_args(args, verbosity_level=0)), args_path)
+        gdl.save_yaml(vars(gdl.strip_args(args, level=0)), args_path)
         print("Saved {0}".format(args_path))
     except Exception as e:
-        print("Error saving args - " + str(e))
+        print("Error saving args - {0}".format(e))
     return
 
 def cli_default_args(**kwargs):
-    return Namespace(**(vars(gdl.DEFAULT_SAMPLE_SETTINGS) | kwargs))
+    return Namespace(**(vars(gdl.get_default_args()) | kwargs))
 
 def cli_resample(old_path, new_path, **kwargs):
     resample_args = argparse.Namespace(**kwargs)
@@ -257,9 +257,7 @@ def cli_save_comparison_grid(*paths, **kwargs):
 def cli_run_script(script_name, args=None, **kwargs):
     global cli_locals
     script_path = gdl.DEFAULT_PATHS.inputs+"/scripts/"+script_name+".py"
-    if args == None: args = cli_default_args()
-    args = argparse.Namespace(**(vars(args) | kwargs))
-    args_dict = {"args": args}
+    args_dict = {"args": args, "kwargs": kwargs}
     try:
         exec(open(script_path).read(), dict(globals(), **(vars(cli_locals) | args_dict)))
     except KeyboardInterrupt:
@@ -274,9 +272,7 @@ def cli_show_samplers():
     return
 
 def cli_show_models():
-    models = gdl.get_models()
-    print("Found {0} model(s) on the SDGRPC server:".format(len(models)))
-    print(yaml.dump(models, sort_keys=False))
+    gdl.show_models()
     return
 
 def cli_clear():

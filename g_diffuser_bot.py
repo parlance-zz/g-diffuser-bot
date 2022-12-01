@@ -49,9 +49,10 @@ gdl.DEFAULT_PATHS.inputs = gdl.DEFAULT_PATHS.bot+"/inputs"
 gdl.DEFAULT_PATHS.outputs = gdl.DEFAULT_PATHS.bot+"/outputs"
 gdl.DEFAULT_PATHS.temp = gdl.DEFAULT_PATHS.bot+"/temp"
 
-gdl.start_grpc_server()
-models = gdl.get_models()
-
+models = gdl.start_grpc_server()
+if models == None:
+    raise Exception("Error: SDGRPC server is unavailable")
+    
 MODEL_CHOICES = []
 for model in models:
     MODEL_CHOICES.append(app_commands.Choice(name=model["id"], value=model["id"]))
@@ -197,12 +198,12 @@ async def img(
     args = Namespace(**(vars(gdl.get_default_args()) | args))
     init_image = await download_attachment(input_image_url)
     args.init_image = init_image
-    gdl.print_args(args, verbosity_level=1)
+    gdl.print_args(args)
 
     try: await interaction.response.defer(thinking=True, ephemeral=False) # start by requesting more time to respond
     except Exception as e: print("exception in await interaction - " + str(e))
 
-    # ...
+    output_args = await gdl.get_samples(args)
 
     if "output_file" in args:
         attachment_files = []
@@ -253,7 +254,7 @@ async def img(
         try: await interaction.followup.send(files=attachment_files, content=message)
         except Exception as e: print("exception in await interaction - " + str(e))
     else:
-        print("error - " + args.err_txt); gdl.print_args(args)
+        print("error - " + args.err_txt); gdl.print_args(args, verbosity_level=0)
         try: await interaction.followup.send(content="sorry, something went wrong :(", ephemeral=True)
         except Exception as e: print("exception in await interaction - " + str(e))
         return
@@ -342,7 +343,7 @@ async def g(
     args.noise_start = img2img_strength
     args.n = n
     args.interactive = True
-    gdl.print_args(args, verbosity_level=1)
+    gdl.print_args(args)
 
     try:
         await GRPC_SERVER_LOCK.acquire()
@@ -365,7 +366,7 @@ async def g(
             await asyncio.sleep(0.05)
         sample_thread.join() # it's the only way to be sure
     except Exception as e:
-        print("error - " + str(e)); gdl.print_args(args)
+        print("error - " + str(e)); gdl.print_args(args, verbosity_level=0)
         try: await interaction.followup.send(content="sorry, something went wrong :(", ephemeral=True)
         except Exception as e: print("exception in await interaction - " + str(e))
         return
@@ -421,7 +422,7 @@ async def g(
         try: await interaction.followup.send(files=attachment_files, content=message)
         except Exception as e: print("exception in await interaction - " + str(e))
     else:
-        print("error - " + args.err_txt); gdl.print_args(args)
+        print("error - " + args.err_txt); gdl.print_args(args, verbosity_level=0)
         try: await interaction.followup.send(content="sorry, something went wrong :(", ephemeral=True)
         except Exception as e: print("exception in await interaction - " + str(e))
         return
