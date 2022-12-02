@@ -342,7 +342,7 @@ def soften_mask(np_rgba_image, softness):
     if softness == 0: return np_rgba_image
     original_max_opacity = np.max(np_rgba_image[:,:,3])
     out_mask = np_rgba_image[:,:,3] <= 0.
-    blurred_mask = gdl_utils.gaussian_blur(np_rgba_image[:,:,3], 3.14/softness)
+    blurred_mask = gdl_utils.gaussian_blur(np_rgba_image[:,:,3], 3.14/softness, mode="linear_gradient")
     blurred_mask = np.maximum(blurred_mask - np.max(blurred_mask[out_mask]), 0.) 
     np_rgba_image[:,:,3] *= blurred_mask  # preserve partial opacity in original input mask
     np_rgba_image[:,:,3] /= np.max(np_rgba_image[:,:,3]) # renormalize
@@ -373,6 +373,7 @@ def expand_image(cv2_img, top, right, bottom, left, softness, space):
         if mask_cutoff_threshold > 0.:
             new_img[:,:,3] *= (new_img[:,:,3] >= mask_cutoff_threshold)
         new_img = (np.clip(new_img, 0., 1.)*255.).astype(np.uint8)
+        #save_image(new_img, "temp/debug_expanded.png")
 
     return new_img
 
