@@ -386,7 +386,8 @@ def load_image(file_path, cv2_flags=cv2.IMREAD_UNCHANGED):
 
 def prepare_init_image(args):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
-    MINIMUM_OUTPAINT_IMG2IMG_STRENGTH = 2. # 1.
+    MINIMUM_OUTPAINT_IMG2IMG_STRENGTH = 1. # 2.
+    CV2_RESIZE_INTERPOLATION_MODE = cv2.INTER_AREA
 
     # load and resize input image to multiple of 8x8
     fs_init_image_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_image).as_posix()
@@ -399,26 +400,22 @@ def prepare_init_image(args):
 
     if (args.width, args.height) != (init_image.shape[1], init_image.shape[0]):  # todo: implement mask-aware rescaler
         print("Resizing input image from {0}x{1} to {2}x{3}".format(init_image.shape[1], init_image.shape[0], args.width, args.height))
-        
-        if num_channels == 3: # rgb input image, normal resize is fine
-            init_image = np.clip(cv2.resize(init_image, (args.width, args.height), interpolation=cv2.INTER_LANCZOS4), 0, 255)
-        else:
-            # resize rgb and mask separately because filtering the alpha channel can cause artifacts
-            alpha_channel = cv2.resize(init_image[:,:,3], (args.width, args.height), interpolation=cv2.INTER_NEAREST)
-            init_image = np.clip(cv2.resize(init_image, (args.width, args.height), interpolation=cv2.INTER_LANCZOS4), 0, 255)
-            init_image[:,:,3] = alpha_channel
-    
+        # resizing an image with a mask has been a PITA, but cv2.INTER_AREA seems to cooperate if you're downsampling exclusively
+        init_image = np.clip(cv2.resize(init_image, (args.width, args.height), interpolation=CV2_RESIZE_INTERPOLATION_MODE), 0, 255)
+
     if num_channels == 4:  # input image has an alpha channel, setup mask for in/out-painting
         args.img2img_strength = float(np.maximum(MINIMUM_OUTPAINT_IMG2IMG_STRENGTH, args.img2img_strength))
         mask_image = 255. - init_image[:,:,3] # extract mask from alpha channel and invert
         init_image = 0. + init_image[:,:,0:3] # strip mask from init_img leaving only rgb channels
-        init_image *= gdl_utils.np_img_grey_to_rgb(mask_image) < 255. # force color data in erased areas to 0
+        #init_image *= gdl_utils.np_img_grey_to_rgb(mask_image) < 255. # force color data in erased areas to 0
 
+        print("Using in/out-painting with strength {0}".format(args.img2img_strength))
         if args.sampler == "k_euler": # k_euler currently does not add noise during sampling
             print("Warning: k_euler is not currently supported for in-painting, switching to sampler=k_euler_ancestral")
             args.sampler = "k_euler_ancestral"
         
     elif num_channels == 3: # rgb image, regular img2img without a mask
+        print("Using img2img with strength {0}".format(args.img2img_strength))
         mask_image = None
     else:
         raise Exception("Error loading init_image "+fs_init_image_path+": unsupported image format")
