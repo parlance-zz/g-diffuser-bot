@@ -33,19 +33,19 @@ args.num_samples = 1
 args.zoom_num_frames = 1000 # number of discrete zoom images to sample
                             # (you can abort / close the program at any time to use the keyframes you have already generated)
 
-args.expand_softness = 15.
-args.expand_space = 1.      # distance to hard erase from source image edge
-args.expand_top = 25        # amount to expand in each direction in each step
-args.expand_bottom = 25     # these values are in % of the original image size
-args.expand_left = 25       # exceeding 50% in any direction is not recommended for recursive zooms / pans
-args.expand_right = 25
+args.expand_softness = 50.
+args.expand_space = 15.     # distance to hard erase from source image edge
+args.expand_top = 33        # amount to expand in each direction in each step
+args.expand_bottom = 33     # these values are in % of the original image size
+args.expand_left = 33       # exceeding 50% in any direction is not recommended for recursive zooms / pans
+args.expand_right = 33
 
 args.init_image = ""  # starting (or rather, ending image file, relative to inputs path). if blank start with a generated image
 args.output_path = "zoom_maker"  # output path, relative to outputs
 args.output_name = "zoom_maker"
 args.steps = 11 #8 #60
-args.cfg_scale = 10.5 #12.
-args.guidance_strength = 1. #0.7 #0.5   # try lowering clip guidance_strength if you have problems with zooms "exploding"
+args.cfg_scale = 12. #12.
+args.guidance_strength = 0.5 #0.7 #0.5   # try lowering clip guidance_strength if you have problems with zooms "exploding"
 #args.negative_prompt = "frame, comic book, collage, cropped, oversaturated, signed, greyscale, monotone, vignette, title, text, logo, watermark"
 args.negative_prompt = "watermark, title, label, collage, cropped, highly saturated colors, monotone, vignette"
 #args.sampler = "k_euler_ancestral"
@@ -53,7 +53,6 @@ args.negative_prompt = "watermark, title, label, collage, cropped, highly satura
 #args.sampler="plms"
 #args.sampler = "dpmspp_2"
 args.sampler = "dpmspp_3"
-
 
 # *****************************************************************
 
@@ -91,6 +90,7 @@ for i in range(args.zoom_num_frames):
         args.prompt = args.zoom_prompt_schedule[prompt_index]
         print("prompt: {0}".format(args.prompt))
 
+    args.img2img_strength = float(np.random.random()+1.)
     args.output_name = "zoom_maker_f{0}".format(str(i+start_frame_index).zfill(4))
     args = sample(args)
     if args.status != 2: break # cancelled or error
