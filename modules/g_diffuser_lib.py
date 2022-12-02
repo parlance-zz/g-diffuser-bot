@@ -180,7 +180,7 @@ def load_config():
     try:
         defaults = load_yaml(DEFAULT_PATHS.defaults_file)
     except:
-        print("Warning: Could not load defaults file {0}".format(DEFAULT_PATHS.defaults))
+        print("Warning: Could not load defaults file {0}".format(DEFAULT_PATHS.defaults_file))
         defaults = {}
 
     DEFAULT_SAMPLE_SETTINGS = argparse.Namespace()
