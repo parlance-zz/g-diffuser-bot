@@ -34,25 +34,26 @@ def ifft2(data):
         
     return out_ifft
             
-def get_gaussian(width, height, std=3.14, edge_filter=False): # simple gaussian kernel
+def get_gaussian(width, height, std=3.14, mode="gaussian"): # simple gaussian kernel
     window_scale_x = float(width / min(width, height))  # for non-square aspect ratios we still want a circular gaussian
     window_scale_y = float(height / min(width, height)) 
-    window = np.zeros((width, height))
-    
-    x = (np.arange(width) / width * 2. - 1.) * window_scale_x
-    kx = np.exp(-x*x * std)
-    if window_scale_x != window_scale_y:
-        y = (np.arange(height) / height * 2. - 1.) * window_scale_y
-        ky = np.exp(-y*y * std)
+    if mode == "gaussian":
+        x = (np.arange(width) / width * 2. - 1.) * window_scale_x
+        kx = np.exp(-x*x * std)
+        if window_scale_x != window_scale_y:
+            y = (np.arange(height) / height * 2. - 1.) * window_scale_y
+            ky = np.exp(-y*y * std)
+        else:
+            y = x; ky = kx
+        return np.outer(kx, ky)
+    elif mode == "linear_gradient":
+        x = (np.arange(width) / width * 2. - 1.) * window_scale_x
+        if window_scale_x != window_scale_y:
+            y = (np.arange(height) / height * 2. - 1.) * window_scale_y
+        else: y = x
+        return np.clip(1. - np.sqrt(np.add.outer(x*x, y*y)) * std / 3.14, 0., 1.)
     else:
-        y = x
-        ky = kx
-    gaussian = np.outer(kx, ky)
-    
-    if edge_filter:
-        return gaussian * (1. -std*np.add.outer(x*x,y*y)) # normalized gaussian 2nd derivative
-    else:
-        return gaussian
+        raise Exception("Error: Unknown mode in get_gaussian: {0}".format(mode))
 
 def convolve(data1, data2):      # fast convolution with fft
     if data1.ndim != data2.ndim: # promote to rgb if mismatch
@@ -60,10 +61,10 @@ def convolve(data1, data2):      # fast convolution with fft
         if data2.ndim < 3: data2 = np_img_grey_to_rgb(data2)
     return ifft2(fft2(data1) * fft2(data2))
 
-def gaussian_blur(data, std=3.14):
+def gaussian_blur(data, std=3.14, mode="gaussian"):
     width = data.shape[0]
     height = data.shape[1]
-    kernel = get_gaussian(width, height, std)
+    kernel = get_gaussian(width, height, std, mode=mode)
     return np.real(convolve(data, kernel / np.sqrt(np.sum(kernel*kernel))))
  
 def normalize_image(data):
