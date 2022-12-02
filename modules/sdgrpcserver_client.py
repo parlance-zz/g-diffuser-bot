@@ -16,6 +16,7 @@ import logging
 import time
 import mimetypes
 #import signal
+from sdgrpcserver.sonora import client as sonora_client
 
 import grpc
 from argparse import ArgumentParser, Namespace
@@ -142,6 +143,7 @@ class StabilityInference:
         engine: str = "stable-diffusion-v1-5",
         verbose: bool = False,
         wait_for_ready: bool = True,
+        use_grpc_web: bool = False,
     ):
         """
         Initialize the client.
@@ -172,12 +174,20 @@ class StabilityInference:
                 print("Key provided but channel is not HTTPS - assuming a local network")
                 channel_credentials = grpc.local_channel_credentials()
             
-            channel = grpc.secure_channel(
-                host, 
-                grpc.composite_channel_credentials(channel_credentials, *call_credentials)
-            )
-        else: 
-            channel = grpc.insecure_channel(host)
+            if not use_grpc_web:
+                channel = grpc.secure_channel(
+                    host, 
+                    grpc.composite_channel_credentials(channel_credentials, *call_credentials)
+                )
+            else:
+                # this function doesn't exist for some reason
+                #channel = sonora_client.secure_web_channel(host, channel_credentials, *call_credentials)
+                raise("Error: GRPC Web on SSL not supported yet")
+        else:
+            if not use_grpc_web:
+                channel = grpc.insecure_channel(host)
+            else:
+                channel = sonora_client.insecure_web_channel(host)
 
         if verbose:
             logger.info(f"Channel opened to {host}")
