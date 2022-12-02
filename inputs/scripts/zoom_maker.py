@@ -8,7 +8,6 @@ from argparse import Namespace
 recycle_image = "zoom_maker.png" # file path in /inputs/ to copy over from outputs for recursive zoom
 
 args = cli_default_args()
-args.zoom_resume = False   # set to True to start generating the zoom from the last keyframe instead of endzoom.png
 args.zoom_prompt_schedule = [
     #"Face portrait of a retrofuturistic assassin surrounded by advanced brutalist architecture. highly detailed fantasy, trending on artstation an ultrafine hyperdetailed colorfull illustration by kim jung gi, moebius, irakli nadar, alphonse mucha, ayami kojima, amano, greg hildebrandt",
     #"a wooden shed, many green plant and flower gowing on it, illustration key visual trending pixiv fanbox by wlop and greg rutkowski and makoto shinkai and studio ghibli",
@@ -19,8 +18,12 @@ args.zoom_prompt_schedule = [
     #"Deep space, psychedelic, organic, oni compound artwork, artstation, beeple, mf marling fantasy epcot, glitchcore portrait of omin dran mind flayer psion politician, key portrait realism, druid octane trending gems, octane organic cinematic, mindar mumford, helmet, high character, futurescape, style final unreal of punk, mindar punk, borne space library artwork",
     #"Deep space, octane organic cinematic, mindar mumford, helmet, high character, futurescape, style final unreal of punk, mindar punk, borne space library artwork",
     #"Deep space, mindar mumford, helmet, high character, futurescape, style final unreal of punk, mindar punk, borne space library artwork",
-    "glitchcore portrait of omin dran mind flayer psion politician, key portrait realism, druid octane trending gems, octane organic cinematic, mindar mumford, helmet, high character, futurescape, style final unreal of punk, mindar punk, borne space library artwork",
-    #"I've seen things you people wouldn't believe. Attack ships on fire off the shoulder of Orion. I watched C-beams glitter in the dark near the Tannhäuser Gate. All those moments will be lost in time, like tears in rain."
+    #"glitchcore portrait of omin dran mind flayer psion politician, key portrait realism, druid octane trending gems, octane organic cinematic, mindar mumford, helmet, high character, futurescape, style final unreal of punk, mindar punk, borne space library artwork",
+
+    #"cyberpunk, city, street art, graffiti, spraypaint, colored smoke, heavily stylized, surreal, surrealism, artstation, beeple, key portrait realism, organic cinematic, mindar mumford, helmet, high character, futurescape, style final unreal of punk, mindar punk, borne space library artwork",
+    #"epiphanies, stone figures and statues, natural warm spring lit by strong sunlight shining through, vast, wide angle, waterfall, close up portrait, detailed, photo, photorealistic, hyperrealistic",
+    #"mopaumowhe intufinism",
+    "Textless, Perfect ling, mucheneuve, muchenies ing, Jeffrigheme,  realistacking, ejsin the bartgerm,  Perfect focus-stic listan, rhads, villess, colourealighelant lit",
 ]
 args.zoom_prompt_reset_interval = 2   # the prompt is switched to the next prompt in the list every n samples
 #args.zoom_prompt_schedule_order = "linear"  # rotate through the prompt list in order
@@ -40,19 +43,17 @@ args.expand_right = 25
 args.init_image = ""  # starting (or rather, ending image file, relative to inputs path). if blank start with a generated image
 args.output_path = "zoom_maker"  # output path, relative to outputs
 args.output_name = "zoom_maker"
-args.steps = 20 #60
-args.cfg_scale = 12. #14.
-args.guidance_strength = 0.8 #0.5   # try lowering clip guidance_strength if you have problems with zooms "exploding"
+args.steps = 11 #8 #60
+args.cfg_scale = 10.5 #12.
+args.guidance_strength = 1. #0.7 #0.5   # try lowering clip guidance_strength if you have problems with zooms "exploding"
 #args.negative_prompt = "frame, comic book, collage, cropped, oversaturated, signed, greyscale, monotone, vignette, title, text, logo, watermark"
-args.negative_prompt = "watermark, title, label, logo, collage, cropped, oversaturated, monotone, vignette"
+args.negative_prompt = "watermark, title, label, collage, cropped, highly saturated colors, monotone, vignette"
 #args.sampler = "k_euler_ancestral"
 #args.sampler = "k_dpm_2_ancestral"
-args.sampler = "dpmspp_2"
-#args.sampler = "dpmspp_3"
+#args.sampler="plms"
+#args.sampler = "dpmspp_2"
+args.sampler = "dpmspp_3"
 
-
-#args.zoom_resume = True
-#args.auto_seed = 22950
 
 # *****************************************************************
 
@@ -60,20 +61,20 @@ args.sampler = "dpmspp_2"
 if cli_args: args = Namespace(**(vars(args) | vars(cli_args)))
 if kwargs: args = Namespace(**(vars(args) | kwargs))
 
-if args.zoom_resume:
-    frame_filenames = sorted(glob.glob(gdl.DEFAULT_PATHS.outputs+"/"+args.output_path+"/*.png"), reverse=True)
-    if len(frame_filenames) > 0:
-        args.init_image = recycle_image
-        output_file = frame_filenames[0]
-        input_file = gdl.DEFAULT_PATHS.inputs+"/"+args.init_image
-        print("Resuming zoom from {0}...".format(output_file))
-        print("Copying from {0} to {1}...".format(output_file, input_file))
-        shutil.copyfile(output_file, input_file)
-    else:
-        raise Exception("Error: No frames found in {0} to resume from!".format(gdl.DEFAULT_PATHS.outputs+"/"+args.output_path))
+frame_filenames = sorted(glob.glob(gdl.DEFAULT_PATHS.outputs+"/"+args.output_path+"/*.png"), reverse=True)
+if len(frame_filenames) > 0:
+    args.init_image = recycle_image
+    output_file = frame_filenames[0]
+    input_file = gdl.DEFAULT_PATHS.inputs+"/"+args.init_image
+    print("Resuming zoom from {0}...".format(output_file))
+    print("Copying from {0} to {1}...".format(output_file, input_file))
+    shutil.copyfile(output_file, input_file)
+    start_frame_index = len(frame_filenames)
 else:
+    print("No frames found in {0} to resume from".format(gdl.DEFAULT_PATHS.outputs+"/"+args.output_path))
     if not args.init_image: print("No init_image specified, generating a random starting image...")
     else: print("Starting from '{0}'...".format(args.init_image))
+    start_frame_index = 0
 
 # create zoom frames
 for i in range(args.zoom_num_frames):
@@ -90,6 +91,7 @@ for i in range(args.zoom_num_frames):
         args.prompt = args.zoom_prompt_schedule[prompt_index]
         print("prompt: {0}".format(args.prompt))
 
+    args.output_name = "zoom_maker_f{0}".format(str(i+start_frame_index).zfill(4))
     args = sample(args)
     if args.status != 2: break # cancelled or error
 
