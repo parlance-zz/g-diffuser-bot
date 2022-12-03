@@ -164,9 +164,11 @@ def load_config():
     GRPC_SERVER_SETTINGS.host = str(os.environ.get("SD_GRPC_HOST", "localhost"))
     GRPC_SERVER_SETTINGS.grpc_port = int(os.environ.get("SD_GRPC_PORT", "50051"))
     GRPC_SERVER_SETTINGS.grpc_key = str(os.environ.get("SD_GRPC_KEY", ""))
+    GRPC_SERVER_SETTINGS.grpc_web = bool(int(os.environ.get("SD_GRPC_WEB", "0")))
     GRPC_SERVER_SETTINGS.nsfw_behavior = os.environ.get("SD_NSFW_BEHAVIOUR", "block")
     GRPC_SERVER_SETTINGS.vram_optimization_level = int(os.environ.get("SD_VRAM_OPTIMISATION_LEVEL", "2"))
     if GRPC_SERVER_SETTINGS.host == "localhost":
+        GRPC_SERVER_SETTINGS.grpc_web = False
         GRPC_SERVER_SETTINGS.host = "localhost:{0}".format(GRPC_SERVER_SETTINGS.grpc_port)
 
     DISCORD_BOT_SETTINGS = argparse.Namespace()
