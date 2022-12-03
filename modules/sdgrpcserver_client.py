@@ -163,36 +163,34 @@ class StabilityInference:
         if verbose:
             logger.info(f"Opening channel to {host}")
 
-        call_credentials = []
-
-        if key:
-            call_credentials.append(grpc.access_token_call_credentials(f"{key}"))
+        if use_grpc_web:
+            channel = sonora_client.insecure_web_channel(host)
+            channel._session.headers.update({"authorization": "Bearer {0}".format(key)})
             
-            if host.endswith("443"):
-                channel_credentials = grpc.ssl_channel_credentials()
-            else:
-                print("Key provided but channel is not HTTPS - assuming a local network")
-                channel_credentials = grpc.local_channel_credentials()
-            
-            if not use_grpc_web:
-                channel = grpc.secure_channel(
-                    host, 
-                    grpc.composite_channel_credentials(channel_credentials, *call_credentials)
-                )
-            else:
-                # this function doesn't exist for some reason
-                #channel = sonora_client.secure_web_channel(host, channel_credentials, *call_credentials)
-                raise("Error: GRPC Web on SSL not supported yet")
         else:
-            if not use_grpc_web:
-                channel = grpc.insecure_channel(host)
+            call_credentials = []
+
+            if key:
+                call_credentials.append(grpc.access_token_call_credentials(f"{key}"))
+                
+                if host.endswith("443"):
+                    channel_credentials = grpc.ssl_channel_credentials()
+                else:
+                    print("Key provided but channel is not HTTPS - assuming a local network")
+                    channel_credentials = grpc.local_channel_credentials()
+                
+                    channel = grpc.secure_channel(
+                        host, 
+                        grpc.composite_channel_credentials(channel_credentials, *call_credentials)
+                    )
             else:
-                channel = sonora_client.insecure_web_channel(host)
+                channel = grpc.insecure_channel(host)
 
         if verbose:
             logger.info(f"Channel opened to {host}")
         self.stub = generation_grpc.GenerationServiceStub(channel)
         self.engines_stub = engines_grpc.EnginesServiceStub(channel)
+        return
 
     def list_engines(self):
         rq = engines.ListEnginesRequest()
