@@ -47,9 +47,14 @@ SAMPLERS: Dict[str, int] = {
     "k_dpm_2": generation.SAMPLER_K_DPM_2,
     "k_dpm_2_ancestral": generation.SAMPLER_K_DPM_2_ANCESTRAL,
     "k_lms": generation.SAMPLER_K_LMS,
+    "dpm_fast": generation.SAMPLER_DPM_FAST,
+    "dpm_adaptive": generation.SAMPLER_DPM_ADAPTIVE,
     "dpmspp_1": generation.SAMPLER_DPMSOLVERPP_1ORDER,
     "dpmspp_2": generation.SAMPLER_DPMSOLVERPP_2ORDER,
     "dpmspp_3": generation.SAMPLER_DPMSOLVERPP_3ORDER,
+    "dpmspp_2s_ancestral": generation.SAMPLER_DPMSOLVERPP_2S_ANCESTRAL,
+    "dpmspp_sde": generation.SAMPLER_DPMSOLVERPP_SDE,
+    "dpmspp_2m": generation.SAMPLER_DPMSOLVERPP_2M,
 }
 
 def get_sampler_from_str(s: str) -> generation.DiffusionSampler:
