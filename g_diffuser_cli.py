@@ -40,8 +40,6 @@ import asyncio
 import numpy as np
 import cv2
 
-LAST_ARGS_PATH = gdl.DEFAULT_PATHS.inputs+"/args/last_args.yaml"
-
 VERSION_STRING = "g-diffuser-cli v2.0"
 INTERACTIVE_MODE_BANNER_STRING = """Interactive mode:
     call sample() with keyword arguments and use the up/down arrow-keys to browse command history:
@@ -84,6 +82,9 @@ def main():
     
     gdl.start_grpc_server()
     
+    global LAST_ARGS_PATH
+    LAST_ARGS_PATH = gdl.DEFAULT_PATHS.inputs+"/args/last_args.yaml"
+
     global cli_locals
     cli_locals = argparse.Namespace()
     cli_locals.sample = cli_get_samples
