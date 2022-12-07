@@ -12,22 +12,20 @@ from OpenGL.GLU import *
 args = cli_default_args()
 args.zoom_output_path = "zoom_maker"
 
-args.expand_softness = 15. # **the expand values here should match the values used to create the frames in zoom_maker**
-args.expand_space = 1. 
+args.expand_softness = 50. # **the expand values here should match the values used to create the frames in zoom_maker**
+args.expand_space = 10. 
 args.expand_top = 25
 args.expand_bottom = 25
 args.expand_left = 25
 args.expand_right = 25
 
-args.zoom_start_in_black_void = False      # enabled to start zooming out from a black void instead of starting on the first frame
-args.zoom_num_interpolated_frames = 15     # number of interpolated frames per keyframe, controls zoom speed (and the expand ratio)
-args.zoom_frame_rate = 30                  # fps of the output video
+args.zoom_num_interpolated_frames = 30     # number of interpolated frames per keyframe, controls zoom speed (and the expand ratio)
+args.zoom_frame_rate = 60                  # fps of the output video
 args.zoom_output_file = "zoom.mp4"         # name of output file (this will be saved in the folder with the key frames)
 args.zoom_preview_output = False           # if enabled this will show a preview of the video in a window as it renders
 args.zoom_out = False                      # if enabled this will zoom out instead of zooming in
-args.zoom_rotate_speed = 0.                # change from 0. if you _really_ want to barf
 args.zoom_acceleration_smoothing = 0.      # if > 0. this slows the start and stop, good values are 1 to 3
-args.zoom_video_size = (1920, 1080)        # video output resolution
+args.zoom_video_size = (1920*2, 1080*2)        # video output resolution
 args.zoom_encode_lossless = False          # set to True to make an uncompressed video file (this will take a lot of disk space)
 
 # *****************************************************************
@@ -35,7 +33,7 @@ args.zoom_encode_lossless = False          # set to True to make an uncompressed
 # find keyframes and sort them
 print("Loading keyframes from {0}...".format(gdl.DEFAULT_PATHS.outputs+"/"+args.zoom_output_path))
 frame_filenames = sorted(glob.glob(gdl.DEFAULT_PATHS.outputs+"/"+args.zoom_output_path+"/*.png"), reverse=True)
-#frame_filenames = frame_filenames[0:10] # limit to 20 frames for testing
+#frame_filenames = frame_filenames[0:20] # limit to 20 frames for testing
 num_keyframes = len(frame_filenames)
 
 frame0_cv2_image = cv2.imread(frame_filenames[0])
@@ -59,10 +57,8 @@ frame_textures = []
 for f in range(num_keyframes):
     print("Generating textures {0}/{1}...".format(f+1, num_keyframes))
     cv2_image = cv2.imread(frame_filenames[f])
-    if (f > 0) or args.zoom_start_in_black_void:
-        np_image = gdl.expand_image(cv2_image, args.expand_top, args.expand_right, args.expand_bottom, args.expand_left, args.expand_softness, args.expand_space)
-    else:
-        np_image = gdl.expand_image(cv2_image, args.expand_top, args.expand_right, args.expand_bottom, args.expand_left, 0., 0.)
+    if f > 0: np_image = gdl.expand_image(cv2_image, args.expand_top, args.expand_right, args.expand_bottom, args.expand_left, args.expand_softness, args.expand_space)
+    else: np_image = gdl.expand_image(cv2_image, args.expand_top, args.expand_right, args.expand_bottom, args.expand_left, 0., 0.)
 
     frame_textures.append(glGenTextures(1))
     glBindTexture(GL_TEXTURE_2D, frame_textures[f])
@@ -87,16 +83,17 @@ frame_pixels = (GLubyte * (3*args.zoom_video_size[0]*args.zoom_video_size[1]))(0
 
 if args.zoom_preview_output: # show video window if preview is enabled
     pygame.display.set_mode(args.zoom_video_size, SHOWN|DOUBLEBUF|OPENGL, vsync=0)
-if args.zoom_start_in_black_void: start_offset = 0 # start by zooming in from a black screen if enabled
-else: start_offset = 3.  # otherwise start very slightly pulled back from the first keyframe
+
+start_offset = 3.  # start very slightly pulled back from the first keyframe
+end_offset = 3.
 
 # create a schedule of time values for each rendered video frame
 if args.zoom_acceleration_smoothing > 0.:
     t_schedule = np.tanh(np.linspace(-args.zoom_acceleration_smoothing, args.zoom_acceleration_smoothing, args.zoom_num_interpolated_frames * num_keyframes))
     t_schedule = t_schedule - np.min(t_schedule)
-    t_schedule = t_schedule / np.max(t_schedule) * (num_keyframes-3.) + start_offset
+    t_schedule = t_schedule / np.max(t_schedule) * (num_keyframes+end_offset) + start_offset
 else:
-    t_schedule = np.linspace(start_offset, num_keyframes-3., args.zoom_num_interpolated_frames * num_keyframes)
+    t_schedule = np.linspace(start_offset, num_keyframes+end_offset, args.zoom_num_interpolated_frames * num_keyframes)
 
 if args.zoom_out:
     t_schedule = t_schedule[::-1] # reverse the schedule if zooming out
@@ -108,8 +105,8 @@ try:
         t = t_schedule[f]
         
         glClear(GL_COLOR_BUFFER_BIT)
-        start_frame = int(np.clip(t+0.5-10., 0, num_keyframes-1))
-        end_frame = int(np.clip(t+0.5+10., 1, num_keyframes))
+        start_frame = int(np.clip(t+0.5-25., 0, num_keyframes-1))
+        end_frame = int(np.clip(t+0.5+25., 1, num_keyframes))
         for f0 in range(start_frame, end_frame):
             z = f0 - t
             
@@ -117,7 +114,6 @@ try:
             scaleX = ((args.expand_left + args.expand_right)/100. +1.) ** (-z)
             scaleY = ((args.expand_top + args.expand_bottom)/100. +1.) ** (-z)
             glScalef(scaleX * aspect_adjustmentX, scaleY * aspect_adjustmentY, 1.)
-            glRotatef(t * args.zoom_rotate_speed, 0., 0., 1.)
 
             glBindTexture(GL_TEXTURE_2D, frame_textures[f0])                
             glBegin(GL_QUADS)
