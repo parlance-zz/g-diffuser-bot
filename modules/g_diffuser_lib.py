@@ -340,7 +340,7 @@ def validate_resolution(args):      # clip output dimensions at max_resolution, 
     args.width, args.height = (width, height)
     return
 
-def soften_mask(np_rgba_image, softness):
+def soften_mask(np_rgba_image, softness, space):
     if softness == 0: return np_rgba_image
     original_max_opacity = np.max(np_rgba_image[:,:,3])
     out_mask = np_rgba_image[:,:,3] <= 0.
@@ -348,6 +348,8 @@ def soften_mask(np_rgba_image, softness):
     blurred_mask = np.maximum(blurred_mask - np.max(blurred_mask[out_mask]), 0.) 
     np_rgba_image[:,:,3] *= blurred_mask  # preserve partial opacity in original input mask
     np_rgba_image[:,:,3] /= np.max(np_rgba_image[:,:,3]) # renormalize
+    np_rgba_image[:,:,3] = np.clip(np_rgba_image[:,:,3] - space, 0., 1.) # make space
+    np_rgba_image[:,:,3] /= np.max(np_rgba_image[:,:,3]) # and renormalize again
     np_rgba_image[:,:,3] *= original_max_opacity # restore original max opacity
     return np_rgba_image                 
 
@@ -370,10 +372,7 @@ def expand_image(cv2_img, top, right, bottom, left, softness, space):
         raise Exception("Unsupported image format: {0} channels".format(cv2_img.shape[2]))
         
     if softness > 0.:
-        new_img = soften_mask(new_img/255., softness/100.)
-        mask_cutoff_threshold = np.clip(space/255., 0., 1.)
-        if mask_cutoff_threshold > 0.:
-            new_img[:,:,3] *= (new_img[:,:,3] >= mask_cutoff_threshold)
+        new_img = soften_mask(new_img/255., softness/100., space/100.)
         new_img = (np.clip(new_img, 0., 1.)*255.).astype(np.uint8)
         #save_image(new_img, "temp/debug_expanded.png")
 
@@ -390,7 +389,7 @@ def load_image(file_path, cv2_flags=cv2.IMREAD_UNCHANGED):
 def prepare_init_image(args):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
     MINIMUM_OUTPAINT_IMG2IMG_STRENGTH = 1. # 2.
-    CV2_RESIZE_INTERPOLATION_MODE = cv2.INTER_AREA
+    CV2_RESIZE_INTERPOLATION_MODE = cv2.INTER_LANCZOS4 #cv2.INTER_AREA
 
     # load and resize input image to multiple of 8x8
     fs_init_image_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_image).as_posix()
@@ -594,7 +593,8 @@ def _get_samples(args):
         args.status = 3
         args.error_message = "Cancelled by user"
         output_args.append(args)
-
+        try: answers.cancel()
+        except: pass
     except Exception as e:
         args.status = -1 # error status
         args.error_message = str(e)
