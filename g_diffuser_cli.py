@@ -29,16 +29,12 @@ g_diffuser_cli.py - interactive command line interface for g-diffuser
 
 import modules.g_diffuser_lib as gdl
 from modules.g_diffuser_lib import SimpleLogger
-gdl.load_config()
-
-import os; os.chdir(gdl.DEFAULT_PATHS.root)
 
 import argparse
 from argparse import Namespace
 import code
 import glob
 import pathlib
-import yaml
 import asyncio
 
 import numpy as np
@@ -82,9 +78,10 @@ exit()         # exit interactive mode
 """
 
 def main():
+    gdl.load_config()
+    import os; os.chdir(gdl.DEFAULT_PATHS.root)
     logger = SimpleLogger("g_diffuser_cli.log")
-    global INTERACTIVE_MODE_BANNER_STRING
-
+    
     gdl.start_grpc_server()
     
     global cli_locals
@@ -108,6 +105,7 @@ def main():
     cli_locals.help = cli_help
     cli_locals.exit = cli_exit
     
+    global INTERACTIVE_MODE_BANNER_STRING
     interpreter = code.InteractiveConsole(locals=dict(globals(), **vars(cli_locals)))
     interpreter.interact(banner=INTERACTIVE_MODE_BANNER_STRING, exitmsg="")
 
