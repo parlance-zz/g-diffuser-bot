@@ -29,10 +29,12 @@ g_diffuser_bot.py - discord bot interface for g-diffuser-lib
 
 import modules.g_diffuser_lib as gdl
 from modules.g_diffuser_lib import SimpleLogger
-gdl.load_config()
 
-import os; os.chdir(gdl.DEFAULT_PATHS.root)
-
+if __name__ == "__main__":
+    gdl.load_config()
+    import os; os.chdir(gdl.DEFAULT_PATHS.root)
+    logger = SimpleLogger("g_diffuser_bot.log")
+    
 import datetime
 import pathlib
 import yaml
@@ -86,7 +88,7 @@ class G_DiffuserBot(discord.Client):
 
         return
 
-    async def setup_hook(self):
+    async def setup_commands(self):
         # this is broken, for some reason fetch_commands() always returns nothing
         app_commands = await self.tree.fetch_commands()
         for app_command in app_commands:
@@ -94,10 +96,11 @@ class G_DiffuserBot(discord.Client):
 
         # explicitly sync all commands with all guilds / servers bot has joined
         bot_guilds = client.guilds
-        print("Synchronizing app commands with servers/guilds: {0}...\n".format(str([vars(x) for x in bot_guilds])))
+        print("Synchronizing app commands with servers/guilds: {0}...\n".format(str([str(x.id) for x in bot_guilds])))
         for guild in bot_guilds:
             self.tree.copy_global_to(guild=guild)
             await self.tree.sync(guild=guild)
+
         print("Bot app-command tree: {0}\n\n".format(str(vars(self.tree))))
         return
 
@@ -119,7 +122,6 @@ class G_DiffuserBot(discord.Client):
 
 
 if __name__ == "__main__":
-    logger = SimpleLogger("g_diffuser_bot.log")
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         "--token",
@@ -138,6 +140,24 @@ if __name__ == "__main__":
         client = G_DiffuserBot()
 
 
+def check_discord_attachment_size(file_path):
+    return file_path # todo: check if img is too large, if so convert and save to jpg, return that path instead
+
+def get_discord_echo_args(args, img2img_params=False):
+    if args.seed: args.seed -= 1 # show the seed that was _used_, not the next seed
+    if args.auto_seed: args.auto_seed -= 1
+
+    if img2img_params:
+        if "width" in args: del args.width
+        if "height" in args: del args.height
+
+    args_string = gdl.print_args(args, verbosity_level=2, return_only=True, width=9999)
+    return args_string.replace("\n", "\t")
+
+@client.event
+async def on_ready():
+    await client.setup_commands()
+
 # img command for generating with an input image (img2img, in/outpainting)
 @client.tree.command(
     name="img",
@@ -155,7 +175,6 @@ if __name__ == "__main__":
     steps='number of sampling steps',
     negative_prompt='has the effect of an anti-prompt',
     guidance_strength='clip guidance (only affects clip models)',
-    input_image_url='optional input image url for in/out-painting or img2img',
     img2img_strength='amount to change the input image (only affects img2img, not in/out-painting)',
     expand_top='expand input image top by how much (in %)?',
     expand_right='expand input image right by how much (in %)?',
@@ -189,104 +208,57 @@ async def img(
     expand_space: Optional[app_commands.Range[float, 0., 200.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.expand_space,
     
 ):
+    try: await interaction.response.defer(thinking=True, ephemeral=False) # start by requesting more time to respond
+    except Exception as e: print("exception in await interaction - " + str(e))
+
     # build sample args from app command params
     args = locals().copy()
-    del args.interaction
-    args["model_name"] = args["model_name"].value
-    args["sampler"] = args["sampler"].value
+    del args["interaction"]
+    if type(args["model_name"]) != str: args["model_name"] = args["model_name"].value
+    if type(args["sampler"]) != str: args["sampler"] = args["sampler"].value
     
     args = Namespace(**(vars(gdl.get_default_args()) | args))
     init_image = await download_attachment(input_image_url)
     args.init_image = init_image
     gdl.print_args(args)
 
-    try: await interaction.response.defer(thinking=True, ephemeral=False) # start by requesting more time to respond
-    except Exception as e: print("exception in await interaction - " + str(e))
-
     output_args = await gdl.get_samples(args)
 
-    if "output_file" in args:
+    if args.status == 2: # completed successfully
         attachment_files = []
-        for sample_file in sample_thread.sample_files:
-            sample_filename = DEFAULT_PATHS.outputs + "/" + sample_file
+        for output in output_args:
+            sample_filename = check_discord_attachment_size(gdl.DEFAULT_PATHS.outputs + "/" + output.output_file)
             attachment_files.append(discord.File(sample_filename))
-
-        args_prompt = args.prompt; del args.prompt # extract and re-attach the prompt for formatting we can keep apostrophes and commas
-        if args.seed != 0: args_seed = args.seed-args.n # only need to show the seed as seed for simplicity
-        else: args_seed = args.auto_seed-args.n
-        del args.seed
-        if "auto_seed" in vars(args): del args.auto_seed
-
-        args_width = args.w; args_height = args.h # replace w and h with width and height for copy/paste and consistency
-        del args.w; del args.h
-        args.width = args_width
-        args.height = args_height
-
-        # don't echo parameters if they have a default value
-        if args.model_name == DEFAULT_SAMPLE_SETTINGS.model_name: del args.model_name
-        if args.sampler == DEFAULT_SAMPLE_SETTINGS.sampler: del args.sampler
-        if args.steps == DEFAULT_SAMPLE_SETTINGS.steps: del args.steps
-        if args.scale == DEFAULT_SAMPLE_SETTINGS.scale: del args.scale
-        if args.noise_q == DEFAULT_SAMPLE_SETTINGS.noise_q: del args.noise_q
-        if args.noise_start == DEFAULT_SAMPLE_SETTINGS.noise_start: del args.noise_start
-        if args.noise_end == DEFAULT_SAMPLE_SETTINGS.noise_end: del args.noise_end
-        if args.noise_eta == DEFAULT_SAMPLE_SETTINGS.noise_eta: del args.noise_eta
-        if args.n == DEFAULT_SAMPLE_SETTINGS.n: del args.n
-        if width == DEFAULT_SAMPLE_SETTINGS.resolution[0]: del args.width
-        if height == DEFAULT_SAMPLE_SETTINGS.resolution[1]: del args.height
-        if args.negative_prompt == DEFAULT_SAMPLE_SETTINGS.negative_prompt: del args.negative_prompt
-        if args.guidance_strength == DEFAULT_SAMPLE_SETTINGS.guidance_strength: del args.guidance_strength
-        if args.init_img != "":
-             del args.init_img
-             args.input_image_url = input_image_url
-        if "noise_start" in args:
-            noise_start = args.noise_start
-            del args.noise_start
-            if noise_start != DEFAULT_SAMPLE_SETTINGS.min_outpaint_noise:
-                args.img2img_strength = noise_start
-
-        # construct args string for echo / acknowledgement
-        args_dict = vars(gdl.strip_args(args, level=1))
-        args_str = str(args_dict).replace("{","").replace("}","").replace('"', "").replace("'", "").replace(",", " ")
-        args_str = "prompt: " + args_prompt + "  " + args_str + "  seed: " + str(args_seed)
-        message = "@" + interaction.user.display_name + ":  /g "+ args_str
+        
+        args_str = get_discord_echo_args(args, img2img_params=True)
+        message = "@" + interaction.user.display_name + ":  /img "+args_str
 
         try: await interaction.followup.send(files=attachment_files, content=message)
         except Exception as e: print("exception in await interaction - " + str(e))
     else:
-        print("error - " + args.err_txt); gdl.print_args(args, verbosity_level=0)
+        print("error - " + args.error_message); gdl.print_args(args, verbosity_level=0)
         try: await interaction.followup.send(content="sorry, something went wrong :(", ephemeral=True)
         except Exception as e: print("exception in await interaction - " + str(e))
-        return
 
-    print("elapsed time: " + str(datetime.datetime.now() - start_time) + "s")
+    print("")
     return
 
+# txt2img command
 @client.tree.command(
     name="g",
     description="create something",
 #    nsfw=(gdl.GRPC_SERVER_SETTINGS.nsfw_behaviour != "block"),
 )
 @app_commands.describe(
-    prompt='what do you want to create today? use a single space for no prompt',
-    n='number of images to generate at once',
+    prompt='what do you want to create today?',
+    num_samples='number of images to generate at once',
     model_name='which model to use',
     sampler='which sampling algorithm to use',
-    width='width of each output image',
-    height='height of each output image',
-    scale='conditional guidance scale',
+    cfg_scale='classifier-free guidance scale',
     seed='seed for the random generator',
     steps='number of sampling steps',
     negative_prompt='has the effect of an anti-prompt',
     guidance_strength='clip guidance (only affects clip models)',
-    input_image_url='optional input image url for in/out-painting or img2img',
-    img2img_strength='amount to change the input image (only affects img2img, not in/out-painting)',
-    top='expand input image top by how much (in %)?',
-    right='expand input image right by how much (in %)?',
-    bottom='expand input image bottom by how much (in %)?',
-    left='expand input image left by how much (in %)?',
-    softness='amount to soften the resulting input image mask (in %)',
-    space='distance erased from the edge of the original input image',    
 )
 @app_commands.choices(
     sampler=SAMPLER_CHOICES,
@@ -295,139 +267,46 @@ async def img(
 async def g(
     interaction: discord.Interaction,
     prompt: str,
-    n: Optional[app_commands.Range[int, 1, gdl.DISCORD_BOT_SETTINGS.max_output_limit]] = gdl.DISCORD_BOT_SETTINGS.default_output_n,
+    num_samples: Optional[app_commands.Range[int, 1, gdl.DISCORD_BOT_SETTINGS.max_output_limit]] = gdl.DISCORD_BOT_SETTINGS.default_output_n,
     model_name: Optional[app_commands.Choice[str]] = gdl.DEFAULT_SAMPLE_SETTINGS.model_name,
     sampler: Optional[app_commands.Choice[str]] = gdl.DEFAULT_SAMPLE_SETTINGS.sampler,
-    width: Optional[app_commands.Range[int, 64, gdl.DEFAULT_SAMPLE_SETTINGS.max_resolution[0]]] = gdl.DEFAULT_SAMPLE_SETTINGS.resolution[0],
-    height: Optional[app_commands.Range[int, 64, gdl.DEFAULT_SAMPLE_SETTINGS.max_resolution[1]]] = gdl.DEFAULT_SAMPLE_SETTINGS.resolution[1],
-    scale: Optional[app_commands.Range[float, 0.0, 100.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.scale,
+    cfg_scale: Optional[app_commands.Range[float, 0.0, 100.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.cfg_scale,
     seed: Optional[app_commands.Range[int, 1, 2000000000]] = 0,
     steps: Optional[app_commands.Range[int, 1, gdl.DISCORD_BOT_SETTINGS.max_steps_limit]] = gdl.DEFAULT_SAMPLE_SETTINGS.steps,
     negative_prompt: Optional[str] = gdl.DEFAULT_SAMPLE_SETTINGS.negative_prompt,
     guidance_strength: Optional[app_commands.Range[float, 0.0, 1.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.guidance_strength,
-    input_image_url: Optional[str] = "",
-    img2img_strength: Optional[app_commands.Range[float, 0.0, 2.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.noise_start,
-    top: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
-    right: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
-    bottom: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
-    left: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
-    softness: Optional[app_commands.Range[float, 0.0, 1000.0]] = 100.,
-    space: Optional[app_commands.Range[float, 0.1, 100.0]] = 1.,
-    
 ):
-    global GRPC_SERVER_LOCK
-
     try: await interaction.response.defer(thinking=True, ephemeral=False) # start by requesting more time to respond
     except Exception as e: print("exception in await interaction - " + str(e))
 
-    if input_image_url != "":
-        init_img = await download_attachment(input_image_url)
-    else:
-        init_img = ""
-        
     # build sample args from app command params
-    args = gdl.get_default_args()
-    args.prompt = prompt
-    if type(model_name) == str: args.model_name = model_name
-    else: args.model_name = model_name.value
-    if type(sampler) == str: args.sampler = sampler
-    else: args.sampler = sampler.value
-    if width != DEFAULT_SAMPLE_SETTINGS.resolution[0]: args.w = width
-    if height != DEFAULT_SAMPLE_SETTINGS.resolution[1]: args.h = height
-    args.scale = scale
-    args.seed = seed
-    args.steps = steps
-    args.negative_prompt = negative_prompt
-    args.guidance_strength = guidance_strength
-    if init_img != "": args.init_img = init_img
-    args.noise_start = img2img_strength
-    args.n = n
-    args.interactive = True
+    args = locals().copy()
+    del args["interaction"]
+    if type(args["model_name"]) != str: args["model_name"] = args["model_name"].value
+    if type(args["sampler"]) != str: args["sampler"] = args["sampler"].value
+    
+    args = Namespace(**(vars(gdl.get_default_args()) | args))
     gdl.print_args(args)
 
-    try:
-        await GRPC_SERVER_LOCK.acquire()
-        start_time = datetime.datetime.now()
+    output_args = await gdl.get_samples(args)
 
-        def get_samples_wrapper(args):
-            try:
-                samples, sample_files = gdl.get_samples(args, no_grid=True)
-                threading.current_thread().sample_files = sample_files
-            except Exception as e:
-                threading.current_thread().sample_files = []
-                threading.current_thread().err_txt = str(e)
-            return
-
-        sample_thread = Thread(target = get_samples_wrapper, args=[args], daemon=True)
-        sample_thread.start()
-        while True:
-            sample_thread.join(0.0001)
-            if not sample_thread.is_alive(): break
-            await asyncio.sleep(0.05)
-        sample_thread.join() # it's the only way to be sure
-    except Exception as e:
-        print("error - " + str(e)); gdl.print_args(args, verbosity_level=0)
-        try: await interaction.followup.send(content="sorry, something went wrong :(", ephemeral=True)
-        except Exception as e: print("exception in await interaction - " + str(e))
-        return
-    finally:
-        GRPC_SERVER_LOCK.release()
-
-    if "output_file" in args:
+    if args.status == 2: # completed successfully
         attachment_files = []
-        for sample_file in sample_thread.sample_files:
-            sample_filename = DEFAULT_PATHS.outputs + "/" + sample_file
+        for output in output_args:
+            sample_filename = check_discord_attachment_size(gdl.DEFAULT_PATHS.outputs + "/" + output.output_file)
             attachment_files.append(discord.File(sample_filename))
-
-        args_prompt = args.prompt; del args.prompt # extract and re-attach the prompt for formatting we can keep apostrophes and commas
-        if args.seed != 0: args_seed = args.seed-args.n # only need to show the seed as seed for simplicity
-        else: args_seed = args.auto_seed-args.n
-        del args.seed
-        if "auto_seed" in vars(args): del args.auto_seed
-
-        args_width = args.w; args_height = args.h # replace w and h with width and height for copy/paste and consistency
-        del args.w; del args.h
-        args.width = args_width
-        args.height = args_height
-
-        # don't echo parameters if they have a default value
-        if args.model_name == DEFAULT_SAMPLE_SETTINGS.model_name: del args.model_name
-        if args.sampler == DEFAULT_SAMPLE_SETTINGS.sampler: del args.sampler
-        if args.steps == DEFAULT_SAMPLE_SETTINGS.steps: del args.steps
-        if args.scale == DEFAULT_SAMPLE_SETTINGS.scale: del args.scale
-        if args.noise_q == DEFAULT_SAMPLE_SETTINGS.noise_q: del args.noise_q
-        if args.noise_start == DEFAULT_SAMPLE_SETTINGS.noise_start: del args.noise_start
-        if args.noise_end == DEFAULT_SAMPLE_SETTINGS.noise_end: del args.noise_end
-        if args.noise_eta == DEFAULT_SAMPLE_SETTINGS.noise_eta: del args.noise_eta
-        if args.n == DEFAULT_SAMPLE_SETTINGS.n: del args.n
-        if width == DEFAULT_SAMPLE_SETTINGS.resolution[0]: del args.width
-        if height == DEFAULT_SAMPLE_SETTINGS.resolution[1]: del args.height
-        if args.negative_prompt == DEFAULT_SAMPLE_SETTINGS.negative_prompt: del args.negative_prompt
-        if args.guidance_strength == DEFAULT_SAMPLE_SETTINGS.guidance_strength: del args.guidance_strength
-        if args.init_img != "":
-             del args.init_img
-             args.input_image_url = input_image_url
-        if "noise_start" in args:
-            noise_start = args.noise_start
-            del args.noise_start
-            if noise_start != DEFAULT_SAMPLE_SETTINGS.min_outpaint_noise:
-                args.img2img_strength = noise_start
-
-        # construct args string for echo / acknowledgement
-        args_dict = vars(gdl.strip_args(args, level=1))
-        args_str = str(args_dict).replace("{","").replace("}","").replace('"', "").replace("'", "").replace(",", " ")
-        args_str = "prompt: " + args_prompt + "  " + args_str + "  seed: " + str(args_seed)
+        
+        args_str = get_discord_echo_args(args)
         message = "@" + interaction.user.display_name + ":  /g "+ args_str
 
         try: await interaction.followup.send(files=attachment_files, content=message)
         except Exception as e: print("exception in await interaction - " + str(e))
     else:
-        print("error - " + args.err_txt); gdl.print_args(args, verbosity_level=0)
+        print("error - " + args.error_message); gdl.print_args(args, verbosity_level=0)
         try: await interaction.followup.send(content="sorry, something went wrong :(", ephemeral=True)
         except Exception as e: print("exception in await interaction - " + str(e))
-        return
 
-    print("elapsed time: " + str(datetime.datetime.now() - start_time) + "s")
+    print("")
     return
 
 async def download_attachment(url):   
