@@ -258,7 +258,7 @@ def get_random_string(digits=8):
     uuid_str = str(uuid.uuid4())
     return uuid_str[0:digits] # shorten uuid, don't need that many digits usually
 
-def print_args(args, verbosity_level=1):
+def print_args(args, verbosity_level=1, return_only=False, width=0):
     if type(args) == Namespace:
         namespace_dict = vars(strip_args(args, level=verbosity_level))
     elif type(args) == list:
@@ -267,8 +267,10 @@ def print_args(args, verbosity_level=1):
             namespace_dict.append(vars(strip_args(arg, level=verbosity_level)))
     else:
         raise("args must be an arguments Namespace or list of Namespaces")
-    print(yaml.dump(namespace_dict, sort_keys=False))
-    return
+    if width > 0: arg_string = yaml.dump(namespace_dict, sort_keys=False, width=width)
+    else: arg_string = yaml.dump(namespace_dict, sort_keys=False)
+    if not return_only: print(arg_string)
+    return arg_string
 
 def strip_args(args, level=1): # remove args we wouldn't want to print or serialize, higher levels strip additional irrelevant fields
     stripped = argparse.Namespace(**(vars(args)))
@@ -317,6 +319,36 @@ def strip_args(args, level=1): # remove args we wouldn't want to print or serial
             if "expand_left" in stripped: del stripped.expand_left
             if "expand_right" in stripped: del stripped.expand_right
 
+    if level >=2: # strip what the discord bot won't need to echo
+        if "init_image" in stripped:
+            del stripped.init_image
+        #if "width" in stripped: # these aren't relevant with an input image, but it couldn't hurt to show them
+        #    del stripped.width
+        #if "height" in stripped:
+        #    del stripped.height
+        if "elapsed_time" in stripped:
+            del stripped.elapsed_time
+        if "output_file" in stripped:
+            del stripped.output_file
+        if "args_file" in stripped:
+            del stripped.args_file
+        if "error_message" in stripped:
+            del stripped.error_message
+        if "auto_seed" in stripped:
+            stripped.seed = stripped.auto_seed
+            del stripped.auto_seed
+
+        # note - disabling this for now, I think the verbosity might be better
+        # remove any values that match value defaults
+        """
+        for key, value in vars(DEFAULT_SAMPLE_SETTINGS).items():
+            if key in stripped:
+                if value == stripped.__dict__[key]:
+                    delattr(stripped, key)
+        """
+        
+        #stripped.seed -= 1 # subtract 1 from the seed so the user can see the seed they entered
+                           # (rather than the _next_ seed)
     return stripped
 
 def validate_resolution(args):      # clip output dimensions at max_resolution, while keeping the correct resolution granularity,
@@ -385,6 +417,67 @@ def save_image(cv2_image, file_path):
 
 def load_image(file_path, cv2_flags=cv2.IMREAD_UNCHANGED):
     return cv2.imread(file_path, cv2_flags)
+
+def get_grid_layout(num_samples):
+    def factorize(num):
+        return [n for n in range(1, num + 1) if num % n == 0]
+    factors = factorize(num_samples)
+    median_factor = factors[len(factors)//2]
+    rows = median_factor
+    columns = num_samples // rows
+    return (columns, rows)
+    
+def get_image_grid(imgs, layout, mode="columns"): # make an image grid out of a set of images
+    assert len(imgs) == layout[0]*layout[1]
+    width, height = (imgs[0].shape[0], imgs[0].shape[1])
+
+    np_grid = np.zeros((layout[0]*width, layout[1]*height, 3), dtype="uint8")
+    for i, img in enumerate(imgs):
+        if mode != "rows":
+            paste_x = i // layout[1] * width
+            paste_y = i % layout[1] * height
+        else:
+            paste_x = i % layout[0] * width
+            paste_y = i // layout[0] * height
+        np_grid[paste_x:paste_x+width, paste_y:paste_y+height, :] = img[:]
+
+    return np_grid
+
+def get_annotated_image(image, args):
+    if "annotation" not in args: return image
+    if not args.annotation: return image
+
+    annotation_font = cv2.FONT_HERSHEY_SIMPLEX
+    annotation_position = (8, 31) # todo: hard-coding top-left with small offset for now
+    annotation_scale = 7/8.
+    annotation_linetype = cv2.LINE_8 | cv2.LINE_AA
+    annotation_linethickness = 2
+    annotation_outline_radius = 4
+
+    image_copy = image.copy()
+    try:
+        annotation_color = (0,0,0)
+        for x in range(-annotation_outline_radius, annotation_outline_radius+1, annotation_linethickness):
+            for y in range(-annotation_outline_radius, annotation_outline_radius+1, annotation_linethickness):
+                cv2.putText(image_copy, args.annotation, 
+                    (annotation_position[0]+x, annotation_position[1]+y),
+                    annotation_font, 
+                    annotation_scale,
+                    (0,0,0),
+                    annotation_linethickness,
+                    annotation_linetype)
+        annotation_color = (175,175,175)
+        cv2.putText(image_copy, args.annotation, 
+            annotation_position,
+            annotation_font, 
+            annotation_scale,
+            (255,255,255),
+            annotation_linethickness,
+            annotation_linetype)
+    except Exception as e:
+        print("Error annotating sample - " + str(e))
+        return image
+    return image_copy
 
 def prepare_init_image(args):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
@@ -463,6 +556,12 @@ async def get_samples(args, interactive=False):
 
     def cancel_request(unused_signum, unused_frame, sample_thread):
         print("Okay, cancelling...")
+        if hasattr(sample_thread, "args"):
+            if type(sample_thread.args) == Namespace: args = sample_thread.args
+            elif type(sample_thread.args) == list: args = sample_thread.args[-1]
+            args.status = 3 # cancelled
+            args.error_message = "Cancelled by user"
+
         if sample_thread.ident:
             import ctypes        # this is a a bit of a hack to instantly stop the sample thread but it works
             _stderr = sys.stderr # required to suppress the exception printing from the sample_thread
@@ -569,9 +668,9 @@ def _get_samples(args):
         for path, artifact in grpc_samples:
             image = cv2.imdecode(np.fromstring(artifact.binary, dtype="uint8"), cv2.IMREAD_UNCHANGED)
 
-            if not (mask_image is None): # blend original image back in for in/out-painting, this is required due to vae decoding artifacts
-                mask_rgb = 1.-gdl_utils.np_img_grey_to_rgb(mask_image/255.)
-                image = np.clip(image*(1.-mask_rgb) + init_image*mask_rgb, 0., 255.)
+            #if not (mask_image is None): # blend original image back in for in/out-painting, this is required due to vae decoding artifacts
+            #    mask_rgb = 1.-gdl_utils.np_img_grey_to_rgb(mask_image/255.)
+            #    image = np.clip(image*(1.-mask_rgb) + init_image*mask_rgb, 0., 255.)
 
             if "annotation" in args: image = get_annotated_image(image, args)
 
@@ -582,7 +681,7 @@ def _get_samples(args):
             args.output_sample = image
 
             save_sample(image, args)
-            output_args.append(args)
+            output_args.append(Namespace(**vars(args)))
 
             if args.seed: args.seed += 1 # increment seed or random seed if none was given as we go through the batch
             else: args.auto_seed += 1
@@ -592,14 +691,12 @@ def _get_samples(args):
     except KeyboardInterrupt:
         args.status = 3
         args.error_message = "Cancelled by user"
-        output_args.append(args)
         try: answers.cancel()
         except: pass
     except Exception as e:
         args.status = -1 # error status
         args.error_message = str(e)
         print("Error in grpc sample request: ", e)
-        output_args.append(args)
 
     return output_args
 
@@ -616,17 +713,19 @@ def get_noclobber_checked_path(base_path, file_path):
     existing_count = len(glob.glob(base_path+"/"+file_path_noext+"*"+file_path_ext))
     return file_path_noext+"_x"+str(existing_count).zfill(clobber_num_padding)+file_path_ext
 
-def save_sample(sample, args):
-    global DEFAULT_PATHS
-
-    # get filesystem output paths / base filenames
+def get_fs_paths(args): # get filesystem output paths / base filenames from args
     if not args.prompt: prompt = " "
     else: prompt = args.prompt
     if not args.output_name: fs_output_name = get_default_output_name(prompt)
     else: fs_output_name = get_default_output_name(args.output_name)
     if not args.output_path: fs_output_path = fs_output_name
     else: fs_output_path = get_default_output_name(args.output_path)
+    return fs_output_name, fs_output_path
 
+def save_sample(sample, args):
+    global DEFAULT_PATHS
+
+    fs_output_name, fs_output_path = get_fs_paths(args)
     if args.seed: seed = args.seed
     else: seed = args.auto_seed
     seed_num_padding = 5
@@ -645,78 +744,12 @@ def save_sample(sample, args):
         #print("Saved {0}".format(full_args_path)) # make this silent for now, it's a bit spammy
     return args.output_file
 
-def save_samples_grid(samples, args):
-    global CLI_SETTINGS
-    assert(len(samples)> 1)
-    grid_layout = get_grid_layout(len(samples))
-    grid_image = get_image_grid(samples, grid_layout)
-    filename = "grid_" + args.final_output_name + ".jpg"
-    output_file = args.final_output_path+"/" + filename
-    output_file = get_noclobber_checked_path(DEFAULT_PATHS.outputs, output_file)
+def save_image_grid(images, file_path):
+    global DEFAULT_PATHS
+    grid_layout = get_grid_layout(len(images))
+    grid_image = get_image_grid(images, grid_layout)
+    output_file = DEFAULT_PATHS.outputs+"/"+get_noclobber_checked_path(DEFAULT_PATHS.outputs, file_path)
+    save_image(grid_image, output_file)
+    print("Saved grid image {0}".format(output_file))
+    return
 
-    final_path = DEFAULT_PATHS.outputs+"/"+output_file
-    save_image(grid_image, final_path)
-    print("Saved grid " + final_path)
-    args.output_file = output_file
-    return args.output_file
-
-def get_grid_layout(num_samples):
-    def factorize(num):
-        return [n for n in range(1, num + 1) if num % n == 0]
-    factors = factorize(num_samples)
-    median_factor = factors[len(factors)//2]
-    rows = median_factor
-    columns = num_samples // rows
-    return (columns, rows)
-    
-def get_image_grid(imgs, layout, mode="columns"): # make an image grid out of a set of images
-    assert len(imgs) == layout[0]*layout[1]
-    width, height = (imgs[0].shape[0], imgs[0].shape[1])
-
-    np_grid = np.zeros((layout[0]*width, layout[1]*height, 3), dtype="uint8")
-    for i, img in enumerate(imgs):
-        if mode != "rows":
-            paste_x = i // layout[1] * width
-            paste_y = i % layout[1] * height
-        else:
-            paste_x = i % layout[0] * width
-            paste_y = i // layout[0] * height
-        np_grid[paste_x:paste_x+width, paste_y:paste_y+height, :] = img[:]
-
-    return np_grid
-
-def get_annotated_image(image, args):
-    if "annotation" not in args: return image
-    if not args.annotation: return image
-
-    annotation_font = cv2.FONT_HERSHEY_SIMPLEX
-    annotation_position = (8, 31) # todo: hard-coding top-left with small offset for now
-    annotation_scale = 7/8.
-    annotation_linetype = cv2.LINE_8 | cv2.LINE_AA
-    annotation_linethickness = 2
-    annotation_outline_radius = 4
-
-    image_copy = image.copy()
-    try:
-        annotation_color = (0,0,0)
-        for x in range(-annotation_outline_radius, annotation_outline_radius+1, annotation_linethickness):
-            for y in range(-annotation_outline_radius, annotation_outline_radius+1, annotation_linethickness):
-                cv2.putText(image_copy, args.annotation, 
-                    (annotation_position[0]+x, annotation_position[1]+y),
-                    annotation_font, 
-                    annotation_scale,
-                    (0,0,0),
-                    annotation_linethickness,
-                    annotation_linetype)
-        annotation_color = (175,175,175)
-        cv2.putText(image_copy, args.annotation, 
-            annotation_position,
-            annotation_font, 
-            annotation_scale,
-            (255,255,255),
-            annotation_linethickness,
-            annotation_linetype)
-    except Exception as e:
-        print("Error annotating sample - " + str(e))
-        return image
-    return image_copy
