@@ -259,6 +259,8 @@ async def img(
     steps='number of sampling steps',
     negative_prompt='has the effect of an anti-prompt',
     guidance_strength='clip guidance (only affects clip models)',
+    width='width (in pixels) of the output image',
+    height='height (in pixels) of the output image',
 )
 @app_commands.choices(
     sampler=SAMPLER_CHOICES,
@@ -275,6 +277,8 @@ async def g(
     steps: Optional[app_commands.Range[int, 1, gdl.DISCORD_BOT_SETTINGS.max_steps_limit]] = gdl.DEFAULT_SAMPLE_SETTINGS.steps,
     negative_prompt: Optional[str] = gdl.DEFAULT_SAMPLE_SETTINGS.negative_prompt,
     guidance_strength: Optional[app_commands.Range[float, 0.0, 1.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.guidance_strength,
+    width: Optional[app_commands.Range[int, 512, gdl.DEFAULT_SAMPLE_SETTINGS.max_width]] = gdl.DEFAULT_SAMPLE_SETTINGS.width,
+    height: Optional[app_commands.Range[int, 512, gdl.DEFAULT_SAMPLE_SETTINGS.max_height]] = gdl.DEFAULT_SAMPLE_SETTINGS.height,
 ):
     try: await interaction.response.defer(thinking=True, ephemeral=False) # start by requesting more time to respond
     except Exception as e: print("exception in await interaction - " + str(e))

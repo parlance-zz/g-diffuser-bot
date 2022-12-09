@@ -322,10 +322,6 @@ def strip_args(args, level=1): # remove args we wouldn't want to print or serial
     if level >=2: # strip what the discord bot won't need to echo
         if "init_image" in stripped:
             del stripped.init_image
-        #if "width" in stripped: # these aren't relevant with an input image, but it couldn't hurt to show them
-        #    del stripped.width
-        #if "height" in stripped:
-        #    del stripped.height
         if "elapsed_time" in stripped:
             del stripped.elapsed_time
         if "output_file" in stripped:
@@ -346,9 +342,7 @@ def strip_args(args, level=1): # remove args we wouldn't want to print or serial
                 if value == stripped.__dict__[key]:
                     delattr(stripped, key)
         """
-        
-        #stripped.seed -= 1 # subtract 1 from the seed so the user can see the seed they entered
-                           # (rather than the _next_ seed)
+
     return stripped
 
 def validate_resolution(args):      # clip output dimensions at max_resolution, while keeping the correct resolution granularity,
