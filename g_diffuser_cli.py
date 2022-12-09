@@ -52,8 +52,8 @@ sample("something's wrong with the g-diffuser", sampler="k_euler")  # uses the k
 show_args(default_args())            # show default arguments and sampling parameters
 my_args = default_args(cfg_scale=15) # you can assign a collection of arguments to a variable
 my_args.prompt = "art by frank"      # and modify them before passing them to sample()
-result_args = sample(my_args)        # sample modifies the arguments object you pass in and adds output information
-show_args(result_args)               # you can show the result args to verify the results and output path
+sample(my_args)                      # sample modifies the arguments object you pass in with results
+show_args(my_args)                   # you can show the result args to verify the results and output path
 
 show_samplers() # show all available sampler names
 show_models()   # show available model ids on the grpc server (check models.yaml for more info)
@@ -122,14 +122,14 @@ def cli_get_samples(prompt=None, **kwargs):
         args = cli_default_args(prompt=prompt)
     else:
         raise Exception("Invalid prompt type: {0} - '{1}'".format(str(type(prompt)), str(prompt)))
-    args = argparse.Namespace(**(vars(args) | kwargs)) # merge with keyword args
+
+    args.__dict__ |= kwargs # merge / override with kwargs
     asyncio.run(gdl.get_samples(args, interactive=True))
 
     # try to save the last used args in a file for convenience
     try: gdl.save_yaml(vars(gdl.strip_args(args, level=0)), LAST_ARGS_PATH)
     except Exception as e: pass
-
-    return args
+    return
     
 def cli_show_args(args, level=None):
     if level != None: verbosity_level = level
@@ -192,7 +192,6 @@ def cli_resample(old_path, new_path, **kwargs):
     else:
         print("No outputs found in '" + str(DEFAULT_PATHS.outputs+"/"+old_path) + "' to resample")
 
-    gdl.save_samples_grid(all_resampled_samples, resample_args) # lastly, save a summary grid of all the resampled outputs
     return
     
 def cli_save_comparison_grid(*paths, **kwargs):
