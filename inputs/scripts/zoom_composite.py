@@ -12,28 +12,32 @@ from OpenGL.GLU import *
 args = cli_default_args()
 args.zoom_output_path = "zoom_maker"
 
-args.expand_softness = 50. # **the expand values here should match the values used to create the frames in zoom_maker**
-args.expand_space = 10. 
-args.expand_top = 25
-args.expand_bottom = 25
-args.expand_left = 25
-args.expand_right = 25
+args.expand_softness = 75. # **the expand values here should match the values used to create the frames in zoom_maker**
+args.expand_space = 5. 
+args.expand_top = 50
+args.expand_bottom = 50
+args.expand_left = 50
+args.expand_right = 50
 
-args.zoom_num_interpolated_frames = 30     # number of interpolated frames per keyframe, controls zoom speed (and the expand ratio)
+args.zoom_num_interpolated_frames = 100    # number of interpolated frames per keyframe, controls zoom speed (and the expand ratio)
 args.zoom_frame_rate = 60                  # fps of the output video
 args.zoom_output_file = "zoom.mp4"         # name of output file (this will be saved in the folder with the key frames)
 args.zoom_preview_output = False           # if enabled this will show a preview of the video in a window as it renders
 args.zoom_out = False                      # if enabled this will zoom out instead of zooming in
 args.zoom_acceleration_smoothing = 0.      # if > 0. this slows the start and stop, good values are 1 to 3
-args.zoom_video_size = (1920*2, 1080*2)        # video output resolution
-args.zoom_encode_lossless = False          # set to True to make an uncompressed video file (this will take a lot of disk space)
+args.zoom_video_size = (1920*2, 1080*2)    # video output resolution
+args.zoom_write_raw_frames = False         # set to True to write raw video frames instead of encoding (this will take a lot of disk space)
 
 # *****************************************************************
+
+# if args or keyword args were passed in the cli run command, override the defaults
+if cli_args: args = Namespace(**(vars(args) | vars(cli_args)))
+if kwargs: args = Namespace(**(vars(args) | kwargs))
 
 # find keyframes and sort them
 print("Loading keyframes from {0}...".format(gdl.DEFAULT_PATHS.outputs+"/"+args.zoom_output_path))
 frame_filenames = sorted(glob.glob(gdl.DEFAULT_PATHS.outputs+"/"+args.zoom_output_path+"/*.png"), reverse=True)
-#frame_filenames = frame_filenames[0:20] # limit to 20 frames for testing
+#frame_filenames = frame_filenames[0:4] # limit to 4 frames for testing
 num_keyframes = len(frame_filenames)
 
 frame0_cv2_image = cv2.imread(frame_filenames[0])
@@ -64,28 +68,23 @@ for f in range(num_keyframes):
     glBindTexture(GL_TEXTURE_2D, frame_textures[f])
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS, -0.25)
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS, -0.1)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, np_image.shape[1], np_image.shape[0], 0, GL_RGBA, GL_UNSIGNED_BYTE, np_image)
     glGenerateMipmap(GL_TEXTURE_2D)
 
-# create video encoder
-if args.zoom_encode_lossless == False:
+# create video encoder (if we're not writing raw frames intead)
+if args.zoom_write_raw_frames == False:
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-else:
-    fourcc = cv2.VideoWriter_fourcc(*'HFYU')
-    args.zoom_output_file = os.path.splitext(args.zoom_output_file)[0]+".avi"
-
-print("Creating video of size {0}x{1}...".format(args.zoom_video_size[0], args.zoom_video_size[1]))
-video_output_path = gdl.DEFAULT_PATHS.outputs+"/"+gdl.get_noclobber_checked_path(gdl.DEFAULT_PATHS.outputs, args.zoom_output_path+"/"+args.zoom_output_file)
-
-result = cv2.VideoWriter(video_output_path, fourcc, args.zoom_frame_rate, args.zoom_video_size)
+    print("Creating video of size {0}x{1}...".format(args.zoom_video_size[0], args.zoom_video_size[1]))
+    video_output_path = gdl.DEFAULT_PATHS.outputs+"/"+gdl.get_noclobber_checked_path(gdl.DEFAULT_PATHS.outputs, args.zoom_output_path+"/"+args.zoom_output_file)
+    result = cv2.VideoWriter(video_output_path, fourcc, args.zoom_frame_rate, args.zoom_video_size)
 frame_pixels = (GLubyte * (3*args.zoom_video_size[0]*args.zoom_video_size[1]))(0)
 
 if args.zoom_preview_output: # show video window if preview is enabled
     pygame.display.set_mode(args.zoom_video_size, SHOWN|DOUBLEBUF|OPENGL, vsync=0)
 
-start_offset = 3.  # start very slightly pulled back from the first keyframe
-end_offset = 3.
+start_offset = 1.  # start pulled back from the first keyframe
+end_offset = 2.5   # end zoomed in on the last keyframe
 
 # create a schedule of time values for each rendered video frame
 if args.zoom_acceleration_smoothing > 0.:
@@ -126,7 +125,12 @@ try:
 
         glReadPixels(0, 0, args.zoom_video_size[0], args.zoom_video_size[1], GL_RGB, GL_UNSIGNED_BYTE, frame_pixels)
         np_frame = np.array(frame_pixels).reshape(args.zoom_video_size[1], args.zoom_video_size[0], 3)
-        result.write(np_frame)
+
+        if args.zoom_write_raw_frames == False:
+            result.write(np_frame)
+        else:
+            frame_output_path = gdl.DEFAULT_PATHS.outputs+"/"+args.zoom_output_path+"/video_frames/"+str(f).zfill(8)+".png"
+            gdl.save_image(np_frame, frame_output_path)
 
         pygame.display.flip()
         for e in pygame.event.get():
@@ -138,6 +142,8 @@ except Exception as e:
     raise
 finally:
     pygame.quit()
-    result.release()
-    
-print("Saved {0}".format(video_output_path))
+    if args.zoom_write_raw_frames == False:
+        result.release()
+
+if args.zoom_write_raw_frames == False:
+    print("Saved {0}".format(video_output_path))
