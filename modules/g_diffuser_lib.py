@@ -47,6 +47,7 @@ import socket
 import asyncio
 import threading
 from threading import Thread
+from dotenv import load_dotenv
 
 import yaml
 from yaml import CLoader as Loader
@@ -150,6 +151,9 @@ def load_config():
     global GRPC_SERVER_SETTINGS
     global DISCORD_BOT_SETTINGS
     global DEFAULT_SAMPLE_SETTINGS
+
+    # this env is already loaded if this is a sub-process of the server, but if it isn't we need to load it here
+    load_dotenv("config.ini")
 
     # default paths and main settings are located in the config file and passed as environment variables
     DEFAULT_PATHS = argparse.Namespace()
