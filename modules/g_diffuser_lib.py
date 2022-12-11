@@ -185,8 +185,8 @@ def load_config():
     # try loading sampling defaults from the defaults.yaml file
     try:
         defaults = load_yaml(DEFAULT_PATHS.defaults_file)
-    except:
-        print("Warning: Could not load defaults file {0}".format(DEFAULT_PATHS.defaults_file))
+    except Exception as e:
+        print("Warning: Could not load defaults file {0} - {1}".format(DEFAULT_PATHS.defaults_file, e))
         defaults = {}
 
     DEFAULT_SAMPLE_SETTINGS = argparse.Namespace()
@@ -666,9 +666,9 @@ def _get_samples(args):
         for path, artifact in grpc_samples:
             image = cv2.imdecode(np.fromstring(artifact.binary, dtype="uint8"), cv2.IMREAD_UNCHANGED)
 
-            #if not (mask_image is None): # blend original image back in for in/out-painting, this is required due to vae decoding artifacts
-            #    mask_rgb = 1.-gdl_utils.np_img_grey_to_rgb(mask_image/255.)
-            #    image = np.clip(image*(1.-mask_rgb) + init_image*mask_rgb, 0., 255.)
+            if not (mask_image is None): # blend original image back in for in/out-painting, this is required due to vae decoding artifacts
+                mask_rgb = 1.-gdl_utils.np_img_grey_to_rgb(mask_image/255.)
+                image = np.clip(image*(1.-mask_rgb) + init_image*mask_rgb, 0., 255.)
 
             if "annotation" in args: image = get_annotated_image(image, args)
 
