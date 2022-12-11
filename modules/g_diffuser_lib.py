@@ -63,7 +63,7 @@ GRPC_SERVER_ENGINE_STATUS = []
 GRPC_SERVER_LOCK = asyncio.Lock()
 
 class SimpleLogger(object):
-    def __init__(self, log_path, mode="a"):
+    def __init__(self, log_path, mode="w"):
         try: self.log = open(log_path, mode)
         except: return
         # hijack stdout, stdin, stderr
