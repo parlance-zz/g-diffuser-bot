@@ -25,7 +25,7 @@ args.zoom_prompt_schedule = [
 args.zoom_prompt_reset_interval = 1   # the prompt is switched to the next prompt in the list every n samples
 #args.zoom_prompt_schedule_order = "linear"  # rotate through the prompt list in order
 args.zoom_prompt_schedule_order = "random" # uncomment this line to use prompts in random order
-args.zoom_interactive_cherrypicker = True  # setting this to True will prompt you to interactively accept or reject each keyframe / sample
+args.zoom_interactive_cherrypicker = False  # setting this to True will prompt you to interactively accept or reject each keyframe / sample
 
 args.num_samples = 1
 args.zoom_num_frames = 1000 # number of discrete zoom images to sample
@@ -41,23 +41,24 @@ args.expand_right = 50
 args.init_image = ""  # starting (or rather, ending image file, relative to inputs path). if blank start with a generated image
 args.output_path = "zoom_maker"  # output path, relative to outputs
 args.output_name = "zoom_maker"
-args.steps = 12 #100
-args.cfg_scale = 14. #10.
+args.steps = 50 # 100
+args.cfg_scale = 14. # this scale is for SD1.5, use a lower scale for SD2.0
 args.guidance_strength = 0. #0.7 #0.4   # try lowering clip guidance_strength if you have problems with zooms "exploding"
+
 #args.negative_prompt = "frame, comic book, collage, cropped, oversaturated, signed, greyscale, monotone, vignette, title, text, logo, watermark"
 #args.negative_prompt = "watermark, title, label, collage, cropped, highly saturated colors, monotone, vignette"
 #args.negative_prompt = "art by lisa frank, blender, cropped, lowres, poorly drawn face, out of frame, poorly drawn hands, blurry, bad art, text, watermark, disfigured, deformed, title, label, collage, vignette"
 args.negative_prompt = "frame, blender, cropped, lowres, poorly drawn face, poorly drawn hands, blurry, bad art, text, watermark, disfigured, deformed, title, label, collage, vignette"
 
 args.model_name = "stable-diffusion-v2-standard"
-args.cfg_scale = 7.#4. #4.85 #4.35
+args.cfg_scale = 6.5#4. #4.85 #4.35
 
 #args.sampler = "k_euler_ancestral"
 #args.sampler = "k_dpm_2_ancestral"
-args.sampler = "dpmspp_2"
+#args.sampler = "dpmspp_2"
 #args.sampler = "dpmspp_3"
 #args.sampler = "dpmspp_2s_ancestral"
-#args.sampler = "dpmspp_sde"
+args.sampler = "dpmspp_sde"
 
 # *****************************************************************
 
@@ -104,7 +105,7 @@ while i < args.zoom_num_frames:
     if args.zoom_interactive_cherrypicker:
         input_key = 32
         while chr(input_key).lower() not in ("y","n"):
-            cv2.imshow("Accept sample? (y/n):", args.output_sample)
+            cv2.imshow("Accept or reject? (y/n):", args.output_sample)
             input_key = cv2.waitKey(0)
             cv2.destroyAllWindows()
             if input_key == -1: break # window closed
