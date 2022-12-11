@@ -104,7 +104,7 @@ while i < args.zoom_num_frames:
     if args.zoom_interactive_cherrypicker:
         input_key = 32
         while chr(input_key).lower() not in ("y","n"):
-            cv2.imshow("Accept or reject? (y/n):", args.output_sample)
+            cv2.imshow("Accept sample? (y/n):", args.output_sample)
             input_key = cv2.waitKey(0)
             cv2.destroyAllWindows()
             if input_key == -1: break # window closed
