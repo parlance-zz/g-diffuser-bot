@@ -12,8 +12,8 @@ from OpenGL.GLU import *
 args = cli_default_args()
 args.zoom_output_path = "zoom_maker"
 
-args.expand_softness = 75. # **the expand values here should match the values used to create the frames in zoom_maker**
-args.expand_space = 5. 
+args.expand_softness = 50. # **the expand values here should match the values used to create the frames in zoom_maker**
+args.expand_space = 10. 
 args.expand_top = 50
 args.expand_bottom = 50
 args.expand_left = 50
