@@ -196,7 +196,7 @@ def load_config():
     DEFAULT_SAMPLE_SETTINGS.num_samples = int(defaults.get("num_samples", 1))
     DEFAULT_SAMPLE_SETTINGS.sampler = str(defaults.get("sampler", "dpmspp_2"))
     DEFAULT_SAMPLE_SETTINGS.steps = int(defaults.get("steps", 50))
-    DEFAULT_SAMPLE_SETTINGS.max_steps = int(defaults.get("max_steps", 150))    
+    #DEFAULT_SAMPLE_SETTINGS.max_steps = int(defaults.get("max_steps", 150))
     DEFAULT_SAMPLE_SETTINGS.cfg_scale = float(defaults.get("cfg_scale", 14.))
     DEFAULT_SAMPLE_SETTINGS.guidance_strength = float(defaults.get("guidance_strength", 0.5))
     DEFAULT_SAMPLE_SETTINGS.negative_prompt = str(defaults.get("negative_prompt", ""))
@@ -205,9 +205,13 @@ def load_config():
     DEFAULT_SAMPLE_SETTINGS.height = int(defaults.get("default_resolution", {}).get("height", 512))
     DEFAULT_SAMPLE_SETTINGS.max_width = int(defaults.get("max_resolution", {}).get("width", 960))
     DEFAULT_SAMPLE_SETTINGS.max_height = int(defaults.get("max_resolution", {}).get("height", 960))
+
+    DEFAULT_SAMPLE_SETTINGS.hires_fix = bool(defaults.get("hires_fix", False))
+    DEFAULT_SAMPLE_SETTINGS.seamless_tiling = bool(defaults.get("seamless_tiling", False))
+
     DEFAULT_SAMPLE_SETTINGS.init_image = "" # used to supply an input image for in/out-painting or img2img
     DEFAULT_SAMPLE_SETTINGS.img2img_strength = float(defaults.get("img2img_strength", 0.65))
-    
+
     DEFAULT_SAMPLE_SETTINGS.auto_seed = 0 # if auto_seed is 0, at sampling time this is replaced with a random seed
                                           # from the auto_seed_range. if auto_seed is not 0 it is incremented by 1 instead
     DEFAULT_SAMPLE_SETTINGS.auto_seed_low = int(defaults.get("auto_seed_range", {}).get("low", 10000))
@@ -240,12 +244,7 @@ def load_config():
 def get_default_args():
     global DEFAULT_SAMPLE_SETTINGS
     default_args = Namespace(**vars(DEFAULT_SAMPLE_SETTINGS))
-    del default_args.auto_seed_low
-    del default_args.auto_seed_high
-    del default_args.max_width
-    del default_args.max_height
-    del default_args.max_steps
-    return default_args # copy the default settings minus irrelevant fields
+    return default_args # copy the default settings
 
 def save_yaml(_dict, file_path):
     (pathlib.Path(file_path).parents[0]).mkdir(exist_ok=True, parents=True)
@@ -279,10 +278,17 @@ def print_args(args, verbosity_level=1, return_only=False, width=0):
 def strip_args(args, level=1): # remove args we wouldn't want to print or serialize, higher levels strip additional irrelevant fields
     stripped = argparse.Namespace(**(vars(args)))
 
+    # for level 0 only strip fields that can't / shouldn't be serialized
     if "output_sample" in stripped:
         del stripped.output_sample
 
     if level >=1: # keep just the basics for most printing
+
+        if "auto_seed_low" in stripped: del stripped.auto_seed_low
+        if "auto_seed_high" in stripped: del stripped.auto_seed_high
+        if "max_width" in stripped: del stripped.max_width
+        if "max_height" in stripped: del stripped.max_height
+                
         if "debug" in stripped:
             if not stripped.debug: del stripped.debug
         if "seed" in stripped:
@@ -355,17 +361,17 @@ def validate_resolution(args):      # clip output dimensions at max_resolution, 
 
     width, height = (args.width, args.height)
     aspect_ratio = width / height 
-    if width > DEFAULT_SAMPLE_SETTINGS.max_width:
-        width = DEFAULT_SAMPLE_SETTINGS.max_width
+    if width > args.max_width and args.max_width > 0:
+        width = args.max_width
         height = int(width / aspect_ratio)
-    if height > DEFAULT_SAMPLE_SETTINGS.max_height:
-        height = DEFAULT_SAMPLE_SETTINGS.max_height
+    if height > args.max_height and args.max_height > 0:
+        height = args.max_height
         width = int(height * aspect_ratio)
         
     width = int(width / RESOLUTION_GRANULARITY) * RESOLUTION_GRANULARITY
     height = int(height / RESOLUTION_GRANULARITY) * RESOLUTION_GRANULARITY
-    width = int(np.clip(width, RESOLUTION_GRANULARITY, DEFAULT_SAMPLE_SETTINGS.max_width))
-    height = int(np.clip(height, RESOLUTION_GRANULARITY, DEFAULT_SAMPLE_SETTINGS.max_height))
+    width = max(width, RESOLUTION_GRANULARITY)
+    height = max(height, RESOLUTION_GRANULARITY)
 
     args.width, args.height = (width, height)
     return
@@ -402,9 +408,10 @@ def expand_image(cv2_img, top, right, bottom, left, softness, space):
         raise Exception("Unsupported image format: {0} channels".format(cv2_img.shape[2]))
         
     if softness > 0.:
+        #save_image(new_img, "temp/debug_expanded_pre-soften.png") #debug
         new_img = soften_mask(new_img/255., softness/100., space/100.)
         new_img = (np.clip(new_img, 0., 1.)*255.).astype(np.uint8)
-        #save_image(new_img, "temp/debug_expanded.png")
+        #save_image(new_img, "temp/debug_expanded.png") #debug
 
     return new_img
 
@@ -501,6 +508,7 @@ def prepare_init_image(args):
         mask_image = 255. - init_image[:,:,3] # extract mask from alpha channel and invert
         init_image = 0. + init_image[:,:,0:3] # strip mask from init_img leaving only rgb channels
         #init_image *= gdl_utils.np_img_grey_to_rgb(mask_image) < 255. # force color data in erased areas to 0
+        #mask_image = gdl_utils.np_img_grey_to_rgb(mask_image)
 
         print("Using in/out-painting with strength {0}".format(args.img2img_strength))
         if args.sampler == "k_euler": # k_euler currently does not add noise during sampling
@@ -616,7 +624,9 @@ def build_grpc_request_dict(args, init_image_bytes, mask_image_bytes):
         "negative_prompt": args.negative_prompt,
         "guidance_preset": grpc_client.generation.GUIDANCE_PRESET_SIMPLE if args.guidance_strength > 0. else grpc_client.generation.GUIDANCE_PRESET_NONE,
         "guidance_strength": args.guidance_strength,
-        "guidance_prompt": prompt,   
+        "guidance_prompt": prompt,
+        "hires_fix": args.hires_fix,
+        "tiling": args.seamless_tiling,
     }
 
 def _get_samples(args):
@@ -625,7 +635,7 @@ def _get_samples(args):
     # set auto-seed if no seed provided
     if args.seed == 0:
         if args.auto_seed == 0: # no existing auto-seed, use new seed from auto-seed range
-            args.auto_seed = int(np.random.randint(DEFAULT_SAMPLE_SETTINGS.auto_seed_low, DEFAULT_SAMPLE_SETTINGS.auto_seed_high)) # new random auto-seed
+            args.auto_seed = int(np.random.randint(args.auto_seed_low, args.auto_seed_high)) # new random auto-seed
     else:
         args.auto_seed = 0 # seed provided, disable auto-seed
 
