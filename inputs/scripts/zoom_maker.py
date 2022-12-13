@@ -10,7 +10,7 @@ recycle_image = "zoom_maker.png" # file path in /inputs/ to copy over from outpu
 
 args = cli_default_args()
 args.zoom_prompt_schedule = [
-    #"Face portrait of a retrofuturistic assassin surrounded by advanced brutalist architecture. highly detailed science fiction, rich colors, high contrast, gloomy atmosphere, dark background. trending on artstation an ultrafine hyperdetailed colorfull illustration by kim jung gi, moebius, irakli nadar, alphonse mucha, ayami kojima, amano, greg hildebrandt",
+    "Face portrait of a retrofuturistic assassin surrounded by advanced brutalist architecture. highly detailed science fiction, rich colors, high contrast, gloomy atmosphere, dark background. trending on artstation an ultrafine hyperdetailed colorfull illustration by kim jung gi, moebius, irakli nadar, alphonse mucha, ayami kojima, amano, greg hildebrandt",
     #"Textless, Perfect ling, mucheneuve, muchenies ing, Jeffrigheme,  realistacking, ejsin the bartgerm,  Perfect focus-stic listan, rhads, villess, colourealighelant lit",
     #"a couple of statues sitting next to each other in a building, by Jeremy Geddes, Artstation contest winner, gothic art, wreathed in flame, shattered abstractions, book cover illustration, gothic wraith maiden, peter mohrbacher c 2 0, ffffound, loss in despair, photoshop art, ornate and flowing, promo image, whirling death",
     #"a very strange looking creature in the middle of a desert, cyberpunk art, by Mike 'Beeple' Winkelmann, fantasy art, many mech flowers, high detail 8k render, portrait of a zentaur, cute detailed digital art, robot dragon head, cyberpunk in foliage, behance. high detail, vaporwave artwork composition, beautiful avatar pictures",
@@ -20,7 +20,7 @@ args.zoom_prompt_schedule = [
     #"a painting of a man with a bird in his hand, poster art, by Jason Benjamin, cg society contest winner, psychedelic art, with a glass eye and a top hat, in a deep lush jungle at night, pinguin, dan mumford and thomas kinkade, bubbling ooze covered serious, promo shot, black tie, disney artist, album artwork, booze",
     #"a painting of a strange creature with a giant eye, by Justin Gerard, cg society contest winner, psychedelic art, lush alien landscape, album artwork, black ooze, detailed wide shot, thomas kinkade and tristan eaton, river styx, very very well detailed image, a dream, brock hofer, caravan, hollow, painted in high resolution, mind-bending",
     #"a painting of close-up portrait of a man, a detailed painting, by Justin Gerard, Artstation contest winner, psychedelic art, glowing eyes in helmet, medium portrait of a goblin, beeple and jeremiah ketner, majora mask, highly detailed zen neon, official fanart behance hd, sofubi, detailed mask, dmt temple, trailer",
-    "art by Moooooebius, close up portrait, color, surreal, surrealism",
+    #"art by Moooooebius, close up portrait, color, surreal, surrealism",
 ]
 args.zoom_prompt_reset_interval = 1   # the prompt is switched to the next prompt in the list every n samples
 #args.zoom_prompt_schedule_order = "linear"  # rotate through the prompt list in order
@@ -31,8 +31,8 @@ args.num_samples = 1
 args.zoom_num_frames = 1000 # number of discrete zoom images to sample
                             # (you can abort / close the program at any time to use the keyframes you have already generated)
 
-args.expand_softness = 75.
-args.expand_space = 5.      # distance to hard erase from source image edge
+args.expand_softness = 50.
+args.expand_space = 10.      # distance to hard erase from source image edge
 args.expand_top = 50        # amount to expand in each direction in each step
 args.expand_bottom = 50     # these values are in % of the original image size
 args.expand_left = 50       # exceeding 50% in any direction is not recommended for recursive zooms / pans
@@ -41,8 +41,8 @@ args.expand_right = 50
 args.init_image = ""  # starting (or rather, ending image file, relative to inputs path). if blank start with a generated image
 args.output_path = "zoom_maker"  # output path, relative to outputs
 args.output_name = "zoom_maker"
-args.steps = 50 # 100
-args.cfg_scale = 14. # this scale is for SD1.5, use a lower scale for SD2.0
+args.steps = 30 #50 # 100
+args.cfg_scale = 10. # this scale is for SD1.5, use a lower scale for SD2.0
 args.guidance_strength = 0. #0.7 #0.4   # try lowering clip guidance_strength if you have problems with zooms "exploding"
 
 #args.negative_prompt = "frame, comic book, collage, cropped, oversaturated, signed, greyscale, monotone, vignette, title, text, logo, watermark"
@@ -51,14 +51,25 @@ args.guidance_strength = 0. #0.7 #0.4   # try lowering clip guidance_strength if
 args.negative_prompt = "frame, blender, cropped, lowres, poorly drawn face, poorly drawn hands, blurry, bad art, text, watermark, disfigured, deformed, title, label, collage, vignette"
 
 args.model_name = "stable-diffusion-v2-standard"
-args.cfg_scale = 6.5#4. #4.85 #4.35
+args.cfg_scale = 4.5#4. #4.85 #4.35
 
+#args.model_name = "stable-diffusion-v2-vpred"
+#args.cfg_scale = 6.5
+
+args.width = 800
+args.height = 800
+args.max_width = 800
+args.max_height = 800
+
+args.hires_fix = True
+args.sampler = "dpmspp_sde"
 #args.sampler = "k_euler_ancestral"
 #args.sampler = "k_dpm_2_ancestral"
 #args.sampler = "dpmspp_2"
 #args.sampler = "dpmspp_3"
 #args.sampler = "dpmspp_2s_ancestral"
-args.sampler = "dpmspp_sde"
+
+
 
 # *****************************************************************
 
