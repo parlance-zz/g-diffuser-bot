@@ -57,6 +57,12 @@ SAMPLERS: Dict[str, int] = {
     "dpmspp_2m": generation.SAMPLER_DPMSOLVERPP_2M,
 }
 
+NOISE_TYPES: Dict[str, int] = {
+    "normal": generation.SAMPLER_NOISE_NORMAL,
+    "brownian": generation.SAMPLER_NOISE_BROWNIAN,
+}
+
+
 def get_sampler_from_str(s: str) -> generation.DiffusionSampler:
     """
     Convert a string to a DiffusionSampler enum.
@@ -68,8 +74,18 @@ def get_sampler_from_str(s: str) -> generation.DiffusionSampler:
     algorithm = SAMPLERS.get(algorithm_key, None)
     if algorithm is None:
         raise ValueError(f"unknown sampler {s}")
-    
+
     return algorithm
+
+
+def get_noise_type_from_str(s: str) -> generation.SamplerNoiseType:
+    noise_key = s.lower().strip()
+    noise_type = NOISE_TYPES.get(noise_key, None)
+
+    if noise_type is None:
+        raise ValueError(f"unknown noise type {s}")
+
+    return noise_type
 
 def image_to_prompt(im, init: bool = False, mask: bool = False) -> generation.Prompt:
     if init and mask:
@@ -90,6 +106,7 @@ def image_to_prompt(im, init: bool = False, mask: bool = False) -> generation.Pr
         ),
         parameters=generation.PromptParameters(init=init),
     )
+
 
 def process_artifacts_from_answers(
     prefix: str,
@@ -132,12 +149,11 @@ def process_artifacts_from_answers(
                     if verbose:
                         artifact_t = generation.ArtifactType.Name(artifact.type)
                         logger.info(f"wrote {artifact_t} to {out_p}")
-                        if artifact.finish_reason == generation.FILTER: logger.info(f"{artifact_t} flagged as NSFW")
+                        if artifact.finish_reason == generation.FILTER:
+                            logger.info(f"{artifact_t} flagged as NSFW")
 
             yield [out_p, artifact]
             idx += 1
-
-
 
 
 class StabilityInference:
@@ -222,6 +238,13 @@ class StabilityInference:
         end_schedule: float = 0.01,
         cfg_scale: float = 7.0,
         eta: float = 0.0,
+        churn: float = None,
+        churn_tmin: float = None,
+        churn_tmax: float = None,
+        sigma_min: float = None,
+        sigma_max: float = None,
+        karras_rho: float = None,
+        noise_type: int = None,
         sampler: generation.DiffusionSampler = generation.SAMPLER_K_LMS,
         steps: int = 50,
         seed: Union[Sequence[int], int] = 0,
@@ -233,6 +256,9 @@ class StabilityInference:
         guidance_strength: Optional[float] = None,
         guidance_prompt: Union[str, generation.Prompt] = None,
         guidance_models: List[str] = None,
+        hires_fix: bool | None = None,
+        hires_oos_fraction: float | None = None,
+        tiling: bool = False,
     ) -> Generator[generation.Answer, None, None]:
         """
         Generate images from a prompt.
@@ -282,22 +308,48 @@ class StabilityInference:
             prompts.append(p)
 
         if negative_prompt:
-            prompts += [generation.Prompt(
-                text=negative_prompt, 
-                parameters=generation.PromptParameters(weight=-1)
-            )]
+            prompts += [
+                generation.Prompt(
+                    text=negative_prompt,
+                    parameters=generation.PromptParameters(weight=-1),
+                )
+            ]
+
+        sampler_parameters = dict(cfg_scale=cfg_scale)
+
+        if eta:
+            sampler_parameters["eta"] = eta
+        if noise_type:
+            sampler_parameters["noise_type"] = noise_type
+
+        if churn:
+            churn_parameters = dict(churn=churn)
+
+            if churn_tmin:
+                churn_parameters["churn_tmin"] = churn_tmin
+            if churn_tmax:
+                churn_parameters["churn_tmax"] = churn_tmax
+
+            sampler_parameters["churn"] = generation.ChurnSettings(**churn_parameters)
+
+        sigma_parameters = {}
+
+        if sigma_min:
+            sigma_parameters["sigma_min"] = sigma_min
+        if sigma_max:
+            sigma_parameters["sigma_max"] = sigma_max
+        if karras_rho:
+            sigma_parameters["karras_rho"] = karras_rho
+
+        sampler_parameters["sigma"] = generation.SigmaParameters(**sigma_parameters)
 
         step_parameters = dict(
-            scaled_step=0,
-            sampler=generation.SamplerParameters(
-                cfg_scale=cfg_scale,
-                eta=eta,
-            ),
+            scaled_step=0, sampler=generation.SamplerParameters(**sampler_parameters)
         )
 
         # NB: Specifying schedule when there's no init image causes washed out results
         if init_image is not None:
-            step_parameters['schedule'] = generation.ScheduleParameters(
+            step_parameters["schedule"] = generation.ScheduleParameters(
                 start=start_schedule,
                 end=end_schedule,
             )
@@ -341,7 +393,19 @@ class StabilityInference:
                 ],
             )
 
-        image_parameters=generation.ImageParameters(
+        if hires_fix is None and hires_oos_fraction is not None:
+            hires_fix = True
+
+        hires = None
+
+        if hires_fix is not None:
+            hires_params: dict[str, bool | float] = dict(enable=hires_fix)
+            if hires_oos_fraction is not None:
+                hires_params["oos_fraction"] = hires_oos_fraction
+
+            hires = generation.HiresFixParameters(**hires_params)
+
+        image_parameters = generation.ImageParameters(
             transform=generation.TransformType(diffusion=sampler),
             height=height,
             width=width,
@@ -349,6 +413,8 @@ class StabilityInference:
             steps=steps,
             samples=samples,
             parameters=[generation.StepParameter(**step_parameters)],
+            hires=hires,
+            tiling=tiling,
         )
 
         return self.emit_request(prompt=prompts, image_parameters=image_parameters)
@@ -365,26 +431,28 @@ class StabilityInference:
             request_id = str(uuid.uuid4())
         if not engine_id:
             engine_id = self.engine
-        
+
         rq = generation.Request(
             engine_id=engine_id,
             request_id=request_id,
             prompt=prompt,
-            image=image_parameters
+            image=image_parameters,
         )
-        
+
         if self.verbose:
             logger.info("Sending request.")
 
         start = time.time()
         answers = self.stub.Generate(rq, **self.grpc_args)
-
+        
+        """
         def cancel_request(unused_signum, unused_frame):
-            #print("Cancelling")
+            print("Cancelling")
             answers.cancel()
-            #sys.exit(0)
+            sys.exit(0)
 
-        #signal.signal(signal.SIGINT, cancel_request)
+        signal.signal(signal.SIGINT, cancel_request)
+        """
 
         for answer in answers:
             duration = time.time() - start
@@ -400,8 +468,7 @@ class StabilityInference:
                     )
                 else:
                     logger.info(
-                        f"Got keepalive {answer.answer_id} in "
-                        f"{duration:0.2f}s"
+                        f"Got keepalive {answer.answer_id} in " f"{duration:0.2f}s"
                     )
 
             yield answer
