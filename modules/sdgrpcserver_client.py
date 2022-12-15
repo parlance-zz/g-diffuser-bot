@@ -181,6 +181,9 @@ class StabilityInference:
 
         self.grpc_args = {"wait_for_ready": wait_for_ready}
 
+        # disable send / receive limit
+        grpc_channel_options = [("grpc.max_send_message_length", -1), ("grpc.max_receive_message_length", -1)]
+
         if verbose:
             logger.info(f"Opening channel to {host}")
 
@@ -202,10 +205,11 @@ class StabilityInference:
                 
                     channel = grpc.secure_channel(
                         host, 
-                        grpc.composite_channel_credentials(channel_credentials, *call_credentials)
+                        grpc.composite_channel_credentials(channel_credentials, *call_credentials),
+                        options=grpc_channel_options,
                     )
             else:
-                channel = grpc.insecure_channel(host)
+                channel = grpc.insecure_channel(host, options=grpc_channel_options)
 
         if verbose:
             logger.info(f"Channel opened to {host}")
