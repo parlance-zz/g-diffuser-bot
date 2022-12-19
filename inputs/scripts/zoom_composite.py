@@ -12,15 +12,15 @@ from OpenGL.GLU import *
 args = cli_default_args()
 args.zoom_output_path = "zoom_maker"
 
-args.expand_softness = 50. # **the expand values here should match the values used to create the frames in zoom_maker**
+args.expand_softness = 25. # **the expand values here should match the values used to create the frames in zoom_maker**
 args.expand_space = 10. 
-args.expand_top = 50
-args.expand_bottom = 50
-args.expand_left = 50
-args.expand_right = 50
+args.expand_top = 30
+args.expand_bottom = 30
+args.expand_left = 30
+args.expand_right = 30
 
-args.zoom_num_interpolated_frames = 100    # number of interpolated frames per keyframe, controls zoom speed (and the expand ratio)
-args.zoom_frame_rate = 60                  # fps of the output video
+args.zoom_num_interpolated_frames = 90     # number of interpolated frames per keyframe, controls zoom speed (and the expand ratio)
+args.zoom_frame_rate = 30                  # fps of the output video
 args.zoom_output_file = "zoom.mp4"         # name of output file (this will be saved in the folder with the key frames)
 args.zoom_preview_output = False           # if enabled this will show a preview of the video in a window as it renders
 args.zoom_out = False                      # if enabled this will zoom out instead of zooming in
