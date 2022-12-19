@@ -733,7 +733,7 @@ def _get_samples(args):
 
     return output_args
 
-def get_default_output_name(name, truncate_length=100, force_ascii=True):
+def get_default_output_name(name, truncate_length=64, force_ascii=True):
     if force_ascii: name = str(name.encode('utf-8').decode('ascii', 'ignore'))
     sanitized_name = re.sub(r'[\\/*?:"<>|]',"", name).replace(".","").replace("'","").replace("\t"," ").replace(" ","_").strip()
     if (truncate_length > len(sanitized_name)) or (truncate_length==0): truncate_length = len(sanitized_name)
