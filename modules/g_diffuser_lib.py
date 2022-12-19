@@ -282,8 +282,8 @@ def strip_args(args, level=1): # remove args we wouldn't want to print or serial
     # for level 0 only strip fields that can't / shouldn't be serialized
     if "output_sample" in stripped:
         del stripped.output_sample
-    if "outout_expand_mask" in stripped:
-        del stripped.outout_expand_mask
+    if "output_expand_mask" in stripped:
+        del stripped.output_expand_mask
     if "init_image" in stripped:
         if type(stripped.init_image) != str: del stripped.init_image
 
