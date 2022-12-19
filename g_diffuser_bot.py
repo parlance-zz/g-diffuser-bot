@@ -151,6 +151,9 @@ def get_discord_echo_args(args, img2img_params=False):
         if "width" in args: del args.width
         if "height" in args: del args.height
 
+    if args.prompt == "":
+        del args.prompt
+
     args_string = gdl.print_args(args, verbosity_level=2, return_only=True, width=9999)
     return args_string.replace("\n", "\t")
 
@@ -180,8 +183,11 @@ async def on_ready():
     expand_right='expand input image right by how much (in %)?',
     expand_bottom='expand input image bottom by how much (in %)?',
     expand_left='expand input image left by how much (in %)?',
+    expand_all='expand input image in _every_ direction by how much (in %)?',
     expand_softness='amount to soften the resulting input image mask (in %)',
-    expand_space='distance erased from the edge of the original input image',    
+    expand_space='distance erased from the edge of the original input image',
+    hires_fix='Use the hires fix system to improve quality of large images',
+    seamless_tiling='Generate a seamlessly tileable image',
 )
 @app_commands.choices(
     sampler=SAMPLER_CHOICES,
@@ -204,9 +210,11 @@ async def img(
     expand_bottom: Optional[app_commands.Range[float, 0.0, 1000.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.expand_bottom,
     expand_left: Optional[app_commands.Range[float, 0.0, 1000.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.expand_left,
     expand_right: Optional[app_commands.Range[float, 0.0, 1000.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.expand_right,
+    expand_all: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
     expand_softness: Optional[app_commands.Range[float, 0.0, 1000.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.expand_softness,
     expand_space: Optional[app_commands.Range[float, 0., 200.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.expand_space,
-    
+    hires_fix: Optional[bool] = gdl.DEFAULT_SAMPLE_SETTINGS.hires_fix,
+    seamless_tiling: Optional[bool] = gdl.DEFAULT_SAMPLE_SETTINGS.seamless_tiling,
 ):
     try: await interaction.response.defer(thinking=True, ephemeral=False) # start by requesting more time to respond
     except Exception as e: print("exception in await interaction - " + str(e))
@@ -214,6 +222,13 @@ async def img(
     # build sample args from app command params
     args = locals().copy()
     del args["interaction"]
+
+    args["expand_top"] += args["expand_all"]
+    args["expand_bottom"] += args["expand_all"]
+    args["expand_left"] += args["expand_all"]
+    args["expand_right"] += args["expand_all"]
+    del args["expand_all"]
+
     if type(args["model_name"]) != str: args["model_name"] = args["model_name"].value
     if type(args["sampler"]) != str: args["sampler"] = args["sampler"].value
     
@@ -261,6 +276,8 @@ async def img(
     guidance_strength='clip guidance (only affects clip models)',
     width='width (in pixels) of the output image',
     height='height (in pixels) of the output image',
+    hires_fix='Use the hires fix system to improve quality of large images',
+    seamless_tiling='Generate a seamlessly tileable image',    
 )
 @app_commands.choices(
     sampler=SAMPLER_CHOICES,
@@ -279,6 +296,8 @@ async def g(
     guidance_strength: Optional[app_commands.Range[float, 0.0, 1.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.guidance_strength,
     width: Optional[app_commands.Range[int, 512, gdl.DEFAULT_SAMPLE_SETTINGS.max_width]] = gdl.DEFAULT_SAMPLE_SETTINGS.width,
     height: Optional[app_commands.Range[int, 512, gdl.DEFAULT_SAMPLE_SETTINGS.max_height]] = gdl.DEFAULT_SAMPLE_SETTINGS.height,
+    hires_fix: Optional[bool] = gdl.DEFAULT_SAMPLE_SETTINGS.hires_fix,
+    seamless_tiling: Optional[bool] = gdl.DEFAULT_SAMPLE_SETTINGS.seamless_tiling,    
 ):
     try: await interaction.response.defer(thinking=True, ephemeral=False) # start by requesting more time to respond
     except Exception as e: print("exception in await interaction - " + str(e))
