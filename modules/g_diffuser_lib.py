@@ -234,6 +234,7 @@ def load_config():
     DEFAULT_SAMPLE_SETTINGS.output_name = ""       # by default an output name based on the prompt will be used
     DEFAULT_SAMPLE_SETTINGS.output_file = ""       # if sampling is successful this is the path to the output image file
     DEFAULT_SAMPLE_SETTINGS.output_sample = None   # cv2 image of the output sample if sampling is successful (or None)
+    DEFAULT_SAMPLE_SETTINGS.output_expand_mask  = None # if expand parameters were used this is the mask used to expand the image
     DEFAULT_SAMPLE_SETTINGS.no_output_file = False # if True do not save an output file for the sample
     DEFAULT_SAMPLE_SETTINGS.args_file = ""         # path to a file containing the arguments used for sampling
     DEFAULT_SAMPLE_SETTINGS.no_args_file = False   # if True do not save a separate args file for the output sample
@@ -281,6 +282,10 @@ def strip_args(args, level=1): # remove args we wouldn't want to print or serial
     # for level 0 only strip fields that can't / shouldn't be serialized
     if "output_sample" in stripped:
         del stripped.output_sample
+    if "outout_expand_mask" in stripped:
+        del stripped.outout_expand_mask
+    if "init_image" in stripped:
+        if type(stripped.init_image) != str: del stripped.init_image
 
     if level >=1: # keep just the basics for most printing
 
@@ -487,11 +492,16 @@ def get_annotated_image(image, args):
 def prepare_init_image(args):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
     MINIMUM_OUTPAINT_IMG2IMG_STRENGTH = 1. # 2.
-    CV2_RESIZE_INTERPOLATION_MODE = cv2.INTER_LANCZOS4 #cv2.INTER_AREA
+    #CV2_RESIZE_INTERPOLATION_MODE = cv2.INTER_LANCZOS4
+    CV2_RESIZE_INTERPOLATION_MODE = cv2.INTER_AREA
 
     # load and resize input image to multiple of 8x8
-    fs_init_image_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_image).as_posix()
-    init_image = load_image(fs_init_image_path)
+    if type(args.init_image) == str:
+        fs_init_image_path = (pathlib.Path(DEFAULT_PATHS.inputs) / args.init_image).as_posix()
+        init_image = load_image(fs_init_image_path)
+    else:
+        init_image = args.init_image
+
     if args.expand_top or args.expand_bottom or args.expand_left or args.expand_right:
         init_image = expand_image(init_image, args.expand_top, args.expand_right, args.expand_bottom, args.expand_left, args.expand_softness, args.expand_space)
     args.width, args.height = (init_image.shape[1], init_image.shape[0])
@@ -640,7 +650,12 @@ def _get_samples(args):
         args.auto_seed = 0 # seed provided, disable auto-seed
 
     # load input image if we have one
-    if args.init_image != "":
+    if type(args.init_image) == str:
+        load_init_image = args.init_image != ""
+    else:
+        load_init_image = True
+
+    if load_init_image:
         init_image, mask_image = prepare_init_image(args)
     else:
         init_image, mask_image = (None, None)
@@ -658,6 +673,7 @@ def _get_samples(args):
         args.error_message = ""
         args.output_file = ""
         args.output_sample = None
+        args.output_expand_mask = None
         args.args_file = ""
 
         start_time = datetime.datetime.now()
@@ -679,7 +695,7 @@ def _get_samples(args):
             if not (mask_image is None): # blend original image back in for in/out-painting, this is required due to vae decoding artifacts
                 mask_rgb = 1.-gdl_utils.np_img_grey_to_rgb(mask_image/255.)
                 image = np.clip(image*(1.-mask_rgb) + init_image*mask_rgb, 0., 255.)
-
+                args.output_expand_mask = 255-mask_image
             if "annotation" in args: image = get_annotated_image(image, args)
 
             end_time = datetime.datetime.now()
@@ -760,4 +776,3 @@ def save_image_grid(images, file_path):
     save_image(grid_image, output_file)
     print("Saved grid image {0}".format(output_file))
     return
-
