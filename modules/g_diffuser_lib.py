@@ -363,20 +363,29 @@ def strip_args(args, level=1): # remove args we wouldn't want to print or serial
 def validate_resolution(args):      # clip output dimensions at max_resolution, while keeping the correct resolution granularity,
     global DEFAULT_SAMPLE_SETTINGS  # while roughly preserving aspect ratio.
     RESOLUTION_GRANULARITY = 8      # hard-coding this for now, not likely to change any time soon
+    MINIMUM_WIDTH = 512
+    MINIMUM_HEIGHT = 512
 
     width, height = (args.width, args.height)
     aspect_ratio = width / height 
     if width > args.max_width and args.max_width > 0:
         width = args.max_width
         height = int(width / aspect_ratio)
+    if width < MINIMUM_WIDTH:
+        width = MINIMUM_WIDTH
+        height = int(width / aspect_ratio)
+
     if height > args.max_height and args.max_height > 0:
         height = args.max_height
         width = int(height * aspect_ratio)
-        
+    if height < MINIMUM_HEIGHT:
+        height = MINIMUM_HEIGHT
+        width = int(height * aspect_ratio)
+
     width = int(width / RESOLUTION_GRANULARITY) * RESOLUTION_GRANULARITY
     height = int(height / RESOLUTION_GRANULARITY) * RESOLUTION_GRANULARITY
-    width = max(width, RESOLUTION_GRANULARITY)
-    height = max(height, RESOLUTION_GRANULARITY)
+    width = max(width, MINIMUM_WIDTH)
+    height = max(height, MINIMUM_HEIGHT)
 
     args.width, args.height = (width, height)
     return
