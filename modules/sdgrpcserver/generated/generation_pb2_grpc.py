@@ -27,6 +27,21 @@ class GenerationServiceStub(object):
                 request_serializer=generation__pb2.ChainRequest.SerializeToString,
                 response_deserializer=generation__pb2.Answer.FromString,
                 )
+        self.AsyncGenerate = channel.unary_unary(
+                '/gooseai.GenerationService/AsyncGenerate',
+                request_serializer=generation__pb2.Request.SerializeToString,
+                response_deserializer=generation__pb2.AsyncHandle.FromString,
+                )
+        self.AsyncResult = channel.unary_unary(
+                '/gooseai.GenerationService/AsyncResult',
+                request_serializer=generation__pb2.AsyncHandle.SerializeToString,
+                response_deserializer=generation__pb2.AsyncAnswer.FromString,
+                )
+        self.AsyncCancel = channel.unary_unary(
+                '/gooseai.GenerationService/AsyncCancel',
+                request_serializer=generation__pb2.AsyncHandle.SerializeToString,
+                response_deserializer=generation__pb2.AsyncCancelAnswer.FromString,
+                )
 
 
 class GenerationServiceServicer(object):
@@ -47,6 +62,39 @@ class GenerationServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def AsyncGenerate(self, request, context):
+        """AsyncGenerate starts an asynchronous generation
+
+        The passed Request is the same as to Generate. However this method
+        will return immediately, returning a handle that can be used to get
+        any results of the generation created so far or cancel it.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AsyncResult(self, request, context):
+        """AsyncResult gets and results so far for an asynchronous generation
+
+        You can call this multiple times. Each time you call it, you will get
+        any results that are ready that have not been returned before.
+        (Note that this "consumes" the ready results - they will not be returned again).
+
+        Any generated results will eventually (default: after 10 minutes) be discarded
+        if they are not taken by a call to this method.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AsyncCancel(self, request, context):
+        """AsyncCancel cancels a generation that is currently in progress
+        and discards any results that have not yet been returned by a call to AsyncResult.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_GenerationServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -59,6 +107,21 @@ def add_GenerationServiceServicer_to_server(servicer, server):
                     servicer.ChainGenerate,
                     request_deserializer=generation__pb2.ChainRequest.FromString,
                     response_serializer=generation__pb2.Answer.SerializeToString,
+            ),
+            'AsyncGenerate': grpc.unary_unary_rpc_method_handler(
+                    servicer.AsyncGenerate,
+                    request_deserializer=generation__pb2.Request.FromString,
+                    response_serializer=generation__pb2.AsyncHandle.SerializeToString,
+            ),
+            'AsyncResult': grpc.unary_unary_rpc_method_handler(
+                    servicer.AsyncResult,
+                    request_deserializer=generation__pb2.AsyncHandle.FromString,
+                    response_serializer=generation__pb2.AsyncAnswer.SerializeToString,
+            ),
+            'AsyncCancel': grpc.unary_unary_rpc_method_handler(
+                    servicer.AsyncCancel,
+                    request_deserializer=generation__pb2.AsyncHandle.FromString,
+                    response_serializer=generation__pb2.AsyncCancelAnswer.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -104,5 +167,56 @@ class GenerationService(object):
         return grpc.experimental.unary_stream(request, target, '/gooseai.GenerationService/ChainGenerate',
             generation__pb2.ChainRequest.SerializeToString,
             generation__pb2.Answer.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def AsyncGenerate(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/gooseai.GenerationService/AsyncGenerate',
+            generation__pb2.Request.SerializeToString,
+            generation__pb2.AsyncHandle.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def AsyncResult(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/gooseai.GenerationService/AsyncResult',
+            generation__pb2.AsyncHandle.SerializeToString,
+            generation__pb2.AsyncAnswer.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def AsyncCancel(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/gooseai.GenerationService/AsyncCancel',
+            generation__pb2.AsyncHandle.SerializeToString,
+            generation__pb2.AsyncCancelAnswer.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
