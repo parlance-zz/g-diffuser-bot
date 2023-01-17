@@ -60,7 +60,6 @@ from modules import g_diffuser_utilities as gdl_utils
 
 GRPC_SERVER_SUPPORTED_SAMPLERS_LIST = list(grpc_client.SAMPLERS.keys())
 GRPC_SERVER_ENGINE_STATUS = []
-GRPC_SERVER_LOCK = asyncio.Lock()
 
 class SimpleLogger(object):
     def __init__(self, log_path, mode="w"):
@@ -390,11 +389,13 @@ def validate_resolution(args):      # clip output dimensions at max_resolution, 
     args.width, args.height = (width, height)
     return
 
-def soften_mask(np_rgba_image, softness, space):
+def soften_mask(np_rgba_image, softness, space, use_fft=True):
     if softness == 0: return np_rgba_image
+    softness = min(softness, 1.)
+    space = np.clip(space, 0., 1.)
     original_max_opacity = np.max(np_rgba_image[:,:,3])
     out_mask = np_rgba_image[:,:,3] <= 0.
-    blurred_mask = gdl_utils.gaussian_blur(np_rgba_image[:,:,3], 3.14/softness, mode="linear_gradient")
+    blurred_mask = gdl_utils.image_blur(np_rgba_image[:,:,3], 3.5/softness, mode="linear", use_fft=use_fft)
     blurred_mask = np.maximum(blurred_mask - np.max(blurred_mask[out_mask]), 0.) 
     np_rgba_image[:,:,3] *= blurred_mask  # preserve partial opacity in original input mask
     np_rgba_image[:,:,3] /= np.max(np_rgba_image[:,:,3]) # renormalize
@@ -426,6 +427,7 @@ def expand_image(cv2_img, top, right, bottom, left, softness, space):
         new_img = soften_mask(new_img/255., softness/100., space/100.)
         new_img = (np.clip(new_img, 0., 1.)*255.).astype(np.uint8)
         #save_image(new_img, "temp/debug_expanded.png") #debug
+        #save_image(new_img[:,:,3], "temp/debug_expanded_alpha.png") #debug        
 
     return new_img
 
@@ -500,7 +502,7 @@ def get_annotated_image(image, args):
 
 def prepare_init_image(args):
     global DEFAULT_PATHS, DEFAULT_SAMPLE_SETTINGS
-    MINIMUM_OUTPAINT_IMG2IMG_STRENGTH = 1. # 2.
+    MINIMUM_OUTPAINT_IMG2IMG_STRENGTH = 2.
     #CV2_RESIZE_INTERPOLATION_MODE = cv2.INTER_LANCZOS4
     CV2_RESIZE_INTERPOLATION_MODE = cv2.INTER_AREA
 
@@ -601,14 +603,12 @@ async def get_samples(args, interactive=False):
     signal.signal(signal.SIGINT, functools.partial(cancel_request, sample_thread=sample_thread))
 
     try:
-        global GRPC_SERVER_LOCK
-        async with GRPC_SERVER_LOCK: # only one grpc request at a time please (at least, in this process)
-            sample_thread.start()
-            while True:
-                sample_thread.join(0.)
-                if not sample_thread.is_alive(): break
-                await asyncio.sleep(0.1)
-            sample_thread.join() # it's the only way to be sure
+        sample_thread.start()
+        while True:
+            sample_thread.join(0.)
+            if not sample_thread.is_alive(): break
+            await asyncio.sleep(0.1)
+        sample_thread.join() # it's the only way to be sure
     except Exception as e:
         raise
     finally:
@@ -701,9 +701,11 @@ def _get_samples(args):
         for path, artifact in grpc_samples:
             image = cv2.imdecode(np.fromstring(artifact.binary, dtype="uint8"), cv2.IMREAD_UNCHANGED)
 
-            if not (mask_image is None): # blend original image back in for in/out-painting, this is required due to vae decoding artifacts
-                mask_rgb = 1.-gdl_utils.np_img_grey_to_rgb(mask_image/255.)
-                image = np.clip(image*(1.-mask_rgb) + init_image*mask_rgb, 0., 255.)
+            # blend original image back in for in/out-painting, this is required due to vae decoding artifacts
+            # ** this is disabled for now, the issue seems to be fixed now in the sdgrpcserver **
+            if not (mask_image is None):
+                #mask_rgb = 1.-gdl_utils.np_img_grey_to_rgb(mask_image/255.)
+                #image = np.clip(image*(1.-mask_rgb) + init_image*mask_rgb, 0., 255.)
                 args.output_expand_mask = 255-mask_image
             if "annotation" in args: image = get_annotated_image(image, args)
 
