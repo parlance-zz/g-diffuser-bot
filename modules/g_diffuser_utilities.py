@@ -3,6 +3,7 @@
 #from skimage import color, transform
 
 import numpy as np
+import scipy
 
 # common utility functions for g-diffuser-lib input / output processing
 
@@ -34,8 +35,8 @@ def ifft2(data):
         
     return out_ifft
             
-def get_gaussian(width, height, std=3.14, mode="gaussian"): # simple gaussian kernel
-    window_scale_x = float(width / min(width, height))  # for non-square aspect ratios we still want a circular gaussian
+def get_gradient_kernel(width, height, std=3.14, mode="linear"):
+    window_scale_x = float(width / min(width, height))  # for non-square aspect ratios we still want a circular kernel
     window_scale_y = float(height / min(width, height)) 
     if mode == "gaussian":
         x = (np.arange(width) / width * 2. - 1.) * window_scale_x
@@ -46,14 +47,14 @@ def get_gaussian(width, height, std=3.14, mode="gaussian"): # simple gaussian ke
         else:
             y = x; ky = kx
         return np.outer(kx, ky)
-    elif mode == "linear_gradient":
+    elif mode == "linear":
         x = (np.arange(width) / width * 2. - 1.) * window_scale_x
         if window_scale_x != window_scale_y:
             y = (np.arange(height) / height * 2. - 1.) * window_scale_y
         else: y = x
         return np.clip(1. - np.sqrt(np.add.outer(x*x, y*y)) * std / 3.14, 0., 1.)
     else:
-        raise Exception("Error: Unknown mode in get_gaussian: {0}".format(mode))
+        raise Exception("Error: Unknown mode in get_gradient_kernel: {0}".format(mode))
 
 def convolve(data1, data2):      # fast convolution with fft
     if data1.ndim != data2.ndim: # promote to rgb if mismatch
@@ -61,11 +62,16 @@ def convolve(data1, data2):      # fast convolution with fft
         if data2.ndim < 3: data2 = np_img_grey_to_rgb(data2)
     return ifft2(fft2(data1) * fft2(data2))
 
-def gaussian_blur(data, std=3.14, mode="gaussian"):
-    width = data.shape[0]
-    height = data.shape[1]
-    kernel = get_gaussian(width, height, std, mode=mode)
-    return np.real(convolve(data, kernel / np.sqrt(np.sum(kernel*kernel))))
+def image_blur(data, std=3.14, mode="linear", use_fft=True):
+    if use_fft:    
+        width = data.shape[0]
+        height = data.shape[1]
+        kernel = get_gradient_kernel(width, height, std, mode=mode)
+        return np.real(convolve(data, kernel / np.sqrt(np.sum(kernel*kernel))))
+    else:
+        k_width = 64
+        kernel = get_gradient_kernel(k_width, k_width, std, mode=mode)
+        return np.real(scipy.ndimage.convolve(data, kernel / np.sqrt(np.sum(kernel*kernel)), mode="nearest"))
  
 def normalize_image(data):
     normalized = data - np.min(data)
