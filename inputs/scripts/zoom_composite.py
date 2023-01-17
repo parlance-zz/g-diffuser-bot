@@ -12,15 +12,15 @@ from OpenGL.GLU import *
 args = cli_default_args()
 args.zoom_output_path = "zoom_maker"
 
-args.expand_softness = 25. # **the expand values here should match the values used to create the frames in zoom_maker**
+args.expand_softness = 50. # **the expand values here should match the values used to create the frames in zoom_maker**
 args.expand_space = 10. 
-args.expand_top = 30
-args.expand_bottom = 30
-args.expand_left = 30
-args.expand_right = 30
+args.expand_top = 50
+args.expand_bottom = 50
+args.expand_left = 50
+args.expand_right = 50
 
-args.zoom_num_interpolated_frames = 90     # number of interpolated frames per keyframe, controls zoom speed (and the expand ratio)
-args.zoom_frame_rate = 30                  # fps of the output video
+args.zoom_num_interpolated_frames = 60     # number of interpolated frames per keyframe, controls zoom speed (and the expand ratio)
+args.zoom_frame_rate = 60                  # fps of the output video
 args.zoom_output_file = "zoom.mp4"         # name of output file (this will be saved in the folder with the key frames)
 args.zoom_preview_output = False           # if enabled this will show a preview of the video in a window as it renders
 args.zoom_out = False                      # if enabled this will zoom out instead of zooming in
@@ -44,13 +44,13 @@ frame0_cv2_image = cv2.imread(frame_filenames[0])
 source_size = (int(frame0_cv2_image.shape[1]), int(frame0_cv2_image.shape[0]))
 video_aspect_ratio = args.zoom_video_size[0]/args.zoom_video_size[1]
 source_aspect_ratio = source_size[0]/source_size[1]
-aspect_adjustmentX = source_size[0] / args.zoom_video_size[0]
-aspect_adjustmentY = source_size[1] / args.zoom_video_size[1]
+aspect_adjustmentX = source_size[0] / 1024.#args.zoom_video_size[0]
+aspect_adjustmentY = source_size[1] / 1024.#args.zoom_video_size[1]
 
 # setup opengl for compositing via pygame
 pygame.init()
 pygame.display.set_mode(args.zoom_video_size, HIDDEN|DOUBLEBUF|OPENGL, vsync=0)
-gluOrtho2D(-1., 1., -1., 1.)
+gluOrtho2D(-video_aspect_ratio, video_aspect_ratio, -1., 1.)
 glDisable(GL_CULL_FACE); glDisable(GL_DEPTH_TEST)
 glEnable(GL_TEXTURE_2D); glEnable(GL_BLEND)
 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
@@ -84,7 +84,7 @@ if args.zoom_preview_output: # show video window if preview is enabled
     pygame.display.set_mode(args.zoom_video_size, SHOWN|DOUBLEBUF|OPENGL, vsync=0)
 
 start_offset = 1.  # start pulled back from the first keyframe
-end_offset = 2.5   # end zoomed in on the last keyframe
+end_offset = 1.   # end zoomed in on the last keyframe
 
 # create a schedule of time values for each rendered video frame
 if args.zoom_acceleration_smoothing > 0.:
@@ -110,6 +110,7 @@ try:
             z = f0 - t
             
             glPushMatrix()
+            #glRotatef(t *2.*np.pi, 0., 0., 1.)
             scaleX = ((args.expand_left + args.expand_right)/100. +1.) ** (-z)
             scaleY = ((args.expand_top + args.expand_bottom)/100. +1.) ** (-z)
             glScalef(scaleX * aspect_adjustmentX, scaleY * aspect_adjustmentY, 1.)
