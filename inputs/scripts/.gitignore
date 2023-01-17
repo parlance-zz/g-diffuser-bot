@@ -4,4 +4,5 @@
 !.gitignore
 !*.py
 !README.md
-!grid maker example*.jpg
+3d_test.py
+collage_maker.py
