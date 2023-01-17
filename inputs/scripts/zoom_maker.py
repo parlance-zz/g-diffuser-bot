@@ -7,66 +7,72 @@ import numpy as np
 from argparse import Namespace
 
 args = cli_default_args()
+args.prompt_style = "dreamlikeart, surreal, surrealism, Textless, Perfect ling, mucheneuve, muchenies ing, Jeffrigheme, realistacking, ejsin the bartgerm,  Perfect focus-stic listan, rhads, villess, colourealighelant lit"
 args.zoom_prompt_schedule = [
-    #"Face portrait of a retrofuturistic assassin surrounded by advanced brutalist architecture. highly detailed science fiction, rich colors, high contrast, gloomy atmosphere, dark background. trending on artstation an ultrafine hyperdetailed colorfull illustration by kim jung gi, moebius, irakli nadar, alphonse mucha, ayami kojima, amano, greg hildebrandt",
-    #"Textless, Perfect ling, mucheneuve, muchenies ing, Jeffrigheme,  realistacking, ejsin the bartgerm,  Perfect focus-stic listan, rhads, villess, colourealighelant lit",
-    #"a couple of statues sitting next to each other in a building, by Jeremy Geddes, Artstation contest winner, gothic art, wreathed in flame, shattered abstractions, book cover illustration, gothic wraith maiden, peter mohrbacher c 2 0, ffffound, loss in despair, photoshop art, ornate and flowing, promo image, whirling death",
-    #"a very strange looking creature in the middle of a desert, cyberpunk art, by Mike 'Beeple' Winkelmann, fantasy art, many mech flowers, high detail 8k render, portrait of a zentaur, cute detailed digital art, robot dragon head, cyberpunk in foliage, behance. high detail, vaporwave artwork composition, beautiful avatar pictures",
-
-    #"a painting of bench in front of a window, a surrealist painting, by Justin Gerard, behance contest winner, paul lehr and m. c. escher, very very well detailed image, underground room, charles burns, shusei nagaoka, magical portal opened, mysterious laboratory, establishing shot, chris moore",
-    #"a man standing on top of a hill next to a lake, concept art, psychedelic art, colorful dark vector, rich deep colors. masterpiece, dark neon colored universe, michael page, style of kilian eng, high detailed painting, awesome greate composition, lowres, abstract surrealist, journey, fantasy sticker illustration",
-    #"a painting of a man with a bird in his hand, poster art, by Jason Benjamin, cg society contest winner, psychedelic art, with a glass eye and a top hat, in a deep lush jungle at night, pinguin, dan mumford and thomas kinkade, bubbling ooze covered serious, promo shot, black tie, disney artist, album artwork, booze",
-    #"a painting of a strange creature with a giant eye, by Justin Gerard, cg society contest winner, psychedelic art, lush alien landscape, album artwork, black ooze, detailed wide shot, thomas kinkade and tristan eaton, river styx, very very well detailed image, a dream, brock hofer, caravan, hollow, painted in high resolution, mind-bending",
-    #"a painting of close-up portrait of a man, a detailed painting, by Justin Gerard, Artstation contest winner, psychedelic art, glowing eyes in helmet, medium portrait of a goblin, beeple and jeremiah ketner, majora mask, highly detailed zen neon, official fanart behance hd, sofubi, detailed mask, dmt temple, trailer",
-    #"art by Moooooebius, close up portrait, color, surreal, surrealism",
-    #"a close up of a person with a beard and glasses, cyberpunk art, by Beeple, digital art, sitting on santa, unsplash photo contest winner, karthus from league of legends, kerem beyit, tabletop gaming, hyper real photo, duke nukem, hide the pain harold, dazzling lights, baron harkonnen, toy photography, profile pic",
-    "christmas, isometric view of festive Skyrim whiterun art by thomas kinkade, A Winter Scene with a child near a Castle by Hendrick Avercamp, snowing, christmas trees, festive winter decorations, christmas",
+    #"dreamlikeart, surreal, surrealism, Textless, Perfect ling, mucheneuve, muchenies ing, Jeffrigheme, realistacking, ejsin the bartgerm, Perfect focus-stic listan, rhads, villess, colourealighelant lit",
+    #"dreamlikeart, abstract, surreal",
+    "desert landscape with a watch buried in the sand",
+    "a clocktower in the night sky",
+    "an exotic bird with a crown on its head",
+    "a huge apple tree with a snake wrapped around it",
+    "a beautiful underwater city with colorful fish",
+    "an open window with a beautiful view of the ocean",
+    "a bed of hungry flowers",
+    "golden stairs leading to a castle in the clouds",
+    "a lavish banquet hall with a feast on the table",
+    "a pile of large boulders",
+    "a powerful river surrounded by trees", 
 ]
 args.zoom_prompt_reset_interval = 1   # the prompt is switched to the next prompt in the list every n samples
-#args.zoom_prompt_schedule_order = "linear"  # rotate through the prompt list in order
-args.zoom_prompt_schedule_order = "random" # uncomment this line to use prompts in random order
+args.zoom_prompt_schedule_order = "linear"  # rotate through the prompt list in order
+#args.zoom_prompt_schedule_order = "random" # uncomment this line to use prompts in random order
 args.zoom_interactive_cherrypicker = False  # setting this to True will prompt you to interactively accept or reject each keyframe / sample
                                             # currently broken until I can find a better way to distribute opencv2 with appropriate dependencies
 args.num_samples = 1
 args.zoom_num_frames = 1000 # number of discrete zoom images to sample
                             # (you can abort / close the program at any time to use the keyframes you have already generated)
 
-args.expand_softness = 25.
+args.expand_softness = 50.
 args.expand_space = 10.     # distance to hard erase from source image edge
-args.expand_top = 30        # amount to expand in each direction in each step
-args.expand_bottom = 30     # these values are in % of the original image size
-args.expand_left = 30       # exceeding 50% in any direction is not recommended for recursive zooms / pans
-args.expand_right = 30
+args.expand_top = 50        # amount to expand in each direction in each step
+args.expand_bottom = 50     # these values are in % of the original image size
+args.expand_left = 50       # exceeding 50% in any direction is not recommended for recursive zooms / pans
+args.expand_right = 50
 
 args.init_image = ""  # starting (or rather, ending image file, relative to inputs path). if blank start with a generated image
 args.output_path = "zoom_maker"  # output path, relative to outputs
 args.output_name = "zoom_maker"
 
-args.model_name = "stable-diffusion-v1-5-standard"
-args.steps = 80
-args.cfg_scale = 11. 
-args.guidance_strength = 0.25
+#args.model_name = "stable-diffusion-v1-5-standard"
+#args.steps = 80
+#args.cfg_scale = 11. 
+#args.guidance_strength = 0.
 
 # if using sd2.x be sure to use a negative prompt
 #args.model_name = "stable-diffusion-v2-1-standard"
 #args.steps = 80
-#args.cfg_scale = 4.2
+#args.cfg_scale = 6.#4.2
 #args.guidance_strength = 0.
 
-#args.negative_prompt = "frame, comic book, collage, cropped, oversaturated, signed, greyscale, monotone, vignette, title, text, logo, watermark"
+args.model_name = "dreamlike-diffusion-1.0"
+args.steps = 80
+args.cfg_scale = 11.
+args.guidance_strength = 0.
+
+args.negative_prompt = "frame, comic book, collage, cropped, oversaturated, signed, greyscale, monotone, vignette, title, text, logo, watermark"
 #args.negative_prompt = "watermark, title, label, collage, cropped, highly saturated colors, monotone, vignette"
 #args.negative_prompt = "art by lisa frank, blender, cropped, lowres, poorly drawn face, out of frame, poorly drawn hands, blurry, bad art, text, watermark, disfigured, deformed, title, label, collage, vignette"
 #args.negative_prompt = "frame, blender, cropped, lowres, poorly drawn face, poorly drawn hands, blurry, bad art, text, watermark, disfigured, deformed, title, label, collage, vignette"
 #args.negative_prompt = "blender, lowres, poorly drawn face, blurry, bad art, text, watermark, disfigured, deformed, title, label, collage, vignette"
 
 # these dims are only for the starting image (if no user-supplied init_image is used)
-args.width = 896
+args.width = 768
 args.height = 512
 # for each subsequent generation the image is first expanded, but then contracted to fit inside the max width/height
-args.max_width = 896
+args.max_width = 768
 args.max_height = 512
 
-args.hires_fix = True
+args.hires_fix = False
 args.sampler = "dpmspp_sde"
 #args.sampler="dpmspp_2m"
 #args.sampler = "k_euler_ancestral"
@@ -110,6 +116,7 @@ while i < args.zoom_num_frames:
         else:
             raise Exception("Unknown prompt schedule order '{0}'".format(args.zoom_prompt_schedule_order))
         args.prompt = args.zoom_prompt_schedule[prompt_index]
+        if "prompt_style" in args: args.prompt = args.prompt_style + ", " + args.prompt
         print("prompt: {0}".format(args.prompt))
 
     args.img2img_strength = 2.
