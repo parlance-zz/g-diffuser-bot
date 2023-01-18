@@ -42,6 +42,7 @@ from typing import Optional
 import aiohttp
 import argparse
 from argparse import Namespace
+import inspect
 
 import discord
 from discord import app_commands
@@ -211,8 +212,8 @@ async def img(
     expand_left: Optional[app_commands.Range[float, 0.0, 1000.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.expand_left,
     expand_right: Optional[app_commands.Range[float, 0.0, 1000.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.expand_right,
     expand_all: Optional[app_commands.Range[float, 0.0, 1000.0]] = 0.,
-    expand_softness: Optional[app_commands.Range[float, 0.0, 1000.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.expand_softness,
-    expand_space: Optional[app_commands.Range[float, 0., 200.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.expand_space,
+    expand_softness: Optional[app_commands.Range[float, 0.0, 100.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.expand_softness,
+    expand_space: Optional[app_commands.Range[float, 0., 100.0]] = gdl.DEFAULT_SAMPLE_SETTINGS.expand_space,
     hires_fix: Optional[bool] = gdl.DEFAULT_SAMPLE_SETTINGS.hires_fix,
     seamless_tiling: Optional[bool] = gdl.DEFAULT_SAMPLE_SETTINGS.seamless_tiling,
 ):
@@ -246,7 +247,8 @@ async def img(
             attachment_files.append(discord.File(sample_filename))
         
         args_str = get_discord_echo_args(args, img2img_params=True)
-        message = "@" + interaction.user.display_name + ":  /img "+args_str
+        cmd_str = inspect.currentframe().f_code.co_name
+        message = "@" + interaction.user.display_name + f":  /{cmd_str} {args_str}"
 
         try: await interaction.followup.send(files=attachment_files, content=message)
         except Exception as e: print("exception in await interaction - " + str(e))
@@ -320,7 +322,8 @@ async def g(
             attachment_files.append(discord.File(sample_filename))
         
         args_str = get_discord_echo_args(args)
-        message = "@" + interaction.user.display_name + ":  /g "+ args_str
+        cmd_str = inspect.currentframe().f_code.co_name
+        message = "@" + interaction.user.display_name + f":  /{cmd_str} {args_str}"
 
         try: await interaction.followup.send(files=attachment_files, content=message)
         except Exception as e: print("exception in await interaction - " + str(e))
