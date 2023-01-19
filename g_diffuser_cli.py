@@ -78,7 +78,7 @@ exit()         # exit interactive mode
 
 def main():
     gdl.load_config()
-    import os; os.chdir(gdl.DEFAULT_PATHS.root)
+    os.chdir(gdl.DEFAULT_PATHS.root)
     logger = SimpleLogger("g_diffuser_cli.log")
     
     gdl.start_grpc_server()
