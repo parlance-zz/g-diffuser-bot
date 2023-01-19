@@ -715,7 +715,8 @@ def _get_samples(args):
             args.status = 2 # completed successfully
             args.output_sample = image
 
-            save_sample(image, args)
+            if not args.no_output_file:
+                save_sample(image, args)
             output_args.append(Namespace(**vars(args)))
 
             if args.seed: args.seed += 1 # increment seed or random seed if none was given as we go through the batch
